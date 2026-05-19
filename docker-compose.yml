@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # Local MongoDB (optional, for development / when Atlas is blocked)
+  mongo:
+    image: mongo:7
+    container_name: medelin_mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  # Бот та API
+  bot:
+    build: ./MedelinBot
+    container_name: medelin_bot
+    restart: always
+    env_file:
+      - ./MedelinBot/.env
+      - ./MedelinBot/.env.docker
+    volumes:
+      - ./MedelinBot/app/databases:/app/app/databases
+      - ./MedelinBot/cache:/app/cache
+      - ./MedelinSite/images/uploads:/app/uploads
+    ports:
+      - "8000:8000"
+    command: python bot.py
+    depends_on:
+      - mongo
+
+  # Веб-сайт через Nginx
+  web:
+    image: nginx:alpine
+    container_name: medelin_web
+    restart: always
+    volumes:
+      - ./MedelinSite:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - bot
+
+volumes:
+  mongo_data:

@@ -1,0 +1,149 @@
+[
+  {
+    "id": "6a0ab135bef9495874b10a24",
+    "name": "Medelin (Корзо)",
+    "address": "вул. Корзо, 15, Ужгород",
+    "schedule": "Пн–Нд: 08:00 – 20:00",
+    "phone": "+38 (050) 377-59-06",
+    "google_maps_url": "https://www.google.com/maps?q=48.6233102,22.2981488",
+    "image_url": "https://images.pexels.com/photos/2615323/pexels-photo-2615323.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "amenities": [
+      "Безкоштовний Wi‑Fi",
+      "Багато розеток",
+      "Зручна робоча зона",
+      "Pet-friendly",
+      "Оплата карткою"
+    ],
+    "atmosphere": "Затишна кавʼярня у центрі міста з фірмовою кавою та десертами. Зручно для зустрічей і роботи.",
+    "coordinates": {
+      "lat": 48.6233102,
+      "lon": 22.2981488
+    }
+  },
+  {
+    "id": "6a0ab135bef9495874b10a25",
+    "name": "Medelin (Корятовича)",
+    "address": "пл. Корятовича, 5А, Ужгород",
+    "schedule": "Пн–Нд: 08:00 – 20:00",
+    "phone": "+38 (050) 377-59-06",
+    "google_maps_url": "https://www.google.com/maps?q=48.6244831,22.2982141",
+    "image_url": "https://images.pexels.com/photos/2615323/pexels-photo-2615323.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "amenities": [
+      "Безкоштовний Wi‑Fi",
+      "Багато розеток",
+      "Зручна робоча зона",
+      "Pet-friendly",
+      "Оплата карткою"
+    ],
+    "atmosphere": "Класична локація Medelin з комфортною посадкою та швидким сервісом. Добре підходить для роботи й зустрічей.",
+    "coordinates": {
+      "lat": 48.6244831,
+      "lon": 22.2982141
+    }
+  },
+  {
+    "id": "6a0ab135bef9495874b10a26",
+    "name": "Medelin (Петефі)",
+    "address": "пл. Шандора Петефі, 5/2, Ужгород",
+    "schedule": "Пн–Нд: 08:00 – 20:00",
+    "phone": "+38 (050) 377-59-06",
+    "google_maps_url": "https://www.google.com/maps?q=48.6193363,22.2974372",
+    "image_url": "https://images.pexels.com/photos/2615323/pexels-photo-2615323.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "amenities": [
+      "Безкоштовний Wi‑Fi",
+      "Багато розеток",
+      "Зручна робоча зона",
+      "Pet-friendly",
+      "Оплата карткою"
+    ],
+    "atmosphere": "Світла міська кавʼярня з фірмовими напоями та десертами. Ідеально для короткої паузи в центрі.",
+    "coordinates": {
+      "lat": 48.6193363,
+      "lon": 22.2974372
+    }
+  },
+  {
+    "id": "6a0ab135bef9495874b10a27",
+    "name": "Medelin (Свободи)",
+    "address": "просп. Свободи, 55, Ужгород",
+    "schedule": "Пн–Нд: 08:00 – 20:00",
+    "phone": "+38 (050) 377-59-06",
+    "google_maps_url": "https://www.google.com/maps?q=48.6118144,22.2957847",
+    "image_url": "https://images.pexels.com/photos/2615323/pexels-photo-2615323.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "amenities": [
+      "Безкоштовний Wi‑Fi",
+      "Багато розеток",
+      "Зручна робоча зона",
+      "Pet-friendly",
+      "Оплата карткою"
+    ],
+    "atmosphere": "Зручна локація для кави з собою та швидких зустрічей. Є комфортні місця для роботи.",
+    "coordinates": {
+      "lat": 48.6118144,
+      "lon": 22.2957847
+    }
+  },
+  {
+    "id": "6a0ab135bef9495874b10a28",
+    "name": "Medelin (Словʼянська набережна)",
+    "address": "Словʼянська набережна, Ужгород",
+    "schedule": "Пн–Нд: 08:00 – 20:00",
+    "phone": "+38 (050) 377-59-06",
+    "google_maps_url": "https://www.google.com/maps?q=48.6193285,22.2787497",
+    "image_url": "https://images.pexels.com/photos/2615323/pexels-photo-2615323.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "amenities": [
+      "Безкоштовний Wi‑Fi",
+      "Багато розеток",
+      "Зручна робоча зона",
+      "Pet-friendly",
+      "Оплата карткою"
+    ],
+    "atmosphere": "Локація біля набережної для неспішної кави. Приємна атмосфера для відпочинку та прогулянок.",
+    "coordinates": {
+      "lat": 48.6193285,
+      "lon": 22.2787497
+    }
+  },
+  {
+    "id": "6a0ab135bef9495874b10a29",
+    "name": "Medelin (Закарпатська)",
+    "address": "вул. Закарпатська, 44, Ужгород",
+    "schedule": "Пн–Нд: 08:00 – 20:00",
+    "phone": "+38 (050) 377-59-06",
+    "google_maps_url": "https://www.google.com/maps?q=48.6319518,22.2783650",
+    "image_url": "https://images.pexels.com/photos/2615323/pexels-photo-2615323.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "amenities": [
+      "Безкоштовний Wi‑Fi",
+      "Багато розеток",
+      "Зручна робоча зона",
+      "Pet-friendly",
+      "Оплата карткою"
+    ],
+    "atmosphere": "Затишна кавʼярня з великим вибором кави та десертів. Комфортно для зустрічей і роботи.",
+    "coordinates": {
+      "lat": 48.6319518,
+      "lon": 22.278365
+    }
+  },
+  {
+    "id": "6a0ab136bef9495874b10a2a",
+    "name": "Medelin Кабінет (Гойди)",
+    "address": "вул. Юрія Гойди, 10, Ужгород",
+    "schedule": "Пн–Пт: 08:00 – 20:00, Сб–Нд: 09:00 – 19:00",
+    "phone": "+38 (050) 377-59-06",
+    "google_maps_url": "https://www.google.com/maps?q=48.6272962,22.2905275",
+    "image_url": "https://images.pexels.com/photos/2615323/pexels-photo-2615323.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "amenities": [
+      "Швидкий Wi‑Fi",
+      "Багато розеток",
+      "Тиха атмосфера",
+      "Ідеально для роботи",
+      "Кондиціонер"
+    ],
+    "atmosphere": "Тихий простір для продуктивної роботи та зустрічей. Продумана ергономіка і спокійна атмосфера.",
+    "coordinates": {
+      "lat": 48.6272962,
+      "lon": 22.2905275
+    }
+  }
+]

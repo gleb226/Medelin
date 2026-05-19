@@ -1,0 +1,31 @@
+module.exports = {
+    extends: ['stylelint-config-standard'],
+    ignoreFiles: ['**/*.min.css'],
+    rules: {
+        'alpha-value-notation': null,
+        'color-function-notation': null,
+        'keyframes-name-pattern': null,
+        'media-feature-range-notation': null,
+        'no-duplicate-selectors': null,
+        'rule-empty-line-before': null,
+        'at-rule-empty-line-before': null,
+        'custom-property-empty-line-before': null,
+        'declaration-block-no-redundant-longhand-properties': null,
+        'declaration-empty-line-before': null,
+        'font-family-no-missing-generic-family-keyword': null,
+        'selector-id-pattern': null,
+        'selector-class-pattern': null,
+        'shorthand-property-no-redundant-values': null,
+        'color-hex-length': null,
+        'selector-pseudo-class-no-unknown': [true, { ignorePseudoClasses: ['has'] }],
+        'selector-pseudo-element-no-unknown': [
+            true,
+            {
+                ignorePseudoElements: ['-webkit-scrollbar', '-webkit-scrollbar-thumb', '-webkit-scrollbar-track'],
+            },
+        ],
+        'property-no-vendor-prefix': null,
+        'value-no-vendor-prefix': null,
+        'no-descending-specificity': null,
+    },
+};
