@@ -69,19 +69,25 @@
 }
 
 @media (max-width: 768px) {
+    html, body {
+        overflow-x: hidden;
+        position: relative;
+        width: 100%;
+    }
+
     .hero {
         height: 100vh;
         min-height: 550px;
         padding: 0 1.5rem;
     }
     .hero__title {
-        font-size: 3.5rem;
+        font-size: 3.2rem;
         line-height: 1.1;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.2rem;
     }
     .hero__subtitle {
-        font-size: 1.4rem;
-        margin-bottom: 2rem;
+        font-size: 1.3rem;
+        margin-bottom: 1.8rem;
     }
     .btn--hero {
         font-size: 1.4rem;
@@ -90,15 +96,19 @@
     }
 
     .section-title {
-        font-size: 2.5rem;
-        margin-bottom: 3rem;
+        font-size: 2.2rem;
+        margin-bottom: 2rem;
         padding: 0 1rem;
+    }
+
+    .promo {
+        padding: 1.25rem var(--gutter-x);
     }
 
     .promo-card {
         grid-template-columns: 1fr;
         min-height: auto;
-        margin-bottom: 3rem;
+        margin-bottom: 1.5rem;
         border-radius: 24px;
         width: 100% !important;
         overflow: hidden;
@@ -107,7 +117,7 @@
     }
 
     .promo-card__image {
-        height: 260px;
+        height: 240px;
         width: 100%;
         object-fit: cover;
     }
@@ -118,22 +128,37 @@
         order: 0;
     }
     .promo-card__content {
-        padding: 2rem 1.2rem;
+        padding: 1.5rem 1.1rem;
         align-items: center;
         text-align: center;
     }
     .promo-card__title {
-        font-size: 1.8rem;
+        font-size: 1.6rem;
         line-height: 1.2;
         word-wrap: break-word;
     }
     .promo-card__title::after {
-        margin: 1rem auto 0;
+        margin: 0.8rem auto 0;
     }
     .promo-card__text {
-        font-size: 1.05rem;
-        line-height: 1.6;
-        margin-bottom: 2rem;
+        font-size: 1rem;
+        line-height: 1.5;
+        margin-bottom: 1.5rem;
+    }
+
+    .about-summary {
+        padding: 2.5rem var(--gutter-x);
+    }
+
+    .about-summary__text {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        padding: 1rem 0;
+    }
+
+    .about-summary__text::before,
+    .about-summary__text::after {
+        display: none;
     }
 
     .booking-hero {
