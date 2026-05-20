@@ -202,11 +202,11 @@ class PublicDataCache:
 
                     cal = i[5] if len(i) > 5 else ''
 
-                    img = i[7] if len(i) > 7 else ''
-                    comp = i[8] if len(i) > 8 else ''
-                    strn = i[9] if len(i) > 9 else 0
-                    swt = i[10] if len(i) > 10 else 0
-                    opts = i[11] if len(i) > 11 else []
+                    img = i[6] if len(i) > 6 else ''
+                    comp = i[7] if len(i) > 7 else ''
+                    strn = i[8] if len(i) > 8 else 0
+                    swt = i[9] if len(i) > 9 else 0
+                    opts = i[10] if len(i) > 10 else []
                     
                     category_norm = normalize_category(cat)
                     use_default = category_norm in [
