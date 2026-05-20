@@ -674,6 +674,13 @@ window.submitCheckout = function (method) {
         .then(r => r.json())
         .then(res => {
             if (res.status === 'ok') {
+                // Очищаємо кошик при успішному репеї (якщо він був ініційований з поточного сеансу)
+                cart_menu.length = 0;
+                cart_beans.length = 0;
+                localStorage.removeItem('cart_menu');
+                localStorage.removeItem('cart_beans');
+                updateCartBadge();
+
                 if (res.url) window.location.href = res.url;
                 else if (res.data && res.signature) {
                     const form = document.createElement('form');
@@ -738,16 +745,18 @@ window.submitCheckout = function (method) {
                     type: isBeans ? 'beans' : 'menu',
                 });
                 if (res.url) {
-                    cart_menu = [];
-                    cart_beans = [];
-                    saveCart();
+                    cart_menu.length = 0;
+                    cart_beans.length = 0;
+                    localStorage.removeItem('cart_menu');
+                    localStorage.removeItem('cart_beans');
                     updateCartBadge();
                     window.location.href = res.url;
                 }
                 else if (res.data && res.signature) {
-                    cart_menu = [];
-                    cart_beans = [];
-                    saveCart();
+                    cart_menu.length = 0;
+                    cart_beans.length = 0;
+                    localStorage.removeItem('cart_menu');
+                    localStorage.removeItem('cart_beans');
                     updateCartBadge();
 
                     const form = document.createElement('form');
@@ -758,9 +767,10 @@ window.submitCheckout = function (method) {
                     form.submit();
                 } else {
                     window.showToast('Замовлення прийнято! Дякуємо!', 'success');
-                    cart_menu = [];
-                    cart_beans = [];
-                    saveCart();
+                    cart_menu.length = 0;
+                    cart_beans.length = 0;
+                    localStorage.removeItem('cart_menu');
+                    localStorage.removeItem('cart_beans');
                     updateCartBadge();
                     window.closeCheckoutModal();
                 }
