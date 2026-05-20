@@ -138,14 +138,31 @@ class AdminDatabase:
         return bool(r)
 
     async def get_notification_targets(self, location_id: str) -> list:
-
         db = await get_db()
-
-        cur = db.admins.find({'is_on_shift': True, 'receive_notifications': True, 'locations': str(location_id)}, {'_id': 0, 'user_id': 1})
-
+        # Пошук адмінів:
+        # 1. Ті, хто на зміні і мають доступ до цієї локації або до всіх ([])
+        # 2. Або привілейовані ролі, які мають отримувати сповіщення завжди (якщо є доступ)
+        query = {
+            'receive_notifications': True,
+            '$or': [
+                {'is_on_shift': True, 'locations': str(location_id)},
+                {'is_on_shift': True, 'locations': []},
+                {'is_on_shift': True, 'locations': {'$exists': False}},
+                {'role': {'$in': ['boss', 'owner', 'developer', 'super']}, 'locations': str(location_id)},
+                {'role': {'$in': ['boss', 'owner', 'developer', 'super']}, 'locations': []}
+            ]
+        }
+        cur = db.admins.find(query, {'_id': 0, 'user_id': 1})
         rows = await cur.to_list(length=None)
-
-        return [int(r['user_id']) for r in rows or []]
+        targets = {int(r['user_id']) for r in rows or []}
+        
+        # Додаємо BOSS_IDS з конфігу про всяк випадок
+        for bid in BOSS_IDS:
+            if bid.strip():
+                try: targets.add(int(bid))
+                except: pass
+        
+        return list(targets)
 
     async def get_admins_basic(self) -> list:
 
