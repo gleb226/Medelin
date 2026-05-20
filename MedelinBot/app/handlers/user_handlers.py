@@ -537,92 +537,133 @@ async def menu_item(callback: CallbackQuery, state: FSMContext):
 
     text = '\n'.join(parts)
 
-    reply_markup = kb.get_item_actions_kb(item_id)
+    category_norm = category.lower().strip()
+    is_coffee_or_milk = any(c in category_norm for c in ['кава', 'мілк', 'матча', 'какао', 'декаф'])
+    
+    if is_coffee_or_milk:
+        # Отримуємо дефолтні опції якщо в базі порожньо
+        if not options:
+            from app.utils.data_cache import public_data_cache
+            # Ми можемо спробувати отримати з кешу або згенерувати
+            menu_data = public_data_cache.get('menu')
+            if menu_data:
+                for section in menu_data:
+                    if section['category'] == category:
+                        for it in section['items']:
+                            if it['id'] == item_id:
+                                options = it.get('options', [])
+                                break
+            
+            if not options:
+                # Fallback якщо кеш порожній
+                options = [
+                    {'type': 'caffeine', 'name': 'Стандарт', 'add_price': 0},
+                    {'type': 'caffeine', 'name': 'Декаф', 'add_price': 10},
+                    {'type': 'milk', 'name': 'Звичайне', 'add_price': 0}
+                ]
+
+        reply_markup = kb.get_item_options_kb(item_id, name, options)
+    else:
+        reply_markup = kb.get_item_actions_kb(item_id)
 
     if image_url:
-
         await callback.message.delete()
-
         await callback.message.answer_photo(photo=image_url, caption=text, reply_markup=reply_markup, parse_mode='HTML')
-
     else:
-
         await safe_edit_message(callback.message, text, reply_markup=reply_markup, parse_mode='HTML')
 
 @user_router.callback_query(F.data.startswith('opt_'))
-
 async def menu_toggle_option(callback: CallbackQuery, state: FSMContext):
-
     parts = callback.data.split('_')
-
     item_id = parts[1]
-
-    opt = parts[2]
+    opt_data = parts[2] # "type:name"
+    
+    opt_type, opt_name = opt_data.split(':', 1) if ':' in opt_data else ('addon', opt_data)
 
     data = await state.get_data()
-
     item_opts = data.get(f'opts_{item_id}', [])
 
-    if opt in item_opts:
-
-        item_opts.remove(opt)
-
+    # Обробка ексклюзивності для кофеїну та молока
+    if opt_type in ('caf', 'milk'):
+        # Видаляємо інші опції того ж типу
+        item_opts = [o for o in item_opts if not o.startswith(f"{opt_type}:")]
+        item_opts.append(f"{opt_type}:{opt_name}")
     else:
-
-        item_opts.append(opt)
+        # Для додатків (addons) - просто перемикаємо
+        full_opt = f"add:{opt_name}"
+        if full_opt in item_opts:
+            item_opts.remove(full_opt)
+        else:
+            item_opts.append(full_opt)
 
     await state.update_data({f'opts_{item_id}': item_opts})
-
-    await callback.message.edit_reply_markup(reply_markup=kb.get_item_options_kb(item_id, item_opts))
+    
+    # Отримуємо айтем знову щоб отримати його опції
+    row = await menu_db.get_item_by_id(item_id)
+    _, category, name, _, _, _, _, _, _, _, _, options = row
+    
+    if not options:
+        # Fallback на дефолтні
+        options = [
+            {'type': 'caffeine', 'name': 'Стандарт', 'add_price': 0},
+            {'type': 'caffeine', 'name': 'Декаф', 'add_price': 10},
+            {'type': 'milk', 'name': 'Звичайне', 'add_price': 0}
+        ]
+    
+    await callback.message.edit_reply_markup(reply_markup=kb.get_item_options_kb(item_id, name, options, item_opts))
 
 @user_router.callback_query(F.data.startswith('add_to_cart_'))
-
 async def menu_add_to_cart(callback: CallbackQuery, state: FSMContext):
-
     data = callback.data.split('_')
-
     item_id = data[3]
-
     row = await menu_db.get_item_by_id(item_id)
-
     if not row:
-
         await callback.answer('Не знайдено.')
-
         return
 
-    category = row[1]
-
-    name = clean_coffee_name(row[2])
-
-    black_coffee = ('еспресо', 'рістрето', 'американо', 'допіо')
-
-    is_black_coffee = any((x in name.lower() for x in black_coffee))
-
+    _, category, name, base_price, _, _, _, _, _, _, _, options = row
+    name = clean_coffee_name(name)
+    
     state_data = await state.get_data()
-
     item_opts = state_data.get(f'opts_{item_id}', [])
 
-    final_name = name
-
     options_desc = []
+    total_extra = 0
+    
+    for o_str in item_opts:
+        if ':' in o_str:
+            o_type, o_name = o_str.split(':', 1)
+            if (o_name == 'Стандарт' and o_type == 'caf') or (o_name == 'Звичайне' and o_type == 'milk'):
+                continue
+            options_desc.append(o_name)
+            
+            # Шукаємо ціну опції
+            if options:
+                for opt_obj in options:
+                    if opt_obj['name'] == o_name:
+                        total_extra += int(opt_obj.get('add_price') or 0)
+                        break
+            else:
+                # Hardcoded fallback prices
+                if o_name == 'Декаф': total_extra += 10
+                elif o_type == 'add': total_extra += 10
+        else:
+            # Старий формат (сумісність)
+            opt_map = {'decaf': 'декаф', 'honey': 'мед', 'addmilk': 'молоко'}
+            options_desc.append(opt_map.get(o_str, o_str))
+            total_extra += 10
 
-    opt_map = {'decaf': 'декаф', 'honey': 'мед', 'addmilk': 'молоко'}
-
-    for o in item_opts:
-
-        options_desc.append(opt_map.get(o, o))
-
+    final_name = name
     if options_desc:
-
         final_name += f" ({', '.join(options_desc)})"
 
+    # Додаємо ціну до імені для розрахунку в кошику
+    final_price = int(base_price) + total_extra
+    final_item_entry = f"{final_name} [{final_price}]"
+
     cart = list(state_data.get('cart', []))
-
-    cart.append(final_name)
-
+    cart.append(final_item_entry)
     await state.update_data(cart=cart)
-
     await state.update_data({f'opts_{item_id}': []})
 
     await callback.answer(f'Додано: {final_name}')

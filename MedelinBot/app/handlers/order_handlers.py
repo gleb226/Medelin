@@ -306,38 +306,35 @@ async def send_order_invoice(user, chat_id, state, bot):
         freq[i] = freq.get(i, 0) + 1
 
     for display_name, count in freq.items():
+        # Вилучаємо ціну якщо вона є в назві [ЦІНА]
+        pure_name = display_name
+        embedded_price = None
+        if ' [' in display_name and display_name.endswith(']'):
+            parts = display_name.rsplit(' [', 1)
+            pure_name = parts[0]
+            try:
+                embedded_price = int(parts[1].replace(']', ''))
+            except: pass
 
-        base_name = display_name.split(' (')[0]
-
+        base_name = pure_name.split(' (')[0]
         row = await menu_db.get_item_by_name(base_name)
-
         uah = _parse_menu_price(row)
 
-        if not uah:
-
+        if embedded_price is not None:
+            total_item_price = embedded_price * 100 * count
+        elif uah:
+            extra_price = 0
+            if '(' in pure_name:
+                opts_str = pure_name.split('(')[1].replace(')', '').lower()
+                opts_list = [o.strip() for o in opts_str.split(',')]
+                for opt in opts_list:
+                    if opt == 'декаф': extra_price += 10
+                    elif opt in ['мед', 'молоко']: extra_price += 10
+            total_item_price = (uah + extra_price) * 100 * count
+        else:
             continue
 
-        extra_price = 0
-
-        if '(' in display_name:
-
-            opts_str = display_name.split('(')[1].replace(')', '').lower()
-
-            opts_list = [o.strip() for o in opts_str.split(',')]
-
-            for opt in opts_list:
-
-                if opt == 'декаф':
-
-                    extra_price += 10
-
-                elif opt in ['мед', 'молоко']:
-
-                    extra_price += 10
-
-        total_item_price = (uah + extra_price) * 100 * count
-
-        prices.append(LabeledPrice(label=f'{display_name} x{count}', amount=total_item_price))
+        prices.append(LabeledPrice(label=f'{pure_name} x{count}', amount=total_item_price))
 
     if not prices:
 
@@ -356,20 +353,34 @@ async def send_order_invoice(user, chat_id, state, bot):
     cart_items_with_prices = []
     total_uah = 0
     for display_name in data['cart']:
-        base_name = display_name.split(' (')[0]
+        pure_name = display_name
+        embedded_price = None
+        if ' [' in display_name and display_name.endswith(']'):
+            parts = display_name.rsplit(' [', 1)
+            pure_name = parts[0]
+            try:
+                embedded_price = int(parts[1].replace(']', ''))
+            except: pass
+
+        if embedded_price is not None:
+            total_uah += embedded_price
+            cart_items_with_prices.append(f"- {pure_name} ({embedded_price} грн)")
+            continue
+
+        base_name = pure_name.split(' (')[0]
         row = await menu_db.get_item_by_name(base_name)
         uah = _parse_menu_price(row)
         if uah:
             extra = 0
-            if '(' in display_name:
-                opts = display_name.split('(')[1].replace(')', '').lower()
+            if '(' in pure_name:
+                opts = pure_name.split('(')[1].replace(')', '').lower()
                 for opt in [o.strip() for o in opts.split(',')]:
                     if opt in ['декаф', 'мед', 'молоко']: extra += 10
             item_total = uah + extra
             total_uah += item_total
-            cart_items_with_prices.append(f"- {display_name} ({item_total} грн)")
+            cart_items_with_prices.append(f"- {pure_name} ({item_total} грн)")
         else:
-            cart_items_with_prices.append(f"- {display_name}")
+            cart_items_with_prices.append(f"- {pure_name}")
 
     cart_s = '\n'.join(cart_items_with_prices).upper()
     time_info = data.get('pickup_time', 'ЗАРАЗ')

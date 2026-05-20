@@ -319,11 +319,18 @@ async def process_repay(req: RepayRequest):
                     d = await resp.json()
                     return {'status': 'ok', 'url': d['pageUrl'], 'provider': 'monobank'}
 
+    # Мапимо методи на типи оплати LiqPay
+    liqpay_paytypes = 'card,privat24' # default
+    if req.payment_method == 'googlepay': liqpay_paytypes = 'gpay'
+    elif req.payment_method == 'applepay': liqpay_paytypes = 'apay'
+    elif req.payment_method == 'privatpay': liqpay_paytypes = 'privat24'
+    elif req.payment_method == 'card': liqpay_paytypes = 'card,privat24,gpay,apay'
+
     liqpay_params = {
         'action': 'pay', 'amount': total, 'currency': 'UAH', 'description': f'Замовлення #{oid}',
         'order_id': oid, 'version': '3', 'public_key': LIQPAY_PUBLIC_KEY, 'result_url': WEB_APP_URL,
         'server_url': f"{WEB_APP_URL}/api/payments/liqpay-callback-raw",
-        'paytypes': 'apay,gpay,card,privat24' if req.payment_method == 'card' else req.payment_method
+        'paytypes': liqpay_paytypes
     }
     encoded = base64.b64encode(json.dumps(liqpay_params).encode()).decode()
     sig = base64.b64encode(hashlib.sha1((LIQPAY_PRIVATE_KEY + encoded + LIQPAY_PRIVATE_KEY).encode()).digest()).decode()
@@ -368,10 +375,19 @@ async def process_checkout(req: CheckoutRequest):
                     d = await resp.json()
                     return {'status': 'ok', 'url': d['pageUrl'], 'order_id': oid, 'provider': 'monobank'}
 
+    # Мапимо методи на типи оплати LiqPay
+    liqpay_paytypes = 'card,privat24'
+    method = data.get('payment_method')
+    if method == 'googlepay': liqpay_paytypes = 'gpay'
+    elif method == 'applepay': liqpay_paytypes = 'apay'
+    elif method == 'privatpay': liqpay_paytypes = 'privat24'
+    elif method == 'card': liqpay_paytypes = 'card,privat24,gpay,apay'
+
     liqpay_params = {
         'action': 'pay', 'amount': total, 'currency': 'UAH', 'description': f'Замовлення #{oid}',
         'order_id': str(oid), 'version': '3', 'public_key': LIQPAY_PUBLIC_KEY, 'result_url': WEB_APP_URL,
-        'server_url': f"{WEB_APP_URL}/api/payments/liqpay-callback-raw"
+        'server_url': f"{WEB_APP_URL}/api/payments/liqpay-callback-raw",
+        'paytypes': liqpay_paytypes
     }
     encoded = base64.b64encode(json.dumps(liqpay_params).encode()).decode()
     sig = base64.b64encode(hashlib.sha1((LIQPAY_PRIVATE_KEY + encoded + LIQPAY_PRIVATE_KEY).encode()).digest()).decode()

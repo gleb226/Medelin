@@ -106,42 +106,47 @@ class PublicDataCache:
         hidden_categories |= {normalize_category('До кави'), normalize_category('Декаф'), normalize_category('Молоко'), normalize_category('Додатки'), normalize_category('Сиропи')}
 
         categories = await menu_db.get_categories()
-
         addon_items: list[tuple[Any, ...]] = []
+        milk_items: list[tuple[Any, ...]] = []
 
         for cat in categories:
-
-            if normalize_category(cat) == 'до кави':
-
+            norm_cat = normalize_category(cat)
+            if norm_cat == 'до кави':
                 addon_items = await menu_db.get_items_by_category(cat)
-
-                break
+            elif norm_cat == 'молоко':
+                milk_items = await menu_db.get_items_by_category(cat)
 
         def build_default_coffee_options() -> list[dict[str, Any]]:
-
-            options: list[dict[str, Any]] = [{'type': 'caffeine', 'name': 'Стандарт', 'add_price': 0}, {'type': 'caffeine', 'name': 'Декаф', 'add_price': 0}, {'type': 'milk', 'name': 'Звичайне', 'add_price': 0}]
+            options: list[dict[str, Any]] = [
+                {'type': 'caffeine', 'name': 'Стандарт', 'add_price': 0},
+                {'type': 'caffeine', 'name': 'Декаф', 'add_price': 0},
+                {'type': 'milk', 'name': 'Звичайне', 'add_price': 0}
+            ]
+            
+            if milk_items:
+                for it in milk_items:
+                    name = (it[1] if len(it) > 1 else '') or ''
+                    price = it[2] if len(it) > 2 else 0
+                    if not name or name == 'Звичайне': continue
+                    options.append({'type': 'milk', 'name': name, 'add_price': int(price or 0)})
 
             if addon_items:
-
                 for it in addon_items:
-
                     name = (it[1] if len(it) > 1 else '') or ''
-
                     price = it[2] if len(it) > 2 else 0
-
-                    if not name:
-
-                        continue
-
+                    if not name: continue
                     if 'альтернатив' in name.casefold() and 'молок' in name.casefold():
-
                         continue
-
                     options.append({'type': 'addon', 'name': name, 'add_price': int(price or 0)})
-
             else:
-
-                options.extend([{'type': 'addon', 'name': 'Молоко 70мл', 'add_price': 10}, {'type': 'addon', 'name': 'Вершки 70мл', 'add_price': 10}, {'type': 'addon', 'name': 'Вершки порційні', 'add_price': 10}, {'type': 'addon', 'name': 'Мед', 'add_price': 10}, {'type': 'addon', 'name': 'Згущене молоко', 'add_price': 15}, {'type': 'addon', 'name': 'Карамель', 'add_price': 15}])
+                options.extend([
+                    {'type': 'addon', 'name': 'Молоко 70мл', 'add_price': 10},
+                    {'type': 'addon', 'name': 'Вершки 70мл', 'add_price': 10},
+                    {'type': 'addon', 'name': 'Вершки порційні', 'add_price': 10},
+                    {'type': 'addon', 'name': 'Мед', 'add_price': 10},
+                    {'type': 'addon', 'name': 'Згущене молоко', 'add_price': 15},
+                    {'type': 'addon', 'name': 'Карамель', 'add_price': 15}
+                ])
 
             seen: set[tuple[str, str]] = set()
 
@@ -198,10 +203,23 @@ class PublicDataCache:
                     strn = i[8] if len(i) > 8 else 0
 
                     swt = i[9] if len(i) > 9 else 0
-
                     opts = i[10] if len(i) > 10 else []
-
-                    formatted.append({'id': str(item_id), 'name': name or '', 'price': price or 0, 'description': desc or '', 'volume': vol or '', 'calories': cal or '', 'image_url': img or '', 'composition': comp or '', 'strength': strn or 0, 'sweetness': swt or 0, 'options': opts or default_coffee_options if normalize_category(cat) == normalize_category('Кава') else opts or []})
+                    
+                    category_norm = normalize_category(cat)
+                    use_default = category_norm in [
+                        normalize_category('Кава'),
+                        normalize_category('Мілк'),
+                        normalize_category('Матча'),
+                        normalize_category('Какао')
+                    ]
+                    
+                    formatted.append({
+                        'id': str(item_id), 'name': name or '', 'price': price or 0, 
+                        'description': desc or '', 'volume': vol or '', 'calories': cal or '', 
+                        'image_url': img or '', 'composition': comp or '', 
+                        'strength': strn or 0, 'sweetness': swt or 0, 
+                        'options': opts or default_coffee_options if use_default else opts or []
+                    })
 
                 except Exception as e:
 

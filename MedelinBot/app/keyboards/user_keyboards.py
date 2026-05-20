@@ -155,14 +155,52 @@ async def get_locations_kb():
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-def get_item_options_kb(item_id, current_options=None):
-
+def get_item_options_kb(item_id, item_name, options, current_options=None):
     current_options = current_options or []
+    keyboard = [[InlineKeyboardButton(text='✅ ДОДАТИ В КОШИК', callback_data=f'add_to_cart_{item_id}')]]
+    
+    # Сортуємо опції за типами
+    caffeine_opts = [o for o in options if o.get('type') == 'caffeine']
+    milk_opts = [o for o in options if o.get('type') == 'milk']
+    addon_opts = [o for o in options if o.get('type') == 'addon']
 
-    is_decaf = 'decaf' in current_options
+    if caffeine_opts:
+        row = []
+        for o in caffeine_opts:
+            name = o['name']
+            is_active = any(name in opt for opt in current_options) or (name == 'Стандарт' and not any(co['name'] in opt for co in caffeine_opts for opt in current_options))
+            # Для простоти, якщо нічого не обрано, Стандарт вважається обраним
+            prefix = '✅ ' if is_active else ''
+            row.append(InlineKeyboardButton(text=f"{prefix}{name}", callback_data=f"opt_{item_id}_caf:{name}"))
+        keyboard.append(row)
 
-    keyboard = [[InlineKeyboardButton(text='✅ ДОДАТИ В КОШИК', callback_data=f'add_to_cart_{item_id}')], [InlineKeyboardButton(text='🍃 ДЕКАФ (+10₴)' if not is_decaf else '✅ ДЕКАФ ОБРАНО', callback_data=f'opt_{item_id}_decaf')], [InlineKeyboardButton(text='🍯 МЕД (+10₴)', callback_data=f'opt_{item_id}_honey'), InlineKeyboardButton(text='🥛 МОЛОКО (+10₴)', callback_data=f'opt_{item_id}_addmilk')], [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data=f'item_{item_id}')]]
+    if milk_opts:
+        row = []
+        for o in milk_opts:
+            name = o['name']
+            is_active = any(name in opt for opt in current_options)
+            prefix = '✅ ' if is_active else ''
+            row.append(InlineKeyboardButton(text=f"{prefix}{name}", callback_data=f"opt_{item_id}_milk:{name}"))
+            if len(row) == 2:
+                keyboard.append(row)
+                row = []
+        if row: keyboard.append(row)
 
+    if addon_opts:
+        row = []
+        for o in addon_opts:
+            name = o['name']
+            price = o.get('add_price', 0)
+            is_active = any(name in opt for opt in current_options)
+            prefix = '✅ ' if is_active else ''
+            price_text = f" (+{price}₴)" if price > 0 else ""
+            row.append(InlineKeyboardButton(text=f"{prefix}{name}{price_text}", callback_data=f"opt_{item_id}_add:{name}"))
+            if len(row) == 2:
+                keyboard.append(row)
+                row = []
+        if row: keyboard.append(row)
+
+    keyboard.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data=f'item_{item_id}')])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 def get_categories_kb(categories, booking_mode=False, cart_count=0):
@@ -222,13 +260,18 @@ def get_categories_kb(categories, booking_mode=False, cart_count=0):
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 def get_items_kb(items, category, cart_count=0, booking_mode=False):
-
     keyboard = []
+    
+    # Фільтруємо "не стандартні" версії за назвою, якщо вони є окремими позиціями
+    filtered_items = []
+    for item in items:
+        name_lower = item[1].lower()
+        if 'подвій' in name_lower or 'double' in name_lower:
+            continue
+        filtered_items.append(item)
 
-    sorted_items = sorted(items, key=lambda x: x[1])
-
+    sorted_items = sorted(filtered_items, key=lambda x: x[1])
     row = []
-
     for item in sorted_items:
 
         btn_text = f'{truncate(item[1])} - {item[2]}'

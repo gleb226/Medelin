@@ -61,6 +61,7 @@ window.openItemPopup = function (item, category) {
 
         const options = Array.isArray(item?.options) ? item.options : [];
         const caffeineOpts = options.filter((o) => o?.type === 'caffeine');
+        const milkOpts = options.filter((o) => o?.type === 'milk');
         const addonOpts = options.filter((o) => o?.type === 'addon');
 
         const infoChips = [
@@ -79,13 +80,22 @@ window.openItemPopup = function (item, category) {
         };
 
         const optionsHtml = (() => {
-            if (!caffeineOpts.length && !addonOpts.length) return '';
+            if (!caffeineOpts.length && !milkOpts.length && !addonOpts.length) return '';
             const caffeineBlock = caffeineOpts.length
                 ? `
                     <div class="popup__info-chip popup__info-chip--grid-1">
                         <strong><i class="fas fa-mug-hot"></i> Кофеїн</strong>
                         <div class="choice-grid" style="margin-top:10px;">
                             ${caffeineOpts.map((o, i) => makeOptionChip(o, 'caffeine', i === 0)).join('')}
+                        </div>
+                    </div>`
+                : '';
+            const milkBlock = milkOpts.length
+                ? `
+                    <div class="popup__info-chip popup__info-chip--grid-1">
+                        <strong><i class="fas fa-filter"></i> Молоко</strong>
+                        <div class="choice-grid" style="margin-top:10px;">
+                            ${milkOpts.map((o, i) => makeOptionChip(o, 'milk', i === 0)).join('')}
                         </div>
                     </div>`
                 : '';
@@ -98,7 +108,7 @@ window.openItemPopup = function (item, category) {
                         </div>
                     </div>`
                 : '';
-            return `<div class="popup__info-list" style="display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:18px;">${caffeineBlock}${addonsBlock}</div>`;
+            return `<div class="popup__info-list" style="display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:18px;">${caffeineBlock}${milkBlock}${addonsBlock}</div>`;
         })();
 
         const desc = item?.description ? String(item.description) : '';
@@ -141,8 +151,8 @@ window.openItemPopup = function (item, category) {
             optionButtons.forEach((btn) => {
                 btn.addEventListener('click', () => {
                     const t = btn.getAttribute('data-opt-type');
-                    if (t === 'caffeine') {
-                        popupBody.querySelectorAll('.choice-chip[data-opt-type=\"caffeine\"]').forEach((x) => x.classList.remove('is-active'));
+                    if (t === 'caffeine' || t === 'milk') {
+                        popupBody.querySelectorAll(`.choice-chip[data-opt-type="${t}"]`).forEach((x) => x.classList.remove('is-active'));
                         btn.classList.add('is-active');
                     } else {
                         btn.classList.toggle('is-active');
