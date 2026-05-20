@@ -320,7 +320,12 @@ async def start_shift(message: Message, state: FSMContext):
     
     loc_ids = await admin_db.get_locations_for_admin(message.from_user.id)
     if not loc_ids:
-        await message.answer('❌ <b>Помилка:</b> Ви не закріплені за жодною локацією. Зверніться до власника.', parse_mode='HTML')
+        # Якщо список порожній, це означає "Усі заклади"
+        all_locs = await location_db.get_all_locations()
+        loc_ids = [str(loc['_id']) for loc in all_locs]
+        
+    if not loc_ids:
+        await message.answer('❌ В системі немає жодного закладу.', parse_mode='HTML')
         return
         
     if len(loc_ids) == 1:
