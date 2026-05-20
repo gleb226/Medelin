@@ -239,8 +239,14 @@ async def notify_admins_about_order(order_id: str):
             msg += f'📦 Тип: З собою\n'
 
     msg += f'💰 Сума: <b>{total} грн</b>\n'
-    msg += f"💳 Оплата: Онлайн (Сплачено)\n\n"
-    msg += f'🛒 Кошик:\n{items_text}'
+    msg += f"💳 Оплата: Онлайн (Сплачено)\n"
+    
+    wishes = order.get('wishes', '')
+    clean_wishes = wishes.replace(f"TG: {tg_nick}", "").replace("TG: ", "").replace("МЕНЮ", "").strip()
+    if clean_wishes:
+        msg += f"💬 Побажання: {clean_wishes}\n"
+        
+    msg += f"\n🛒 Кошик:\n{items_text}"
 
     await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id if loc_id != 'web' else None)
     if BOSS_IDS:
@@ -350,15 +356,23 @@ async def process_checkout(req: CheckoutRequest):
     payment_mode = user.get('payment_mode') or 'pay_now'
     order_type = user.get('delivery_type') or ('takeaway' if user.get('type') == 'takeaway' else 'in_house')
 
+    comment = user.get('comment', '').strip()
+    wishes_str = f'TG: {tg_nick}'
+    if comment:
+        wishes_str += f'\nКоментар: {comment}'
+
     oid = await orders_db.add_order(
         user_id=None, username=tg_nick, fullname=user.get('name', '—'), phone=phone,
-        location_id=loc_id, date_time='Сьогодні', people_count='1', wishes=f'TG: {tg_nick}',
+        location_id=loc_id, date_time='Сьогодні', people_count='1', wishes=wishes_str,
         cart=items_text, order_type=order_type, payment_mode=payment_mode,
         table_number=user.get('table_number', ''), total_amount=total
     )
 
     if payment_mode == 'pay_at_checkout':
-        msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ (#{oid})</b>\n\n👤 {user.get("name")}\n📞 {phone}\n💰 {total} грн\n💳 Оплата на касі\n\n🛒 {items_text}'
+        msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ (#{oid})</b>\n\n👤 {user.get("name")}\n📞 {phone}\n💰 {total} грн\n💳 Оплата на касі'
+        if comment:
+            msg += f'\n💬 Коментар: {comment}'
+        msg += f'\n\n🛒 {items_text}'
         await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id if loc_id != 'web' else None)
         return {'status': 'ok', 'manual': True, 'order_id': oid}
 

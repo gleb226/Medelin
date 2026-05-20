@@ -401,6 +401,10 @@ window.openCheckoutModal = function () {
                             <label class="form-label">Telegram (@username) — опційно</label>
                             <input type="text" name="tg" placeholder="Telegram (@username) — опційно" value="${userData.tg || ''}">
                         </div>
+                        <div class="form-group">
+                            <label class="form-label">Побажання чи уточнення — опційно</label>
+                            <textarea name="comment" placeholder="Ваші побажання до замовлення..." rows="2" style="width: 100%; border: 1px solid var(--gray-border, #e2e8f0); border-radius: var(--radius-sm, 0.375rem); padding: 0.75rem; font-family: inherit; font-size: 1rem; resize: vertical;"></textarea>
+                        </div>
 
                         ${
                             isBeans
@@ -715,6 +719,7 @@ window.submitCheckout = function (method) {
             name: fd.get('name'),
             phone: fd.get('phone'),
             tg: fd.get('tg'),
+            comment: fd.get('comment'),
             location: fd.get('location'),
             type: fd.get('type'),
             table_number: fd.get('table_number'),

@@ -68,9 +68,8 @@ class OrderStates(StatesGroup):
     choosing_location = State()
 
     entering_table_number = State()
-
     entering_pickup_time = State()
-
+    entering_wishes = State()
     entering_phone = State()
 
 @order_router.callback_query(F.data == 'checkout_order')
@@ -165,13 +164,7 @@ async def order_loc_chosen(callback: CallbackQuery, state: FSMContext, bot: Bot)
 
         await state.update_data(pickup_time='ПО ГОТОВНОСТІ')
 
-        async def _send_invoice_quick():
-
-            await send_order_invoice(callback.from_user, callback.message.chat.id, state, bot)
-
-        if not await _ensure_phone_and_run(callback, state, callback.from_user, _send_invoice_quick):
-
-            return
+        await ask_wishes_order(callback, state)
 
 @order_router.callback_query(F.data.startswith('pickup_time_'))
 
@@ -181,13 +174,7 @@ async def order_pickup_time_chosen(callback: CallbackQuery, state: FSMContext, b
 
     await state.update_data(pickup_time=time_str)
 
-    async def _send_invoice_quick():
-
-        await send_order_invoice(callback.from_user, callback.message.chat.id, state, bot)
-
-    if not await _ensure_phone_and_run(callback, state, callback.from_user, _send_invoice_quick):
-
-        return
+    await ask_wishes_order(callback, state)
 
 @order_router.message(OrderStates.entering_table_number)
 
@@ -211,13 +198,7 @@ async def order_table_entered(message: Message, state: FSMContext, bot: Bot):
 
     await state.update_data(table_number=val)
 
-    async def _finalize_table_order():
-
-        await process_order_final(message.from_user, message.chat.id, state, bot)
-
-    if not await _ensure_phone_and_run(message, state, message.from_user, _finalize_table_order):
-
-        return
+    await ask_wishes_order(message, state)
 
 async def ask_phone_order(target, state: FSMContext):
 
@@ -232,6 +213,30 @@ async def ask_phone_order(target, state: FSMContext):
         await target.answer(text, parse_mode='HTML')
 
     await state.set_state(OrderStates.entering_phone)
+
+async def ask_wishes_order(target, state: FSMContext):
+    text = '💬 <b>ПОБАЖАННЯ АБО УТОЧНЕННЯ ДО ЗАМОВЛЕННЯ (або "ні"):</b>'
+    if isinstance(target, CallbackQuery):
+        await target.message.answer(text, parse_mode='HTML')
+    else:
+        await target.answer(text, parse_mode='HTML')
+    await state.set_state(OrderStates.entering_wishes)
+
+@order_router.message(OrderStates.entering_wishes)
+async def order_wishes_entered(message: Message, state: FSMContext, bot: Bot):
+    wishes_raw = (message.text or '').strip()
+    wishes = '' if wishes_raw.lower() in ('ні', 'нет', 'no', '-', '—') else wishes_raw
+    await state.update_data(wishes=wishes)
+    
+    async def _next_step():
+        data = await state.get_data()
+        if data.get('order_type') == 'in_house':
+            await process_order_final(message.from_user, message.chat.id, state, bot)
+        else:
+            await send_order_invoice(message.from_user, message.chat.id, state, bot)
+            
+    if not await _ensure_phone_and_run(message, state, message.from_user, _next_step):
+        return
 
 async def _ensure_phone_and_run(target, state: FSMContext, user, action):
 
@@ -511,8 +516,13 @@ async def process_beans_final(user, chat_id, state, bot):
     time_info = 'НОВА ПОШТА' if is_np else 'БРОНЬ 2 ДНІ'
 
     order_type = 'beans_delivery' if is_np else 'beans_booking'
+    
+    wishes = data.get('wishes', '')
+    wishes_str = f"ВАГА: {data['weight']}г | {np_info}"
+    if wishes:
+        wishes_str += f"\nПОБАЖАННЯ: {wishes}"
 
-    rid = await orders_db.add_order(user.id, user.username, user.full_name, data['phone'], loc_id or "NP", time_info, '0', f"ВАГА: {data['weight']}г | {np_info}", f"ЗЕРНА: {data['bean_name']}", order_type)
+    rid = await orders_db.add_order(user.id, user.username, user.full_name, data['phone'], loc_id or "NP", time_info, '0', wishes_str, f"ЗЕРНА: {data['bean_name']}", order_type)
 
     await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
 
@@ -528,7 +538,10 @@ async def process_beans_final(user, chat_id, state, bot):
 
         loc_name = loc['name'] if loc else '—'
 
-    msg = f"🌟 <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data['phone']}</code>\n🏛 <b>ОТРИМАННЯ:</b> {loc_name}\n🚚 <b>ТИП:</b> {np_info}\n☕️ <b>СОРТ:</b> {data['bean_name']} ({data['weight']}г)\n💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
+    msg = f"🌟 <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data['phone']}</code>\n🏛 <b>ОТРИМАННЯ:</b> {loc_name}\n🚚 <b>ТИП:</b> {np_info}\n☕️ <b>СОРТ:</b> {data['bean_name']} ({data['weight']}г)"
+    if wishes:
+        msg += f"\n💬 <b>ПОБАЖАННЯ:</b> {wishes}"
+    msg += f"\n💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
 
     targets = set()
 
@@ -578,7 +591,10 @@ async def process_order_final(user, chat_id, state, bot):
 
     time_info = data.get('pickup_time', 'ЗАРАЗ')
 
-    rid = await orders_db.add_order(user.id, user.username, user.full_name, data['phone'], loc_id, time_info, '0', 'МЕНЮ', cart_s, data.get('order_type', 'order'), data.get('table_number', ''))
+    wishes_val = data.get('wishes')
+    wishes_str = f"МЕНЮ. {wishes_val}" if wishes_val else "МЕНЮ"
+
+    rid = await orders_db.add_order(user.id, user.username, user.full_name, data['phone'], loc_id, time_info, '0', wishes_str, cart_s, data.get('order_type', 'order'), data.get('table_number', ''))
 
     if not is_house:
 
@@ -594,7 +610,10 @@ async def process_order_final(user, chat_id, state, bot):
 
     t_line = f"🪑 <b>СТОЛИК:</b> {data.get('table_number')}\n" if is_house else f'🕒 <b>ЧАС:</b> {time_info}\n'
 
-    msg = f"🔔 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data['phone']}</code>\n🏛 <b>ЗАКЛАД:</b> {loc_name}\n{t_line}🥘 <b>ПОЗИЦІЇ:</b> {cart_s}\n{p_stat}"
+    msg = f"🔔 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data['phone']}</code>\n🏛 <b>ЗАКЛАД:</b> {loc_name}\n{t_line}🥘 <b>ПОЗИЦІЇ:</b> {cart_s}"
+    if wishes_val:
+        msg += f"\n💬 <b>ПОБАЖАННЯ:</b> {wishes_val}"
+    msg += f"\n{p_stat}"
 
     targets = await admin_db.get_notification_targets(loc_id)
 

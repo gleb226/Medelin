@@ -80,7 +80,7 @@ class CoffeeBeanStates(StatesGroup):
     entering_np_city = State()
 
     entering_np_warehouse = State()
-
+    entering_wishes = State()
     entering_phone = State()
 
 @user_router.message(F.text == '🏠 НА ГОЛОВНУ')
@@ -1313,19 +1313,7 @@ async def beans_np_warehouse_selected(callback: CallbackQuery, state: FSMContext
 
     await state.update_data(np_warehouse=warehouse_name)
 
-    phone = await user_db.get_phone(callback.from_user.id)
-
-    if phone:
-
-        await state.update_data(phone=phone)
-
-        await send_beans_invoice(callback.from_user, callback.message.chat.id, state, bot)
-
-        return
-
-    await callback.message.answer('☎️ <b>ВКАЖІТЬ ВАШ ТЕЛЕФОН:</b>\n\nНатисніть кнопку нижче або введіть вручну (+380...):', reply_markup=kb.get_phone_kb(), parse_mode='HTML')
-
-    await state.set_state(CoffeeBeanStates.entering_phone)
+    await ask_wishes_beans(callback, state)
 
 @user_router.message(CoffeeBeanStates.entering_np_warehouse)
 
@@ -1335,19 +1323,7 @@ async def beans_np_warehouse_text(message: Message, state: FSMContext, bot: Bot)
 
     await state.update_data(np_warehouse=warehouse)
 
-    phone = await user_db.get_phone(message.from_user.id)
-
-    if phone:
-
-        await state.update_data(phone=phone)
-
-        await send_beans_invoice(message.from_user, message.chat.id, state, bot)
-
-        return
-
-    await message.answer('☎️ <b>ВКАЖІТЬ ВАШ ТЕЛЕФОН:</b>\n\nНатисніть кнопку нижче або введіть вручну (+380...):', reply_markup=kb.get_phone_kb(), parse_mode='HTML')
-
-    await state.set_state(CoffeeBeanStates.entering_phone)
+    await ask_wishes_beans(message, state)
 
 @user_router.callback_query(F.data.startswith('loc_'), CoffeeBeanStates.choosing_location)
 
@@ -1357,19 +1333,7 @@ async def beans_location(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
     await state.update_data(location_id=loc_id)
 
-    phone = await user_db.get_phone(callback.from_user.id)
-
-    if phone:
-
-        await state.update_data(phone=phone)
-
-        await send_beans_invoice(callback.from_user, callback.message.chat.id, state, bot)
-
-        return
-
-    await callback.message.answer('☎️ <b>ВКАЖІТЬ ВАШ ТЕЛЕФОН:</b>\n\nНатисніть кнопку нижче або введіть вручну (+380...):', reply_markup=kb.get_phone_kb(), parse_mode='HTML')
-
-    await state.set_state(CoffeeBeanStates.entering_phone)
+    await ask_wishes_beans(callback, state)
 
 @user_router.message(CoffeeBeanStates.entering_phone)
 
@@ -1398,6 +1362,29 @@ async def beans_phone(message: Message, state: FSMContext, bot: Bot):
     await message.answer('✅ Телефон збережено.', reply_markup=kb.get_main_menu(is_admin))
 
     await send_beans_invoice(message.from_user, message.chat.id, state, bot)
+
+async def ask_wishes_beans(target, state: FSMContext):
+    text = '💬 <b>ПОБАЖАННЯ АБО УТОЧНЕННЯ ДО ЗАМОВЛЕННЯ (або "ні"):</b>'
+    if isinstance(target, CallbackQuery):
+        await target.message.answer(text, parse_mode='HTML')
+    else:
+        await target.answer(text, parse_mode='HTML')
+    await state.set_state(CoffeeBeanStates.entering_wishes)
+
+@user_router.message(CoffeeBeanStates.entering_wishes)
+async def beans_wishes_entered(message: Message, state: FSMContext, bot: Bot):
+    wishes_raw = (message.text or '').strip()
+    wishes = '' if wishes_raw.lower() in ('ні', 'нет', 'no', '-', '—') else wishes_raw
+    await state.update_data(wishes=wishes)
+    
+    phone = await user_db.get_phone(message.from_user.id)
+    if phone:
+        await state.update_data(phone=phone)
+        await send_beans_invoice(message.from_user, message.chat.id, state, bot)
+        return
+
+    await message.answer('☎️ <b>ВКАЖІТЬ ВАШ ТЕЛЕФОН:</b>\n\nНатисніть кнопку нижче або введіть вручну (+380...):', reply_markup=kb.get_phone_kb(), parse_mode='HTML')
+    await state.set_state(CoffeeBeanStates.entering_phone)
 
 @user_router.callback_query(F.data == 'back_main_menu_only')
 
