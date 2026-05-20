@@ -758,8 +758,8 @@ window.submitCheckout = function (method) {
                     form.submit();
                 } else {
                     window.showToast('Замовлення прийнято! Дякуємо!', 'success');
-                    if (isBeans) cart_beans = [];
-                    else cart_menu = [];
+                    cart_menu = [];
+                    cart_beans = [];
                     saveCart();
                     updateCartBadge();
                     window.closeCheckoutModal();
