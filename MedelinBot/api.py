@@ -387,6 +387,7 @@ async def process_checkout(req: CheckoutRequest):
             'validity': 3600,
             'paymentMethods': methods_map.get(payment_method, [])
         }
+        
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(mono_url, json=payload, headers=headers, timeout=15) as resp:
@@ -394,10 +395,20 @@ async def process_checkout(req: CheckoutRequest):
                     if resp.status == 200:
                         return {'status': 'ok', 'url': resp_data['pageUrl'], 'order_id': oid, 'provider': 'monobank'}
                     else:
-                        # Якщо Монобанк повернув помилку, спробуємо LiqPay як запасний варіант
-                        pass
-        except Exception:
-            # Якщо Монобанк недоступний, йдемо далі до LiqPay
+                        # Якщо помилка (наприклад, через фільтрацію методів), спробуємо без неї
+                        if 'paymentMethods' in payload:
+                            del payload['paymentMethods']
+                            async with session.post(mono_url, json=payload, headers=headers, timeout=15) as resp2:
+                                resp_data2 = await resp2.json()
+                                if resp2.status == 200:
+                                    return {'status': 'ok', 'url': resp_data2['pageUrl'], 'order_id': oid, 'provider': 'monobank'}
+                        
+                        # Якщо все одно помилка, не йдемо в LiqPay, а показуємо помилку Монобанку
+                        raise HTTPException(status_code=resp.status, detail=f"Monobank API Error: {resp_data.get('errText', 'Unknown')}")
+        except Exception as e:
+            if isinstance(e, HTTPException):
+                raise e
+            # Тільки при помилці зв'язку (Network error/Timeout) йдемо в LiqPay як запасний
             pass
 
     # LiqPay використовується для PrivatPay або як запасний варіант
