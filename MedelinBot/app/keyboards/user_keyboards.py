@@ -456,6 +456,8 @@ async def get_contact_kb():
 
         keyboard.append([InlineKeyboardButton(text=s['name'].upper(), url=s['url'])])
 
+    keyboard.append([InlineKeyboardButton(text='💬 ЗВ\'ЯЗАТИСЯ З НАМИ', callback_data='contact_us_msg')])
+
     keyboard.append([InlineKeyboardButton(text='📞 ТЕЛЕФОН', callback_data='contact_phone')])
 
     keyboard.append([InlineKeyboardButton(text='✉️ EMAIL', callback_data='contact_email')])

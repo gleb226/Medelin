@@ -528,9 +528,7 @@ async def process_beans_final(user, chat_id, state, bot):
 
     await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
 
-    if not is_np:
-
-        await active_orders_db.add_active_order(rid, user.id, user.full_name, data['phone'], loc_id, data['bean_name'], 'beans_booking')
+    await active_orders_db.add_active_order(rid, user.id, user.full_name, data['phone'], loc_id or "NP", data['bean_name'], order_type)
 
     loc_name = "НОВА ПОШТА"
 

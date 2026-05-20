@@ -177,8 +177,13 @@ def get_locations_selection_kb(all_locations, selected_ids: list, is_all: bool =
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_booking_manage_kb(booking_id, user_id=None):
-
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='✅ ПІДТВЕРДИТИ', callback_data=f'adm2_confirm_{booking_id}'), InlineKeyboardButton(text='❌ ВІДХИЛИТИ', callback_data=f'adm2_cancel_{booking_id}')]])
+    buttons = [
+        [InlineKeyboardButton(text='✅ ПІДТВЕРДИТИ', callback_data=f'adm2_confirm_{booking_id}'),
+         InlineKeyboardButton(text='❌ ВІДХИЛИТИ', callback_data=f'adm2_cancel_{booking_id}')]
+    ]
+    uid_str = str(user_id) if user_id is not None else "none"
+    buttons.append([InlineKeyboardButton(text='💬 НАПИСАТИ ГОСТЮ', callback_data=f'adm_msg_{uid_str}_{booking_id}')])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_admins_to_remove_kb(admins):
 

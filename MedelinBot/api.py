@@ -223,7 +223,7 @@ async def notify_admins_about_order(order_id: str):
             location_name = loc.get('name', 'Замовлення з сайту')
             break
 
-    msg = f'✅ <b>ОПЛАЧЕНЕ ЗАМОВЛЕННЯ (#{oid})</b>\n\n'
+    msg = f'✅ <b>ОПЛАЧЕНЕ ЗАМОВЛЕННЯ</b>\n\n'
     msg += f"👤 Клієнт: {fullname}\n"
     msg += f'📞 Телефон: <code>{phone}</code>\n'
     if tg_nick:
@@ -373,7 +373,7 @@ async def process_checkout(req: CheckoutRequest):
     )
 
     if payment_mode == 'pay_at_checkout':
-        msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ (#{oid})</b>\n\n👤 {user.get("name")}\n📞 {phone}\n💰 {total} грн\n💳 Оплата на касі'
+        msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 {user.get("name")}\n📞 {phone}\n💰 {total} грн\n💳 Оплата на касі'
         
         if order_type == 'nova_poshta':
             msg += f'\n🚚 Доставка: <b>Нова Пошта</b>'

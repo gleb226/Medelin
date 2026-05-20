@@ -1413,3 +1413,74 @@ async def back_to_main(message: Message, state: FSMContext):
     is_admin = await admin_db.is_admin(message.from_user.id)
 
     await message.answer('☕️ <b>ГОЛОВНЕ МЕНЮ</b>', reply_markup=kb.get_main_menu(is_admin), parse_mode='HTML')
+
+class GuestStates(StatesGroup):
+    contacting_us = State()
+    replying_to_admin = State()
+
+@user_router.callback_query(F.data == 'contact_us_msg')
+async def contact_us_start(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(GuestStates.contacting_us)
+    from app.utils.message_utils import safe_edit_message
+    await safe_edit_message(callback.message, '📝 <b>ЗВ\'ЯЗОК З АДМІНІСТРАЦІЄЮ</b>\n\nВведіть ваше повідомлення або запитання нижче:', parse_mode='HTML')
+
+@user_router.message(GuestStates.contacting_us)
+async def contact_us_send(message: Message, state: FSMContext, bot: Bot):
+    await state.clear()
+    msg_text = message.text
+    user_name = message.from_user.full_name
+    uid = message.from_user.id
+    username = message.from_user.username
+    user_link = f'@{username}' if username else f'<a href="tg://user?id={uid}">{user_name}</a>'
+    
+    from app.databases.mongo_client import get_db
+    db = await get_db()
+    cur = db.admins.find({'role': {'$in': ['super', 'boss', 'owner', 'developer']}})
+    rows = await cur.to_list(length=None)
+    targets = {int(r['user_id']) for r in rows}
+    
+    admin_msg = f'📩 <b>НОВЕ ПОВІДОМЛЕННЯ ВІД КОРИСТУВАЧА</b>\n\n👤 Від: {user_link}\n💬 <b>Текст:</b>\n{msg_text}'
+    
+    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='💬 ВІДПОВІСТИ', callback_data=f'adm_msg_{uid}_none')]])
+    
+    for aid in targets:
+        try:
+            await bot.send_message(aid, admin_msg, parse_mode='HTML', reply_markup=markup)
+        except: pass
+        
+    is_admin = await admin_db.is_admin(uid)
+    await message.answer('✅ <b>Ваше повідомлення надіслано!</b> Адміністратор відповість вам найближчим часом.', parse_mode='HTML', reply_markup=kb.get_main_menu(is_admin))
+
+@user_router.callback_query(F.data.startswith('guest_reply_to_admin_'))
+async def guest_reply_start(callback: CallbackQuery, state: FSMContext):
+    parts = callback.data.split('_')
+    # guest_reply_to_admin_{admin_id}_{oid}
+    admin_id = parts[4]
+    oid = parts[5]
+    await state.update_data(reply_admin_id=admin_id, reply_oid=oid)
+    await state.set_state(GuestStates.replying_to_admin)
+    await callback.message.answer('📝 Введіть текст вашої відповіді:')
+    await callback.answer()
+
+@user_router.message(GuestStates.replying_to_admin)
+async def guest_reply_send(message: Message, state: FSMContext, bot: Bot):
+    data = await state.get_data()
+    admin_id = data.get('reply_admin_id')
+    oid = data.get('reply_oid')
+    await state.clear()
+    
+    user_name = message.from_user.full_name
+    uid = message.from_user.id
+    username = message.from_user.username
+    user_link = f'@{username}' if username else f'<a href="tg://user?id={uid}">{user_name}</a>'
+    
+    order_info = f" (Замовлення #{oid[-6:] if oid != 'none' else '—'})" if oid != 'none' else ""
+    admin_msg = f'📩 <b>ВІДПОВІДЬ ВІД КОРИСТУВАЧА</b>{order_info}\n\n👤 Від: {user_link}\n💬 <b>Текст:</b>\n{message.text}'
+    
+    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='💬 ВІДПОВІСТИ', callback_data=f'adm_msg_{uid}_{oid}')]])
+    
+    try:
+        await bot.send_message(int(admin_id), admin_msg, parse_mode='HTML', reply_markup=markup)
+        await message.answer('✅ Відповідь надіслано.')
+    except:
+        await message.answer('❌ Не вдалося надіслати відповідь.')

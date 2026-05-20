@@ -392,9 +392,9 @@ async def show_new_bookings(message: Message, state: FSMContext):
     if role in ('super', 'boss', 'owner', 'developer'):
         bookings = await orders_db.get_new_orders()
     elif role == 'delivery_manager':
-        # Delivery manager sees only Nova Poshta orders
+        # Delivery manager sees orders with specific types or location
         all_orders = await orders_db.get_new_orders()
-        bookings = [o for o in all_orders if o.get('order_type') == 'nova_poshta']
+        bookings = [o for o in all_orders if o.get('order_type') in ('nova_poshta', 'beans_delivery') or o.get('location_id') == 'NP']
     else:
         shift_loc = await admin_db.is_on_shift(message.from_user.id)
         if isinstance(shift_loc, str) and shift_loc not in ("True", "1", "False", "0"):
@@ -688,7 +688,7 @@ async def cancel_order_cb(callback: CallbackQuery, bot: Bot):
 
     from app.utils.message_utils import fade_out_message
 
-    await fade_out_message(callback.message, f'❌ <b>ВІДХИЛЕНО #{oid[-6:]}</b>')
+    await fade_out_message(callback.message, '❌ <b>ВІДХИЛЕНО</b>')
 
     await callback.answer('Відхилено.')
 
@@ -728,7 +728,7 @@ async def admin_msg_send(message: Message, state: FSMContext, bot: Bot):
 
     if order:
 
-        res = await deliver_guest_message(bot, order, text_html, message.text, reply_callback_data=f'adm_msg_{message.from_user.id}_{oid}')
+        res = await deliver_guest_message(bot, order, text_html, message.text, reply_callback_data=f'guest_reply_to_admin_{message.from_user.id}_{oid}')
 
         if res == 'telegram': await message.answer('✅ Надіслано в Telegram.')
 
@@ -739,8 +739,9 @@ async def admin_msg_send(message: Message, state: FSMContext, bot: Bot):
     elif uid and uid != 'none' and uid != 'None':
 
         try:
-
-            await bot.send_message(int(uid), text_html, parse_mode='HTML')
+            # If the admin replies to a super chat message without an order (oid == none), send it back with a guest_reply_to_admin callback
+            markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='💬 ВІДПОВІСТИ', callback_data=f'guest_reply_to_admin_{message.from_user.id}_none')]])
+            await bot.send_message(int(uid), text_html, parse_mode='HTML', reply_markup=markup)
 
             await message.answer('✅ Надіслано в Telegram.')
 
