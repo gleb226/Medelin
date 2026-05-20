@@ -28,12 +28,12 @@
     }
 
     .mobile-menu__toggle {
-        width: 3.2rem;
-        height: 3.2rem;
+        width: 3.8rem;
+        height: 3.8rem;
         border-radius: 999px;
         border: 2px solid rgba(247, 243, 233, 0.9);
         background: rgba(60, 47, 47, 0.92);
-        box-shadow: 0 1.1rem 2.6rem rgba(0, 0, 0, 0.28);
+        box-shadow: 0 1.2rem 3rem rgba(0, 0, 0, 0.35);
         cursor: pointer;
         display: grid;
         place-items: center;
@@ -42,12 +42,12 @@
 
     .mobile-menu__toggle:hover {
         transform: translateY(-1px);
-        box-shadow: 0 1.35rem 3.1rem rgba(0, 0, 0, 0.32);
+        box-shadow: 0 1.4rem 3.5rem rgba(0, 0, 0, 0.4);
     }
 
     .mobile-menu__icon {
-        width: 1.35rem;
-        height: 0.95rem;
+        width: 1.6rem;
+        height: 1.1rem;
         position: relative;
         display: block;
         color: rgba(247, 243, 233, 0.96);
@@ -87,12 +87,12 @@
     }
 
     .mobile-menu__toggle[aria-expanded='true'] .mobile-menu__icon::before {
-        top: 0.42rem;
+        top: 0.5rem;
         transform: rotate(45deg);
     }
 
     .mobile-menu__toggle[aria-expanded='true'] .mobile-menu__icon::after {
-        bottom: 0.42rem;
+        bottom: 0.5rem;
         transform: rotate(-45deg);
     }
 
