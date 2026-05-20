@@ -15,19 +15,19 @@ class AdminDatabase:
 
         return
 
-    async def set_shift_status(self, user_id: int, status: bool):
+    async def set_shift_status(self, user_id: int, status):
 
         db = await get_db()
 
-        await db.admins.update_one({'user_id': int(user_id)}, {'$set': {'is_on_shift': bool(status)}})
+        await db.admins.update_one({'user_id': int(user_id)}, {'$set': {'is_on_shift': status}})
 
-    async def is_on_shift(self, user_id: int) -> bool:
+    async def is_on_shift(self, user_id: int):
 
         db = await get_db()
 
         r = await db.admins.find_one({'user_id': int(user_id)}, {'_id': 0, 'is_on_shift': 1})
 
-        return bool(r and r.get('is_on_shift'))
+        return (r or {}).get('is_on_shift') or False
 
     async def is_admin(self, user_id: int) -> bool:
 
@@ -139,29 +139,31 @@ class AdminDatabase:
 
     async def get_notification_targets(self, location_id: str) -> list:
         db = await get_db()
-        # Пошук адмінів:
-        # 1. Ті, хто на зміні і мають доступ до цієї локації або до всіх ([])
-        # 2. Або привілейовані ролі, які мають отримувати сповіщення завжди (якщо є доступ)
-        query = {
-            'receive_notifications': True,
-            '$or': [
-                {'is_on_shift': True, 'locations': str(location_id)},
-                {'is_on_shift': True, 'locations': []},
-                {'is_on_shift': True, 'locations': {'$exists': False}},
-                {'role': {'$in': ['boss', 'owner', 'developer', 'super']}, 'locations': str(location_id)},
-                {'role': {'$in': ['boss', 'owner', 'developer', 'super']}, 'locations': []}
-            ]
-        }
+        loc_id_str = str(location_id)
+        
+        # Строга фільтрація:
+        # - Якщо це Нова Пошта (location_id == 'NP'), то відправляємо лише 'delivery_manager'
+        # - Якщо це звичайний заклад, то відправляємо ТІЛЬКИ тим адмінам, які зараз на зміні в цьому закладі.
+        
+        if loc_id_str == "NP":
+            query = {
+                'receive_notifications': True,
+                'role': 'delivery_manager'
+            }
+        else:
+            query = {
+                'receive_notifications': True,
+                'role': 'admin',
+                'is_on_shift': loc_id_str
+            }
+            
         cur = db.admins.find(query, {'_id': 0, 'user_id': 1})
         rows = await cur.to_list(length=None)
-        targets = {int(r['user_id']) for r in rows or []}
         
-        # Додаємо BOSS_IDS з конфігу про всяк випадок
-        for bid in BOSS_IDS:
-            if bid.strip():
-                try: targets.add(int(bid))
-                except: pass
-        
+        targets = set()
+        for r in rows:
+            targets.add(int(r['user_id']))
+            
         return list(targets)
 
     async def get_admins_basic(self) -> list:
@@ -174,7 +176,7 @@ class AdminDatabase:
 
             return []
 
-        role_rank = {'developer': 5, 'owner': 4, 'boss': 4, 'super': 3, 'admin': 2, 'waiter': 1}
+        role_rank = {'developer': 5, 'owner': 4, 'boss': 4, 'super': 3, 'admin': 2}
 
         rows.sort(key=lambda r: (-role_rank.get(r.get('role') or 'admin', 1), int(r.get('user_id') or 0)))
 
@@ -190,7 +192,7 @@ class AdminDatabase:
 
             return []
 
-        role_rank = {'developer': 5, 'owner': 4, 'boss': 4, 'super': 3, 'admin': 2, 'waiter': 1}
+        role_rank = {'developer': 5, 'owner': 4, 'boss': 4, 'super': 3, 'admin': 2}
 
         rows.sort(key=lambda r: (-role_rank.get(r.get('role') or 'admin', 1), int(r.get('user_id') or 0)))
 

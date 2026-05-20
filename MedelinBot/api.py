@@ -217,10 +217,10 @@ async def notify_admins_about_order(order_id: str):
     items_text = order.get('cart', '')
     table_number = order.get('table_number', '')
 
-    location_name = 'Web Order'
+    location_name = 'Замовлення з сайту'
     for loc in await location_db.get_all_locations():
         if str(loc.get('_id')) == loc_id:
-            location_name = loc.get('name', 'Web Order')
+            location_name = loc.get('name', 'Замовлення з сайту')
             break
 
     msg = f'✅ <b>ОПЛАЧЕНЕ ЗАМОВЛЕННЯ (#{oid})</b>\n\n'

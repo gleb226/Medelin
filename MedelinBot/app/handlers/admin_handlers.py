@@ -61,8 +61,6 @@ ROLE_LEVELS = {
 
     'admin': 40,
 
-    'waiter': 20,
-
     'courier': 20,
 
     'delivery_manager': 20
@@ -261,10 +259,10 @@ async def deliver_guest_message(bot: Bot, order: dict | None, text_html: str, si
 
 @admin_router.message(F.text == '📝 ПРИЙНЯТИ ЗАМОВЛЕННЯ')
 async def admin_take_order_start(message: Message, state: FSMContext):
-    # Офіціант починає замовлення від імені клієнта (локально в боті)
+    # Адміністратор починає замовлення від імені клієнта (локально в боті)
     await state.clear()
     from app.handlers.user_handlers import open_menu
-    await message.answer('📝 <b>ПРИЙОМ ЗАМОВЛЕННЯ (РЕЖИМ ОФІЦІАНТА)</b>\n\nОберіть категорію:', parse_mode='HTML')
+    await message.answer('📝 <b>ПРИЙОМ ЗАМОВЛЕННЯ (РЕЖИМ АДМІНІСТРАТОРА)</b>\n\nОберіть категорію:', parse_mode='HTML')
     await open_menu(message, state)
 
 @admin_router.message(F.text == '↩️ НА ГОЛОВНУ')
@@ -302,26 +300,63 @@ async def admin_panel_enter(message: Message, state: FSMContext):
     await state.clear()
 
     role = await get_user_role(message.from_user.id)
+    role_name = akb.ROLE_NAMES.get(role, role).upper()
 
     is_on_shift = await admin_db.is_on_shift(message.from_user.id)
+    shift_info = ""
+    if isinstance(is_on_shift, str) and is_on_shift not in ("True", "1", "False", "0"):
+        loc = await location_db.get_location_by_id(is_on_shift)
+        if loc:
+            shift_info = f"\nАктивна зміна: <b>{loc['name']}</b>"
 
-    await message.answer(f'🔐 <b>ВХІД В АДМІНІСТРАТИВНУ ПАНЕЛЬ</b>\nВаша роль: <b>{role.upper()}</b>', reply_markup=akb.get_main_admin_menu(is_on_shift, role), parse_mode='HTML')
+    await message.answer(f'🔐 <b>ВХІД В АДМІНІСТРАТИВНУ ПАНЕЛЬ</b>\nВаша роль: <b>{role_name}</b>{shift_info}', reply_markup=akb.get_main_admin_menu(bool(is_on_shift), role), parse_mode='HTML')
 
 @admin_router.message(F.text == '🟢 ПОЧАТИ ЗМІНУ')
-
 async def start_shift(message: Message, state: FSMContext):
-
     if not await admin_db.is_admin(message.from_user.id): return
-
     role = await get_user_role(message.from_user.id)
-
-    if role not in ('admin', 'waiter'): return
-
+    if role != 'admin': return
     await state.clear()
+    
+    loc_ids = await admin_db.get_locations_for_admin(message.from_user.id)
+    if not loc_ids:
+        await message.answer('❌ <b>Помилка:</b> Ви не закріплені за жодною локацією. Зверніться до власника.', parse_mode='HTML')
+        return
+        
+    if len(loc_ids) == 1:
+        loc_id = loc_ids[0]
+        await admin_db.set_shift_status(message.from_user.id, loc_id)
+        loc = await location_db.get_location_by_id(loc_id)
+        loc_name = loc['name'] if loc else 'Заклад'
+        await message.answer(f'🟢 <b>ЗМІНУ РОЗПОЧАТО!</b>\nЗаклад: <b>{loc_name}</b>', reply_markup=akb.get_main_admin_menu(True, role), parse_mode='HTML')
+        return
+        
+    buttons = []
+    for lid in loc_ids:
+        loc = await location_db.get_location_by_id(lid)
+        if loc:
+            buttons.append([InlineKeyboardButton(text=f"📍 {loc['name']}", callback_data=f"start_shift_loc_{lid}")])
+            
+    if not buttons:
+        await message.answer('❌ Немає доступних локацій.')
+        return
+        
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    await message.answer('📍 <b>Оберіть заклад для початку зміни:</b>', reply_markup=keyboard, parse_mode='HTML')
 
-    await admin_db.set_shift_status(message.from_user.id, True)
-
-    await message.answer('🟢 <b>ЗМІНУ РОЗПОЧАТО!</b>', reply_markup=akb.get_main_admin_menu(True, role), parse_mode='HTML')
+@admin_router.callback_query(F.data.startswith('start_shift_loc_'))
+async def start_shift_loc_callback(callback: CallbackQuery, state: FSMContext):
+    loc_id = callback.data.replace('start_shift_loc_', '')
+    role = await get_user_role(callback.from_user.id)
+    if role != 'admin': return
+    
+    await admin_db.set_shift_status(callback.from_user.id, loc_id)
+    loc = await location_db.get_location_by_id(loc_id)
+    loc_name = loc['name'] if loc else 'Заклад'
+    
+    await callback.message.delete()
+    await callback.message.answer(f'🟢 <b>ЗМІНУ РОЗПОЧАТО!</b>\nЗаклад: <b>{loc_name}</b>', reply_markup=akb.get_main_admin_menu(True, role), parse_mode='HTML')
+    await callback.answer()
 
 @admin_router.message(F.text == '🔴 ЗАВЕРШИТИ ЗМІНУ')
 
@@ -331,7 +366,7 @@ async def end_shift(message: Message, state: FSMContext):
 
     role = await get_user_role(message.from_user.id)
 
-    if role not in ('admin', 'waiter'): return
+    if role != 'admin': return
 
     await state.clear()
 
@@ -349,7 +384,14 @@ async def show_new_bookings(message: Message, state: FSMContext):
 
     role = await get_user_role(message.from_user.id)
 
-    bookings = await orders_db.get_new_orders() if role in ('super', 'boss', 'owner', 'developer', 'delivery_manager') else await orders_db.get_new_orders_by_locations(await admin_db.get_locations_for_admin(message.from_user.id))
+    if role in ('super', 'boss', 'owner', 'developer', 'delivery_manager'):
+        bookings = await orders_db.get_new_orders()
+    else:
+        shift_loc = await admin_db.is_on_shift(message.from_user.id)
+        if isinstance(shift_loc, str) and shift_loc not in ("True", "1", "False", "0"):
+            bookings = await orders_db.get_new_orders_by_locations([shift_loc])
+        else:
+            bookings = await orders_db.get_new_orders_by_locations(await admin_db.get_locations_for_admin(message.from_user.id))
 
     if not bookings:
 
@@ -389,7 +431,14 @@ async def list_active_bookings(callback: CallbackQuery):
 
     role = await get_user_role(callback.from_user.id)
 
-    locs = None if role in ('super', 'boss', 'owner', 'developer', 'delivery_manager') else await admin_db.get_locations_for_admin(callback.from_user.id)
+    if role in ('super', 'boss', 'owner', 'developer', 'delivery_manager'):
+        locs = None
+    else:
+        shift_loc = await admin_db.is_on_shift(callback.from_user.id)
+        if isinstance(shift_loc, str) and shift_loc not in ("True", "1", "False", "0"):
+            locs = [shift_loc]
+        else:
+            locs = await admin_db.get_locations_for_admin(callback.from_user.id)
 
     bookings = await active_bookings_db.get_active_bookings(locs)
 
@@ -407,7 +456,14 @@ async def list_active_orders(callback: CallbackQuery):
 
     role = await get_user_role(callback.from_user.id)
 
-    locs = None if role in ('super', 'boss', 'owner', 'developer', 'delivery_manager') else await admin_db.get_locations_for_admin(callback.from_user.id)
+    if role in ('super', 'boss', 'owner', 'developer', 'delivery_manager'):
+        locs = None
+    else:
+        shift_loc = await admin_db.is_on_shift(callback.from_user.id)
+        if isinstance(shift_loc, str) and shift_loc not in ("True", "1", "False", "0"):
+            locs = [shift_loc]
+        else:
+            locs = await admin_db.get_locations_for_admin(callback.from_user.id)
 
     orders = await active_orders_db.get_active_orders(locs)
 
@@ -512,6 +568,7 @@ async def admin_panel_back(callback: CallbackQuery, state: FSMContext):
     await state.clear()
 
     role = await get_user_role(callback.from_user.id)
+    role_name = akb.ROLE_NAMES.get(role, role).upper()
 
     is_on_shift = await admin_db.is_on_shift(callback.from_user.id)
 
@@ -519,7 +576,7 @@ async def admin_panel_back(callback: CallbackQuery, state: FSMContext):
 
     except: pass
 
-    await callback.message.answer(f'🔐 <b>ВХІД В АДМІНІСТРАТИВНУ ПАНЕЛЬ</b>\nВаша роль: <b>{role.upper()}</b>', reply_markup=akb.get_main_admin_menu(is_on_shift, role), parse_mode='HTML')
+    await callback.message.answer(f'🔐 <b>ВХІД В АДМІНІСТРАТИВНУ ПАНЕЛЬ</b>\nВаша роль: <b>{role_name}</b>', reply_markup=akb.get_main_admin_menu(is_on_shift, role), parse_mode='HTML')
 
 @admin_router.callback_query(F.data == 'locs_back')
 
@@ -776,6 +833,7 @@ async def adm_add_role(callback: CallbackQuery, state: FSMContext):
     role = callback.data.replace('set_role_', '')
 
     await state.update_data(new_adm_role=role, selected_loc_ids=[], is_all_locs=False)
+    role_name = akb.ROLE_NAMES.get(role, role).upper()
 
     if role in ('developer', 'owner', 'boss', 'super', 'delivery_manager'):
 
@@ -783,7 +841,7 @@ async def adm_add_role(callback: CallbackQuery, state: FSMContext):
 
         await admin_db.add_admin(data['new_adm_id'], data.get('new_adm_username', 'N/A'), data['new_adm_name'], callback.from_user.id, role, locations=[])
 
-        await safe_edit_message(callback.message, f"✅ <b>{data['new_adm_name']}</b> додано як <b>{role.upper()}</b> з повним доступом!", reply_markup=akb.get_admin_management_kb(True), parse_mode='HTML')
+        await safe_edit_message(callback.message, f"✅ <b>{data['new_adm_name']}</b> додано як <b>{role_name}</b> з повним доступом!", reply_markup=akb.get_admin_management_kb(True), parse_mode='HTML')
 
         await state.clear()
 
@@ -793,7 +851,7 @@ async def adm_add_role(callback: CallbackQuery, state: FSMContext):
 
     all_l = await location_db.get_all_locations()
 
-    await safe_edit_message(callback.message, f"✅ Роль <b>{role.upper()}</b> обрано.\n\nТепер оберіть локації, до яких співробітник матиме доступ:", reply_markup=akb.get_locations_selection_kb(all_l, [], False), parse_mode='HTML')
+    await safe_edit_message(callback.message, f"✅ Роль <b>{role_name}</b> обрано.\n\nТепер оберіть локації, до яких співробітник матиме доступ:", reply_markup=akb.get_locations_selection_kb(all_l, [], False), parse_mode='HTML')
 
     await state.set_state(AdminStates.adding_admin_location)
 
@@ -860,8 +918,8 @@ async def adm_list(callback: CallbackQuery):
     text = "👥 <b>КОМАНДА MEDELIN:</b>\n\n"
 
     for aid, user, name, role, on_shift, notif, locs in admins:
-
-        text += f"{'🟢' if on_shift else '🔴'} <b>{name}</b> (@{user or '—'})\nРоль: {role} | Лок: {', '.join(locs) if locs else 'Усі'}\n\n"
+        role_name = akb.ROLE_NAMES.get(role, role)
+        text += f"{'🟢' if on_shift else '🔴'} <b>{name}</b> (@{user or '—'})\nРоль: {role_name} | Лок: {', '.join(locs) if locs else 'Усі'}\n\n"
 
     await safe_edit_message(callback.message, text, reply_markup=akb.get_admin_management_kb(True), parse_mode='HTML')
 

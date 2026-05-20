@@ -14,14 +14,7 @@ async def send_admin_notification(text: str, reply_markup=None, location_id: str
     targets: set[int] = set()
 
     if include_boss:
-
-        for bid in BOSS_IDS:
-
-            bid = str(bid).strip()
-
-            if bid:
-
-                targets.add(int(bid))
+        pass # Boss auto-inclusion removed by request
 
     if location_id:
 

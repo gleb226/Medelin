@@ -15,13 +15,31 @@ def get_cat_with_emoji(cat):
 
     return f'{emoji} {cat_s}'
 
+ROLE_NAMES = {
+    'developer': 'Розробник',
+    'owner': 'Власник',
+    'boss': 'Власник',
+    'super': 'Супер-адмін',
+    'admin': 'Адмін',
+    'delivery_manager': 'Менеджер доставки',
+    'courier': 'Курʼєр'
+}
+
+ORDER_TYPE_NAMES = {
+    'in_house': 'В закладі',
+    'takeaway': 'На виніс',
+    'booking': 'Бронювання',
+    'beans_booking': 'Зерно (самовивіз)',
+    'beans_delivery': 'Зерно (доставка)'
+}
+
 def get_main_admin_menu(is_on_shift: bool=False, role: str='admin'):
 
     keyboard = []
 
     role = role.lower()
 
-    if role in ('admin', 'waiter'):
+    if role == 'admin':
 
         shift_text = '🔴 ЗАВЕРШИТИ ЗМІНУ' if is_on_shift else '🟢 ПОЧАТИ ЗМІНУ'
 
@@ -30,7 +48,7 @@ def get_main_admin_menu(is_on_shift: bool=False, role: str='admin'):
         if is_on_shift:
             keyboard.append([KeyboardButton(text='📝 ПРИЙНЯТИ ЗАМОВЛЕННЯ')])
 
-    if role in ('boss', 'owner', 'developer', 'admin', 'waiter', 'delivery_manager'):
+    if role in ('boss', 'owner', 'developer', 'admin', 'delivery_manager'):
 
         keyboard.append([KeyboardButton(text='🆕 НОВІ ЗАПИТИ'), KeyboardButton(text='⚡️ АКТИВНІ')])
 
@@ -69,8 +87,8 @@ def get_active_orders_list_kb(orders):
     buttons = []
 
     for o in orders:
-
-        buttons.append([InlineKeyboardButton(text=f"✅ {o['fullname']} ({o['order_type']})", callback_data=f"finish_order_{o['_id']}")])
+        o_type = ORDER_TYPE_NAMES.get(o['order_type'], o['order_type'])
+        buttons.append([InlineKeyboardButton(text=f"✅ {o['fullname']} ({o_type})", callback_data=f"finish_order_{o['_id']}")])
 
     buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='active_panel')])
 
@@ -96,19 +114,19 @@ def get_admin_roles_kb(caller_role: str):
 
     if caller_role == 'developer':
 
-        roles = [('Розробник', 'developer'), ('Власник', 'owner'), ('Супер-адмін', 'super'), ('Адмін', 'admin'), ('Менеджер доставки', 'delivery_manager'), ('Офіціант', 'waiter')]
+        roles = [('Розробник', 'developer'), ('Власник', 'owner'), ('Супер-адмін', 'super'), ('Адмін', 'admin'), ('Менеджер доставки', 'delivery_manager')]
 
     elif caller_role in ('owner', 'boss'):
 
-        roles = [('Власник', 'owner'), ('Супер-адмін', 'super'), ('Адмін', 'admin'), ('Менеджер доставки', 'delivery_manager'), ('Офіціант', 'waiter')]
+        roles = [('Власник', 'owner'), ('Супер-адмін', 'super'), ('Адмін', 'admin'), ('Менеджер доставки', 'delivery_manager')]
 
     elif caller_role == 'super':
 
-        roles = [('Адмін', 'admin'), ('Менеджер доставки', 'delivery_manager'), ('Офіціант', 'waiter')]
+        roles = [('Адмін', 'admin'), ('Менеджер доставки', 'delivery_manager')]
 
     elif caller_role == 'admin':
 
-        roles = [('Офіціант', 'waiter')]
+        roles = [] # Admins can't add anyone now that waiter is gone
 
     buttons = []
 
@@ -169,8 +187,9 @@ def get_admins_to_remove_kb(admins):
     for user_id, username, display_name, role in admins:
 
         title = display_name or (f'@{username}' if username else None) or str(user_id)
+        role_name = ROLE_NAMES.get(role, role)
 
-        buttons.append([InlineKeyboardButton(text=f'❌ {title} ({role})', callback_data=f'adm_delete_{user_id}')])
+        buttons.append([InlineKeyboardButton(text=f'❌ {title} ({role_name})', callback_data=f'adm_delete_{user_id}')])
 
     buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='adm_back_to_manage')])
 
