@@ -360,21 +360,13 @@ async def process_checkout(req: CheckoutRequest):
     if payment_mode == 'pay_at_checkout':
         return {'status': 'ok', 'manual': True, 'order_id': oid}
 
-    # Визначаємо провайдера: Картка, Apple Pay, Google Pay та MonoPay йдуть через Монобанк
-    use_monobank = payment_method in ('monobank', 'card', 'applepay', 'googlepay')
+    # Визначаємо провайдера: Тільки MonoPay йде через Монобанк
+    use_monobank = payment_method == 'monobank'
 
     if use_monobank and MONOBANK_TOKEN:
         import aiohttp
         mono_url = 'https://api.monobank.ua/api/merchant/invoice/create'
         headers = {'X-Token': MONOBANK_TOKEN, 'Content-Type': 'application/json'}
-        
-        # Відображаємо тільки той метод, який вибрав користувач
-        methods_map = {
-            'card': ['pan'],
-            'applepay': ['applepay'],
-            'googlepay': ['googlepay'],
-            'monobank': ['monobank']
-        }
         
         payload = {
             'amount': int(total * 100),
@@ -384,8 +376,7 @@ async def process_checkout(req: CheckoutRequest):
                 'destination': f'Замовлення #{oid} (Medelin)'
             },
             'redirectUrl': WEB_APP_URL,
-            'validity': 3600,
-            'paymentMethods': methods_map.get(payment_method, [])
+            'validity': 3600
         }
         
         try:
@@ -395,23 +386,13 @@ async def process_checkout(req: CheckoutRequest):
                     if resp.status == 200:
                         return {'status': 'ok', 'url': resp_data['pageUrl'], 'order_id': oid, 'provider': 'monobank'}
                     else:
-                        # Якщо помилка (наприклад, через фільтрацію методів), спробуємо без неї
-                        if 'paymentMethods' in payload:
-                            del payload['paymentMethods']
-                            async with session.post(mono_url, json=payload, headers=headers, timeout=15) as resp2:
-                                resp_data2 = await resp2.json()
-                                if resp2.status == 200:
-                                    return {'status': 'ok', 'url': resp_data2['pageUrl'], 'order_id': oid, 'provider': 'monobank'}
-                        
-                        # Якщо все одно помилка, не йдемо в LiqPay, а показуємо помилку Монобанку
                         raise HTTPException(status_code=resp.status, detail=f"Monobank API Error: {resp_data.get('errText', 'Unknown')}")
         except Exception as e:
             if isinstance(e, HTTPException):
                 raise e
-            # Тільки при помилці зв'язку (Network error/Timeout) йдемо в LiqPay як запасний
             pass
 
-    # LiqPay використовується для PrivatPay або як запасний варіант
+    # LiqPay використовується для всіх інших методів
     liqpay_paytypes = 'card'
     if payment_method == 'applepay':
         liqpay_paytypes = 'apay'
