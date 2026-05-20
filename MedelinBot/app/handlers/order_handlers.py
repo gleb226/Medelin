@@ -346,38 +346,39 @@ async def send_order_invoice(user, chat_id, state, bot):
         return
 
     p_type = 'bookpay' if data.get('booking_mode') else 'pay'
-
     pay_id = f'{p_type}_{user.id}_{int(time.time())}'
-
     await state.update_data(pay_id=pay_id)
+    
+    # Створюємо замовлення в БД перед оплатою, щоб отримати ID
+    loc_id = data['location_id']
+    cart_s = ', '.join(data['cart']).upper()
+    time_info = data.get('pickup_time', 'ЗАРАЗ')
+    order_type = 'order_with_booking' if data.get('booking_mode') else data.get('order_type', 'order')
+    
+    rid = await orders_db.add_order(
+        user.id, user.username, user.full_name, data['phone'], 
+        loc_id, time_info, data.get('people_count', '1'), 
+        data.get('wishes', ''), cart_s, order_type, 
+        table_number=data.get('table_number', ''),
+        payment_mode='pay_now'
+    )
 
+    from app.common.config import WEB_APP_URL
+    payment_url = f"{WEB_APP_URL}/index.html?order_id={rid}"
+    
     title = '💳 ОПЛАТА БРОНІ + ЗАМОВЛЕННЯ' if data.get('booking_mode') else '💳 ОПЛАТА ЗАМОВЛЕННЯ'
+    
+    kb_pay = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='💳 ПЕРЕЙТИ ДО ОПЛАТИ', url=payment_url)],
+        [InlineKeyboardButton(text='❌ Скасувати', callback_data='back_main_menu_only')]
+    ])
 
-    description = 'Medelin Coffee Order'
-
-    token_preview = f"{PAYMENT_TOKEN[:5]}...{PAYMENT_TOKEN[-4:]}" if (PAYMENT_TOKEN and len(PAYMENT_TOKEN) > 10) else "INVALID/EMPTY"
-
-    logger.info(f"Sending invoice to {user.id}. Token preview: {token_preview}")
-
-    try:
-
-        await bot.send_invoice(chat_id=chat_id, title=title, description=description, payload=pay_id, provider_token=PAYMENT_TOKEN, currency='UAH', prices=prices, start_parameter='order-payment')
-
-    except Exception as e:
-
-        logger.error(f"Failed to send invoice: {e}")
-
-        if await admin_db.get_admin_role(user.id) == 'developer':
-
-            err_msg = f"🛠 DEVELOPER ALERT: {e}"
-
-            if "PAYMENT_PROVIDER_INVALID" in str(e):
-
-                err_msg += "\n\n⚠️ Можлива причина: Невірний або порожній PAYMENT_TOKEN (Portmone/Liqpay) у файлі .env"
-
-            await bot.send_message(user.id, err_msg)
-
-        raise e
+    await bot.send_message(
+        chat_id, 
+        f"<b>{title}</b>\n\nСума до оплати буде вказана на сторінці оплати.\nБудь ласка, натисніть кнопку нижче, щоб обрати спосіб оплати та завершити замовлення:",
+        reply_markup=kb_pay,
+        parse_mode='HTML'
+    )
 
 async def send_beans_invoice(user, chat_id, state, bot):
 

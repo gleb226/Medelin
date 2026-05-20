@@ -279,9 +279,108 @@ async def get_np_warehouses(cityRef: str, cityName: str = None, search: str = No
 
     return data
 
-@app.post('/api/checkout')
+@app.get('/api/orders/{order_id}')
+async def get_order_details(order_id: str):
+    order = await orders_db.get_order_by_id(order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено.")
+    
+    # Вираховуємо загальну суму
+    # В замовленнях з бота 'cart' це рядок або список
+    cart = order.get('cart', '')
+    total = 0
+    if isinstance(cart, str):
+        # Парсимо суми з рядка виду "- Назва (100 грн)"
+        import re
+        prices = re.findall(r'\((\d+)\s*грн\)', cart)
+        total = sum(int(p) for p in prices)
+    elif isinstance(cart, list):
+        for item in cart:
+            total += parse_price(item.get('price', 0))
+    
+    # Якщо суму не вдалося спарсити (наприклад, бронювання), спробуємо заглянути в саму БД або використати 0
+    # Але зазвичай в боті сума вже є в описі
+    
+    return {
+        "order_id": str(order['_id']),
+        "total": total,
+        "fullname": order.get('fullname'),
+        "phone": order.get('phone'),
+        "order_type": order.get('order_type'),
+        "items_text": cart if isinstance(cart, str) else build_cart_text(cart)[1]
+    }
 
+class RepayRequest(BaseModel):
+    order_id: str
+    payment_method: str
+
+@app.post('/api/repay')
+async def process_repay(req: RepayRequest):
+    order = await orders_db.get_order_by_id(req.order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено.")
+
+    oid = str(order['_id'])
+
+    # Вираховуємо суму (аналогічно як в GET /api/orders/{order_id})
+    cart = order.get('cart', '')
+    total = 0
+    if isinstance(cart, str):
+        import re
+        prices = re.findall(r'\((\d+)\s*грн\)', cart)
+        total = sum(int(p) for p in prices)
+    elif isinstance(cart, list):
+        for item in cart:
+            total += parse_price(item.get('price', 0))
+
+    if total <= 0:
+        raise HTTPException(status_code=400, detail="Сума замовлення не може бути 0.")
+
+    payment_method = req.payment_method
+
+    # Повторюємо логіку вибору провайдера
+    use_monobank = payment_method == 'monobank'
+    if use_monobank and MONOBANK_TOKEN:
+        import aiohttp
+        mono_url = 'https://api.monobank.ua/api/merchant/invoice/create'
+        headers = {'X-Token': MONOBANK_TOKEN, 'Content-Type': 'application/json'}
+        payload = {
+            'amount': int(total * 100),
+            'ccy': 980,
+            'merchantPaymInfo': {'reference': oid, 'destination': f'Замовлення #{oid} (Medelin)'},
+            'redirectUrl': WEB_APP_URL,
+            'validity': 3600
+        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(mono_url, json=payload, headers=headers, timeout=15) as resp:
+                    resp_data = await resp.json()
+                    if resp.status == 200:
+                        return {'status': 'ok', 'url': resp_data['pageUrl'], 'provider': 'monobank'}
+        except: pass
+
+    # LiqPay fallback
+    liqpay_paytypes = 'card'
+    if payment_method == 'applepay': liqpay_paytypes = 'apay'
+    elif payment_method == 'googlepay': liqpay_paytypes = 'gpay'
+    elif payment_method == 'privatpay': liqpay_paytypes = 'privat24'
+
+    liqpay_params = {
+        'action': 'pay', 'amount': total, 'currency': 'UAH',
+        'description': f'Замовлення #{oid} (Medelin)', 'order_id': oid,
+        'version': '3', 'public_key': LIQPAY_PUBLIC_KEY, 'result_url': WEB_APP_URL,
+        'paytypes': liqpay_paytypes
+    }
+    json_data = json.dumps(liqpay_params).encode('utf-8')
+    encoded_data = base64.b64encode(json_data).decode('utf-8')
+    sign_string = LIQPAY_PRIVATE_KEY + encoded_data + LIQPAY_PRIVATE_KEY
+    signature = base64.b64encode(hashlib.sha1(sign_string.encode('utf-8')).digest()).decode('utf-8')
+
+    return {'status': 'ok', 'data': encoded_data, 'signature': signature, 'provider': 'liqpay'}
+
+@app.post('/api/checkout')
 async def process_checkout(req: CheckoutRequest):
+
 
     data = req.dict()
 

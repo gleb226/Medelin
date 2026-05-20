@@ -485,11 +485,11 @@ window.openCheckoutModal = function () {
                         <button class="payment-btn" onclick="window.submitCheckout('googlepay')">
                             <i class="fab fa-google-pay"></i> <span>Google Pay</span>
                         </button>
-                        <button class="payment-btn" onclick="window.submitCheckout('monobank')">
-                            <i class="fas fa-wallet"></i> <span>MonoPay</span>
-                        </button>
                         <button class="payment-btn" onclick="window.submitCheckout('privatpay')">
                             <i class="fas fa-university"></i> <span>PrivatPay</span>
+                        </button>
+                        <button class="payment-btn" onclick="window.submitCheckout('monobank')">
+                            <i class="fas fa-wallet"></i> <span>MonoPay</span>
                         </button>
                     </div>
                     <div style="padding: 0 1.5rem 1.5rem;">
@@ -659,6 +659,41 @@ window.backToDetails = function () {
 
 window.submitCheckout = function (method) {
     const btn = window.event ? window.event.target.closest('button') : null;
+    
+    if (window.CURRENT_ORDER_ID) {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обробка...';
+        }
+        const data = { order_id: window.CURRENT_ORDER_ID, payment_method: method };
+        fetch(`${window.API_BASE_URL}/api/repay`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.status === 'ok') {
+                if (res.url) window.location.href = res.url;
+                else if (res.data && res.signature) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = 'https://www.liqpay.ua/api/3/checkout';
+                    form.innerHTML = `<input type="hidden" name="data" value="${res.data}"><input type="hidden" name="signature" value="${res.signature}">`;
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            } else {
+                window.showToast('Помилка: ' + (res.detail || 'невідома помилка'), 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Спробувати ще раз';
+                }
+            }
+        });
+        return;
+    }
+
     const f = document.getElementById('checkout-details-form');
     const fd = new FormData(f);
     const isBeans = window.location.pathname.includes('beans.html');
@@ -877,6 +912,67 @@ function showNotification(t) {
 document.addEventListener('DOMContentLoaded', () => {
     updateCartBadge();
     window.setupMobileMenu?.();
+
+    const orderId = window.getURLParameter('order_id');
+    if (orderId) {
+        window.CURRENT_ORDER_ID = orderId;
+        const container = document.getElementById('checkout-modal-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="cart-modal__overlay"></div>
+                <div class="cart-modal__content checkout-modal-modern">
+                    <div class="loading" style="padding: 3rem; text-align: center;">
+                        <i class="fas fa-spinner fa-spin fa-3x" style="color: var(--color-coffee); margin-bottom: 1rem;"></i>
+                        <p>Завантажуємо деталі замовлення...</p>
+                    </div>
+                </div>`;
+            container.classList.add('cart-modal--active');
+            
+            fetch(`${window.API_BASE_URL}/api/orders/${orderId}`)
+                .then(r => r.json())
+                .then(order => {
+                    if (order.order_id) {
+                        container.innerHTML = `
+                        <div class="cart-modal__overlay" onclick="window.closeCheckoutModal()"></div>
+                        <div class="cart-modal__content checkout-modal-modern">
+                            <button class="cart-modal__close" onclick="window.closeCheckoutModal()"><i class="fas fa-times"></i></button>
+                            <h3 class="checkout-title">Оплата замовлення</h3>
+                            <div id="checkout-payment-step">
+                                <div style="padding: 0 1.5rem 1rem; text-align: center;">
+                                    <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">Сума до оплати:</p>
+                                    <p style="font-size: 2.2rem; font-weight: 900; color: var(--color-coffee);">${order.total} ₴</p>
+                                </div>
+                                <p class="payment-title">Оберіть метод оплати:</p>
+                                <div class="payment-methods-grid">
+                                    <button class="payment-btn" onclick="window.submitCheckout('card')">
+                                        <i class="fas fa-credit-card"></i> <span>Оплата картою</span>
+                                    </button>
+                                    <button class="payment-btn" onclick="window.submitCheckout('applepay')">
+                                        <i class="fab fa-apple-pay"></i> <span>Apple Pay</span>
+                                    </button>
+                                    <button class="payment-btn" onclick="window.submitCheckout('googlepay')">
+                                        <i class="fab fa-google-pay"></i> <span>Google Pay</span>
+                                    </button>
+                                    <button class="payment-btn" onclick="window.submitCheckout('privatpay')">
+                                        <i class="fas fa-university"></i> <span>PrivatPay</span>
+                                    </button>
+                                    <button class="payment-btn" onclick="window.submitCheckout('monobank')">
+                                        <i class="fas fa-wallet"></i> <span>MonoPay</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>`;
+                    } else {
+                        window.showToast('Замовлення не знайдено', 'error');
+                        window.closeCheckoutModal();
+                    }
+                })
+                .catch(() => {
+                    window.showToast('Помилка завантаження замовлення', 'error');
+                    window.closeCheckoutModal();
+                });
+        }
+    }
 });
 
 window.selectWeight = function (el) {
