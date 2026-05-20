@@ -49,7 +49,8 @@ def get_main_admin_menu(is_on_shift: bool=False, role: str='admin'):
             keyboard.append([KeyboardButton(text='📝 ПРИЙНЯТИ ЗАМОВЛЕННЯ')])
 
     if role in ('boss', 'owner', 'developer', 'admin', 'delivery_manager'):
-
+        keyboard.append([KeyboardButton(text='🆕 НОВІ ЗАПИТИ'), KeyboardButton(text='⚡️ АКТИВНІ')])
+    elif role == 'super':
         keyboard.append([KeyboardButton(text='🆕 НОВІ ЗАПИТИ'), KeyboardButton(text='⚡️ АКТИВНІ')])
 
     if role in ('boss', 'owner', 'developer'):

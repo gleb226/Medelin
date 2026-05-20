@@ -144,8 +144,8 @@ class AdminDatabase:
         targets = set()
 
         if not location_id or location_id in ('web', 'unknown', 'None', ''):
-            # Web/unknown order → send to ALL admins with receive_notifications=True
-            rows = await db.admins.find({'receive_notifications': True}, {'_id': 0, 'user_id': 1}).to_list(length=None)
+            # Web/unknown order → send to ALL admins with receive_notifications=True except super
+            rows = await db.admins.find({'receive_notifications': True, 'role': {'$ne': 'super'}}, {'_id': 0, 'user_id': 1}).to_list(length=None)
             for r in rows:
                 targets.add(int(r['user_id']))
 
@@ -155,8 +155,8 @@ class AdminDatabase:
             for r in rows:
                 targets.add(int(r['user_id']))
             if not targets:
-                # Fallback: send to all admins if no delivery_manager found
-                rows = await db.admins.find({'receive_notifications': True}, {'_id': 0, 'user_id': 1}).to_list(length=None)
+                # Fallback: send to all admins if no delivery_manager found except super
+                rows = await db.admins.find({'receive_notifications': True, 'role': {'$ne': 'super'}}, {'_id': 0, 'user_id': 1}).to_list(length=None)
                 for r in rows:
                     targets.add(int(r['user_id']))
 
@@ -167,8 +167,8 @@ class AdminDatabase:
                 targets.add(int(r['user_id']))
 
             if not targets:
-                # Nobody on shift → fallback: admins assigned to this location (or assigned to all = empty list)
-                all_rows = await db.admins.find({'receive_notifications': True}, {'_id': 0, 'user_id': 1, 'locations': 1}).to_list(length=None)
+                # Nobody on shift → fallback: admins assigned to this location (or assigned to all = empty list) except super
+                all_rows = await db.admins.find({'receive_notifications': True, 'role': {'$ne': 'super'}}, {'_id': 0, 'user_id': 1, 'locations': 1}).to_list(length=None)
                 for r in all_rows:
                     locs = r.get('locations') or []
                     # Empty list means "all locations"

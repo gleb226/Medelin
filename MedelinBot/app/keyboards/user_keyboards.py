@@ -453,10 +453,20 @@ async def get_contact_kb():
     row = []
 
     for s in socials:
+        name_lower = s['name'].lower()
+        icon = '🌐 '
+        if 'telegram' in name_lower or 'тг' in name_lower or 'tg' in name_lower:
+            icon = '✈️ '
+        elif 'instagram' in name_lower or 'інста' in name_lower or 'insta' in name_lower:
+            icon = '📸 '
+        elif 'facebook' in name_lower or 'фейсбук' in name_lower or 'fb' in name_lower:
+            icon = '📘 '
+        elif 'tiktok' in name_lower or 'тікток' in name_lower:
+            icon = '🎵 '
 
-        keyboard.append([InlineKeyboardButton(text=s['name'].upper(), url=s['url'])])
+        keyboard.append([InlineKeyboardButton(text=f"{icon}{s['name'].upper()}", url=s['url'])])
 
-    keyboard.append([InlineKeyboardButton(text='💬 ЗВ\'ЯЗАТИСЯ З НАМИ', callback_data='contact_us_msg')])
+    keyboard.append([InlineKeyboardButton(text='💬 НАПИСАТИ НАМ', callback_data='contact_us_msg')])
 
     keyboard.append([InlineKeyboardButton(text='📞 ТЕЛЕФОН', callback_data='contact_phone')])
 

@@ -245,17 +245,15 @@ async def deliver_guest_message(bot: Bot, order: dict | None, text_html: str, si
 
             reply_markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='💬 ВІДПОВІСТИ', callback_data=reply_callback_data)]])
 
+        telegram_ok = False
         try:
-
             await bot.send_message(telegram_target, text_html, parse_mode='HTML', reply_markup=reply_markup)
+            telegram_ok = True
+        except:
+            telegram_ok = False
 
-            return 'telegram'
-
-        except: pass
-
-    await guest_messages_db.add_message(order_id=order.get('id'), phone=order.get('phone'), source='admin', text=site_text)
-
-    return 'site'
+    await guest_messages_db.add_message(order_id=order.get('order_id') or order.get('_id'), phone=order.get('phone'), source='admin', text=site_text)
+    return 'both' if telegram_target and telegram_ok else 'site'
 
 @admin_router.message(F.text == '📝 ПРИЙНЯТИ ЗАМОВЛЕННЯ')
 async def admin_take_order_start(message: Message, state: FSMContext):
