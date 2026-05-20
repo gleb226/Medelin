@@ -737,8 +737,19 @@ window.submitCheckout = function (method) {
                     total: activeCart.reduce((s, i) => s + i.price, 0),
                     type: isBeans ? 'beans' : 'menu',
                 });
-                if (res.url) window.location.href = res.url;
+                if (res.url) {
+                    cart_menu = [];
+                    cart_beans = [];
+                    saveCart();
+                    updateCartBadge();
+                    window.location.href = res.url;
+                }
                 else if (res.data && res.signature) {
+                    cart_menu = [];
+                    cart_beans = [];
+                    saveCart();
+                    updateCartBadge();
+
                     const form = document.createElement('form');
                     form.method = 'POST';
                     form.action = 'https://www.liqpay.ua/api/3/checkout';
