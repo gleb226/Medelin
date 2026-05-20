@@ -157,7 +157,7 @@ async def get_locations_kb():
 
 def get_item_options_kb(item_id, item_name, options, current_options=None, current_price=None):
     current_options = current_options or []
-    btn_text = f'✅ ДОДАТИ В КОШИК ({current_price}₴)' if current_price else '✅ ДОДАТИ В КОШИК'
+    btn_text = f'🛒 ДОДАТИ В КОШИК — {current_price}₴' if current_price else '🛒 ДОДАТИ В КОШИК'
     keyboard = [[InlineKeyboardButton(text=btn_text, callback_data=f'add_to_cart_{item_id}')]]
     
     # Сортуємо опції за типами
@@ -166,29 +166,36 @@ def get_item_options_kb(item_id, item_name, options, current_options=None, curre
     addon_opts = [o for o in options if o.get('type') == 'addon']
 
     if caffeine_opts:
+        keyboard.append([InlineKeyboardButton(text="─── КОФЕЇН ───", callback_data="none")])
         row = []
         for o in caffeine_opts:
             name = o['name']
+            price = o.get('add_price', 0)
             is_active = any(name in opt for opt in current_options) or (name == 'Стандарт' and not any(co['name'] in opt for co in caffeine_opts for opt in current_options))
-            # Для простоти, якщо нічого не обрано, Стандарт вважається обраним
             prefix = '✅ ' if is_active else ''
-            row.append(InlineKeyboardButton(text=f"{prefix}{name}", callback_data=f"opt_{item_id}_caf:{name}"))
+            price_text = f" (+{price}₴)" if price > 0 else ""
+            row.append(InlineKeyboardButton(text=f"{prefix}{name}{price_text}", callback_data=f"opt_{item_id}_caf:{name}"))
         keyboard.append(row)
 
     if milk_opts:
+        keyboard.append([InlineKeyboardButton(text="─── МОЛОКО ───", callback_data="none")])
         row = []
-        for o in milk_opts:
+        # Сортуємо: спочатку звичайне, потім решта
+        sorted_milk = sorted(milk_opts, key=lambda x: (x['name'] != 'Звичайне', x['name'] != 'Безлактозне', x['name']))
+        for o in sorted_milk:
             name = o['name']
-            # Позначаємо "Звичайне" як активне, якщо нічого не обрано
+            price = o.get('add_price', 0)
             is_active = any(name in opt for opt in current_options) or (name == 'Звичайне' and not any(f"milk:" in opt for opt in current_options))
             prefix = '✅ ' if is_active else ''
-            row.append(InlineKeyboardButton(text=f"{prefix}{name}", callback_data=f"opt_{item_id}_milk:{name}"))
+            price_text = f" (+{price}₴)" if price > 0 else ""
+            row.append(InlineKeyboardButton(text=f"{prefix}{name}{price_text}", callback_data=f"opt_{item_id}_milk:{name}"))
             if len(row) == 2:
                 keyboard.append(row)
                 row = []
         if row: keyboard.append(row)
 
     if addon_opts:
+        keyboard.append([InlineKeyboardButton(text="─── ДОДАТКИ ───", callback_data="none")])
         row = []
         for o in addon_opts:
             name = o['name']
