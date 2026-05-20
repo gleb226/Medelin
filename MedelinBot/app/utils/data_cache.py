@@ -255,10 +255,16 @@ class PublicDataCache:
                     # Призначення опцій
                     item_options = opts or []
                     if use_default:
-                        # Якщо немає молока в опціях - додаємо дефолтний набір
                         if not any(o.get('type') == 'milk' for o in item_options):
-                            # Використовуємо дефолтні кавові опції
-                            item_options = default_coffee_options
+                            # Визначаємо чи це саме КАВА (для декафу та додатків)
+                            is_pure_coffee = any(x in cat_l or x in name_l for x in ['кава', 'американо', 'еспресо', 'допіо', 'ристрето', 'латте', 'капучино', 'раф', 'флет', 'глясе'])
+                            
+                            if is_pure_coffee:
+                                # Для кави - повний набір (декаф + молоко + додатки)
+                                item_options = default_coffee_options
+                            else:
+                                # Для інших напоїв (мілкшейки, матча, какао) - ТІЛЬКИ молоко
+                                item_options = [o for o in default_coffee_options if o.get('type') == 'milk']
 
                     formatted.append({
                         'id': str(item_id), 'name': name, 'price': price or 0, 
