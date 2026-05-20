@@ -286,17 +286,28 @@ async def get_order_details(order_id: str):
         raise HTTPException(status_code=404, detail="Замовлення не знайдено.")
     
     # Вираховуємо загальну суму
-    # В замовленнях з бота 'cart' це рядок або список
     cart = order.get('cart', '')
     total = 0
     if isinstance(cart, str):
-        # Парсимо суми з рядка виду "- Назва (100 грн)"
+        # Парсимо суми з рядка виду "- Назва (100 грн)" або просто числа в дужках
         import re
+        # Шукаємо всі числа, які стоять перед "грн" всередині дужок
         prices = re.findall(r'\((\d+)\s*грн\)', cart)
+        if not prices:
+            # Спрощений пошук якщо формат трохи інший
+            prices = re.findall(r'(\d+)\s*грн', cart)
+        
         total = sum(int(p) for p in prices)
     elif isinstance(cart, list):
         for item in cart:
-            total += parse_price(item.get('price', 0))
+            try:
+                p = item.get('price', 0)
+                total += int(p)
+            except: pass
+    
+    # Якщо суму все одно не знайдено, а це замовлення з бота, 
+    # можливо сума вказана в іншому полі або ми можемо спробувати отримати її з menu_db
+    # Але зазвичай регулярки вище достатньо для формату бота.
     
     # Якщо суму не вдалося спарсити (наприклад, бронювання), спробуємо заглянути в саму БД або використати 0
     # Але зазвичай в боті сума вже є в описі
@@ -454,10 +465,14 @@ async def process_checkout(req: CheckoutRequest):
 
     msg += f'🛒 Кошик:\n{items_text}'
 
-    await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id if loc_id != 'web' else None)
-
+    # Надсилаємо сповіщення адміну ТІЛЬКИ якщо це оплата на касі
     if payment_mode == 'pay_at_checkout':
+        await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id if loc_id != 'web' else None)
         return {'status': 'ok', 'manual': True, 'order_id': oid}
+
+    # Для онлайн-оплати сповіщення прийде ПІСЛЯ успішного завершення транзакції (через callback або успішний редірект)
+    # ПРИМІТКА: Потрібно переконатися, що у вас налаштований callback_url для LiqPay/Monobank, 
+    # який викликає функцію сповіщення адміна.
 
     # Визначаємо провайдера: Тільки MonoPay йде через Монобанк
     use_monobank = payment_method == 'monobank'

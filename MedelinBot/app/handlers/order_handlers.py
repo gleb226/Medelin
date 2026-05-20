@@ -351,7 +351,27 @@ async def send_order_invoice(user, chat_id, state, bot):
     
     # Створюємо замовлення в БД перед оплатою, щоб отримати ID
     loc_id = data['location_id']
-    cart_s = ', '.join(data['cart']).upper()
+    
+    # Формуємо рядок кошика з цінами, щоб API міг їх спарсити
+    cart_items_with_prices = []
+    total_uah = 0
+    for display_name in data['cart']:
+        base_name = display_name.split(' (')[0]
+        row = await menu_db.get_item_by_name(base_name)
+        uah = _parse_menu_price(row)
+        if uah:
+            extra = 0
+            if '(' in display_name:
+                opts = display_name.split('(')[1].replace(')', '').lower()
+                for opt in [o.strip() for o in opts.split(',')]:
+                    if opt in ['декаф', 'мед', 'молоко']: extra += 10
+            item_total = uah + extra
+            total_uah += item_total
+            cart_items_with_prices.append(f"- {display_name} ({item_total} грн)")
+        else:
+            cart_items_with_prices.append(f"- {display_name}")
+
+    cart_s = '\n'.join(cart_items_with_prices).upper()
     time_info = data.get('pickup_time', 'ЗАРАЗ')
     order_type = 'order_with_booking' if data.get('booking_mode') else data.get('order_type', 'order')
     
