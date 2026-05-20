@@ -286,24 +286,26 @@ async def get_order_details(order_id: str):
         raise HTTPException(status_code=404, detail="Замовлення не знайдено.")
     
     # Вираховуємо загальну суму
-    cart = order.get('cart', '')
-    total = 0
-    if isinstance(cart, str):
-        # Парсимо суми з рядка виду "- Назва (100 грн)" або просто числа в дужках
-        import re
-        # Шукаємо всі числа, які стоять перед "грн" всередині дужок
-        prices = re.findall(r'\((\d+)\s*грн\)', cart)
-        if not prices:
-            # Спрощений пошук якщо формат трохи інший
-            prices = re.findall(r'(\d+)\s*грн', cart)
-        
-        total = sum(int(p) for p in prices)
-    elif isinstance(cart, list):
-        for item in cart:
-            try:
-                p = item.get('price', 0)
-                total += int(p)
-            except: pass
+    # 1. Спробуємо взяти пряме поле total_amount
+    total = order.get('total_amount', 0)
+    
+    # 2. Якщо 0 або немає, парсимо з рядка cart
+    if not total:
+        cart = order.get('cart', '')
+        if isinstance(cart, str):
+            import re
+            # Використовуємо re.IGNORECASE для підтримки "грн" і "ГРН"
+            prices = re.findall(r'\((\d+)\s*грн\)', cart, re.IGNORECASE)
+            if not prices:
+                prices = re.findall(r'(\d+)\s*грн', cart, re.IGNORECASE)
+            
+            total = sum(int(p) for p in prices)
+        elif isinstance(cart, list):
+            for item in cart:
+                try:
+                    p = item.get('price', 0)
+                    total += int(p)
+                except: pass
     
     # Якщо суму все одно не знайдено, а це замовлення з бота, 
     # можливо сума вказана в іншому полі або ми можемо спробувати отримати її з menu_db
@@ -333,16 +335,22 @@ async def process_repay(req: RepayRequest):
 
     oid = str(order['_id'])
 
-    # Вираховуємо суму (аналогічно як в GET /api/orders/{order_id})
-    cart = order.get('cart', '')
-    total = 0
-    if isinstance(cart, str):
-        import re
-        prices = re.findall(r'\((\d+)\s*грн\)', cart)
-        total = sum(int(p) for p in prices)
-    elif isinstance(cart, list):
-        for item in cart:
-            total += parse_price(item.get('price', 0))
+    # Вираховуємо суму (надійна логіка)
+    total = order.get('total_amount', 0)
+    if not total:
+        cart = order.get('cart', '')
+        if isinstance(cart, str):
+            import re
+            prices = re.findall(r'\((\d+)\s*грн\)', cart, re.IGNORECASE)
+            if not prices:
+                prices = re.findall(r'(\d+)\s*грн', cart, re.IGNORECASE)
+            total = sum(int(p) for p in prices)
+        elif isinstance(cart, list):
+            for item in cart:
+                try:
+                    p = item.get('price', 0)
+                    total += int(p)
+                except: pass
 
     if total <= 0:
         raise HTTPException(status_code=400, detail="Сума замовлення не може бути 0.")

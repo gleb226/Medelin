@@ -21,18 +21,35 @@ class OrdersDatabase:
 
         return
 
-    async def add_order(self, user_id, username, fullname, phone, location_id, date_time, people_count, wishes, cart, order_type='booking', payment_mode='cashier', table_number=''):
-
+    async def add_order(self, user_id, username, fullname, phone, location_id, date_time, people_count, wishes, cart, order_type='booking', payment_mode='cashier', table_number='', total_amount=0):
         db = await get_db()
-
         digits = normalize_phone(phone)
-
         oid = ObjectId()
-
-        doc = {'_id': oid, 'order_id': str(oid), 'user_id': int(user_id) if user_id is not None else None, 'username': username, 'fullname': fullname, 'phone': phone, 'phone_digits': digits, 'location_id': str(location_id), 'date_time': date_time, 'people_count': people_count, 'wishes': wishes, 'cart': cart, 'status': 'new', 'order_type': order_type, 'payment_mode': payment_mode, 'table_number': table_number or '', 'payment_id': None, 'provider_payment_id': None, 'notified_admin_ids': [], 'refund_status': None, 'created_at': datetime.utcnow()}
-
+        doc = {
+            '_id': oid, 
+            'order_id': str(oid), 
+            'user_id': int(user_id) if user_id is not None else None, 
+            'username': username, 
+            'fullname': fullname, 
+            'phone': phone, 
+            'phone_digits': digits, 
+            'location_id': str(location_id), 
+            'date_time': date_time, 
+            'people_count': people_count, 
+            'wishes': wishes, 
+            'cart': cart, 
+            'total_amount': total_amount, # Нове поле
+            'status': 'new', 
+            'order_type': order_type, 
+            'payment_mode': payment_mode, 
+            'table_number': table_number or '', 
+            'payment_id': None, 
+            'provider_payment_id': None, 
+            'notified_admin_ids': [], 
+            'refund_status': None, 
+            'created_at': datetime.utcnow()
+        }
         await db.orders.insert_one(doc)
-
         return str(oid)
 
     async def get_new_orders(self):

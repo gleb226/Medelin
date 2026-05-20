@@ -380,7 +380,8 @@ async def send_order_invoice(user, chat_id, state, bot):
         loc_id, time_info, data.get('people_count', '1'), 
         data.get('wishes', ''), cart_s, order_type, 
         table_number=data.get('table_number', ''),
-        payment_mode='pay_now'
+        payment_mode='pay_now',
+        total_amount=total_uah
     )
 
     from app.common.config import WEB_APP_URL
