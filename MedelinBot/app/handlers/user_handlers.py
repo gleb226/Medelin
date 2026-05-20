@@ -562,13 +562,10 @@ async def menu_item(callback: CallbackQuery, state: FSMContext):
                 {'type': 'caffeine', 'name': 'Декаф', 'add_price': 10},
                 {'type': 'milk', 'name': 'Звичайне', 'add_price': 0},
                 {'type': 'milk', 'name': 'Безлактозне', 'add_price': 15},
-                {'type': 'milk', 'name': 'Бананове', 'add_price': 30},
-                {'type': 'milk', 'name': 'Кокосове', 'add_price': 30},
-                {'type': 'milk', 'name': 'Мигдалеве', 'add_price': 30},
-                {'type': 'milk', 'name': 'Вівсяне', 'add_price': 30},
             ]
 
-        reply_markup = kb.get_item_options_kb(item_id, name, options)
+        # Розраховуємо початкову ціну (базова ціна)
+        reply_markup = kb.get_item_options_kb(item_id, name, options, current_price=int(price or 0))
     else:
         reply_markup = kb.get_item_actions_kb(item_id)
 
@@ -590,9 +587,17 @@ async def menu_toggle_option(callback: CallbackQuery, state: FSMContext):
     item_opts = data.get(f'opts_{item_id}', [])
 
     # Обробка ексклюзивності для кофеїну та молока
-    if opt_type in ('caf', 'milk'):
-        # Видаляємо інші опції того ж типу
-        item_opts = [o for o in item_opts if not o.startswith(f"{opt_type}:")]
+    if opt_type in ('caf', 'milk', 'caffeine'):
+        # Видаляємо інші опції того ж типу (враховуючи обидва можливі ключі для кофеїну)
+        current_type = 'caf' if opt_type in ('caf', 'caffeine') else 'milk'
+        item_opts = [o for o in item_opts if not (o.startswith('caf:') or o.startswith('caffeine:') or o.startswith('milk:')) or not o.startswith(f"{current_type}:")]
+        
+        # Видаляємо всі опції того ж типу
+        if opt_type in ('caf', 'caffeine'):
+            item_opts = [o for o in item_opts if not (o.startswith('caf:') or o.startswith('caffeine:'))]
+        else:
+            item_opts = [o for o in item_opts if not o.startswith('milk:')]
+            
         item_opts.append(f"{opt_type}:{opt_name}")
     else:
         # Для додатків (addons) - просто перемикаємо
@@ -604,9 +609,9 @@ async def menu_toggle_option(callback: CallbackQuery, state: FSMContext):
 
     await state.update_data({f'opts_{item_id}': item_opts})
     
-    # Отримуємо айтем знову щоб отримати його опції
+    # Отримуємо айтем знову щоб отримати його опції та базову ціну
     row = await menu_db.get_item_by_id(item_id)
-    _, category, name, _, _, _, _, _, _, _, _, options = row
+    _, category, name, base_price, _, _, _, _, _, _, _, options = row
     
     from app.utils.data_cache import public_data_cache
     cached_opts = None
@@ -628,13 +633,19 @@ async def menu_toggle_option(callback: CallbackQuery, state: FSMContext):
             {'type': 'caffeine', 'name': 'Декаф', 'add_price': 10},
             {'type': 'milk', 'name': 'Звичайне', 'add_price': 0},
             {'type': 'milk', 'name': 'Безлактозне', 'add_price': 15},
-            {'type': 'milk', 'name': 'Бананове', 'add_price': 30},
-            {'type': 'milk', 'name': 'Кокосове', 'add_price': 30},
-            {'type': 'milk', 'name': 'Мигдалеве', 'add_price': 30},
-            {'type': 'milk', 'name': 'Вівсяне', 'add_price': 30},
         ]
     
-    await callback.message.edit_reply_markup(reply_markup=kb.get_item_options_kb(item_id, name, options, item_opts))
+    # Розраховуємо поточну ціну
+    current_total = int(base_price or 0)
+    for o_str in item_opts:
+        if ':' in o_str:
+            _, o_name = o_str.split(':', 1)
+            for opt_obj in options:
+                if opt_obj['name'] == o_name:
+                    current_total += int(opt_obj.get('add_price') or 0)
+                    break
+
+    await callback.message.edit_reply_markup(reply_markup=kb.get_item_options_kb(item_id, name, options, item_opts, current_price=current_total))
 
 @user_router.callback_query(F.data.startswith('add_to_cart_'))
 async def menu_add_to_cart(callback: CallbackQuery, state: FSMContext):
@@ -642,7 +653,7 @@ async def menu_add_to_cart(callback: CallbackQuery, state: FSMContext):
     item_id = data[3]
     row = await menu_db.get_item_by_id(item_id)
     if not row:
-        await callback.answer('Не знайдено.')
+        await callback.answer('Не знадено.')
         return
 
     _, category, name, base_price, _, _, _, _, _, _, _, options = row
@@ -668,10 +679,6 @@ async def menu_add_to_cart(callback: CallbackQuery, state: FSMContext):
             {'type': 'caffeine', 'name': 'Декаф', 'add_price': 10},
             {'type': 'milk', 'name': 'Звичайне', 'add_price': 0},
             {'type': 'milk', 'name': 'Безлактозне', 'add_price': 15},
-            {'type': 'milk', 'name': 'Бананове', 'add_price': 30},
-            {'type': 'milk', 'name': 'Кокосове', 'add_price': 30},
-            {'type': 'milk', 'name': 'Мигдалеве', 'add_price': 30},
-            {'type': 'milk', 'name': 'Вівсяне', 'add_price': 30},
         ]
     
     state_data = await state.get_data()
@@ -683,20 +690,24 @@ async def menu_add_to_cart(callback: CallbackQuery, state: FSMContext):
     for o_str in item_opts:
         if ':' in o_str:
             o_type, o_name = o_str.split(':', 1)
-            if (o_name == 'Стандарт' and o_type == 'caf') or (o_name == 'Звичайне' and o_type == 'milk'):
+            # Якщо це дефолтна опція, не додаємо в опис
+            if (o_name == 'Стандарт' and o_type in ('caf', 'caffeine')) or (o_name == 'Звичайне' and o_type == 'milk'):
                 continue
             options_desc.append(o_name)
             
             # Шукаємо ціну опції
+            found_price = False
             if options:
                 for opt_obj in options:
                     if opt_obj['name'] == o_name:
                         total_extra += int(opt_obj.get('add_price') or 0)
+                        found_price = True
                         break
-            else:
+            
+            if not found_price:
                 # Hardcoded fallback prices
                 if o_name == 'Декаф': total_extra += 10
-                elif o_type == 'add': total_extra += 10
+                elif o_type in ('add', 'addon'): total_extra += 10
         else:
             # Старий формат (сумісність)
             opt_map = {'decaf': 'декаф', 'honey': 'мед', 'addmilk': 'молоко'}
@@ -708,7 +719,7 @@ async def menu_add_to_cart(callback: CallbackQuery, state: FSMContext):
         final_name += f" ({', '.join(options_desc)})"
 
     # Додаємо ціну до імені для розрахунку в кошику
-    final_price = int(base_price) + total_extra
+    final_price = int(base_price or 0) + total_extra
     final_item_entry = f"{final_name} [{final_price}]"
 
     cart = list(state_data.get('cart', []))

@@ -57,7 +57,7 @@ window.openItemPopup = function (item, category) {
         if (popupTitle) popupTitle.textContent = safeName;
 
         const strength = renderScale(item?.strength, 'fa-fire');
-        const sweetness = renderScale(item?.sweetness, 'fa-candy-cane');
+        const sweetness = renderScale(item?.sweetness, 'fa-cubes');
 
         const options = Array.isArray(item?.options) ? item.options : [];
         const caffeineOpts = options.filter((o) => o?.type === 'caffeine');

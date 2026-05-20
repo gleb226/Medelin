@@ -120,24 +120,20 @@ class PublicDataCache:
             options: list[dict[str, Any]] = [
                 {'type': 'caffeine', 'name': 'Стандарт', 'add_price': 0},
                 {'type': 'caffeine', 'name': 'Декаф', 'add_price': 10},
-                {'type': 'milk', 'name': 'Звичайне', 'add_price': 0}
+                {'type': 'milk', 'name': 'Звичайне', 'add_price': 0},
+                {'type': 'milk', 'name': 'Безлактозне', 'add_price': 15}
             ]
             
             if milk_items:
                 for it in milk_items:
                     name = (it[1] if len(it) > 1 else '') or ''
                     price = it[2] if len(it) > 2 else 0
-                    if not name or name == 'Звичайне': continue
-                    options.append({'type': 'milk', 'name': name, 'add_price': int(price or 0)})
-            else:
-                # Hardcoded defaults if no milk category in DB
-                options.extend([
-                    {'type': 'milk', 'name': 'Безлактозне', 'add_price': 15},
-                    {'type': 'milk', 'name': 'Бананове', 'add_price': 30},
-                    {'type': 'milk', 'name': 'Кокосове', 'add_price': 30},
-                    {'type': 'milk', 'name': 'Мигдалеве', 'add_price': 30},
-                    {'type': 'milk', 'name': 'Вівсяне', 'add_price': 30},
-                ])
+                    if not name or name in ['Звичайне', 'Безлактозне']: continue
+                    # Якщо є інші види молока в базі, можемо їх додати, 
+                    # але користувач попросив тільки "стандартні", 
+                    # тому ми можемо їх проігнорувати або обмежити.
+                    # Поки що ігноруємо, бо в нас є жорсткий набір вище.
+                    pass
 
             if addon_items:
                 for it in addon_items:
@@ -205,14 +201,11 @@ class PublicDataCache:
 
                     cal = i[5] if len(i) > 5 else ''
 
-                    img = i[6] if len(i) > 6 else ''
-
-                    comp = i[7] if len(i) > 7 else ''
-
-                    strn = i[8] if len(i) > 8 else 0
-
-                    swt = i[9] if len(i) > 9 else 0
-                    opts = i[10] if len(i) > 10 else []
+                    img = i[7] if len(i) > 7 else ''
+                    comp = i[8] if len(i) > 8 else ''
+                    strn = i[9] if len(i) > 9 else 0
+                    swt = i[10] if len(i) > 10 else 0
+                    opts = i[11] if len(i) > 11 else []
                     
                     category_norm = normalize_category(cat)
                     use_default = category_norm in [
@@ -222,11 +215,13 @@ class PublicDataCache:
                         normalize_category('Какао')
                     ]
                     
-                    # Фільтруємо flavored версії, які мають бути в опціях
+                    # Фільтруємо flavored та не стандартні версії
                     name_lower = (name or '').lower()
-                    if any(x in name_lower for x in ['бананов', 'ванільн', 'полуничн', 'шоколадн']):
-                        if category_norm in ['кава', 'мілк', 'матча', 'какао']:
-                            continue
+                    if category_norm in ['кава', 'мілк', 'матча', 'какао']:
+                        if any(x in name_lower for x in ['бананов', 'ванільн', 'полуничн', 'шоколадн', 'кокосов', 'мигдалев', 'вівсян', 'великий', 'подвій', 'double']):
+                            # Якщо це не базовий напій, пропускаємо
+                            if name_lower not in ['какао', 'матча лате', 'матча тонік']:
+                                continue
 
                     formatted.append({
                         'id': str(item_id), 'name': name or '', 'price': price or 0, 

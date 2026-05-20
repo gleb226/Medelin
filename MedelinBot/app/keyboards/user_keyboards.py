@@ -155,9 +155,10 @@ async def get_locations_kb():
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-def get_item_options_kb(item_id, item_name, options, current_options=None):
+def get_item_options_kb(item_id, item_name, options, current_options=None, current_price=None):
     current_options = current_options or []
-    keyboard = [[InlineKeyboardButton(text='✅ ДОДАТИ В КОШИК', callback_data=f'add_to_cart_{item_id}')]]
+    btn_text = f'✅ ДОДАТИ В КОШИК ({current_price}₴)' if current_price else '✅ ДОДАТИ В КОШИК'
+    keyboard = [[InlineKeyboardButton(text=btn_text, callback_data=f'add_to_cart_{item_id}')]]
     
     # Сортуємо опції за типами
     caffeine_opts = [o for o in options if o.get('type') == 'caffeine']
@@ -178,7 +179,8 @@ def get_item_options_kb(item_id, item_name, options, current_options=None):
         row = []
         for o in milk_opts:
             name = o['name']
-            is_active = any(name in opt for opt in current_options)
+            # Позначаємо "Звичайне" як активне, якщо нічого не обрано
+            is_active = any(name in opt for opt in current_options) or (name == 'Звичайне' and not any(f"milk:" in opt for opt in current_options))
             prefix = '✅ ' if is_active else ''
             row.append(InlineKeyboardButton(text=f"{prefix}{name}", callback_data=f"opt_{item_id}_milk:{name}"))
             if len(row) == 2:
@@ -274,9 +276,11 @@ def get_items_kb(items, category, cart_count=0, booking_mode=False):
         
         # Фільтруємо flavored версії для категорій, де є вибір молока/сиропів
         if is_customizable_cat:
-            if any(x in name_lower for x in ['бананов', 'ванільн', 'полуничн', 'шоколадн', 'великий']):
+            if any(x in name_lower for x in ['бананов', 'ванільн', 'полуничн', 'шоколадн', 'кокосов', 'мигдалев', 'вівсян', 'великий', 'солев', 'солон']):
                 # Якщо це flavored або не стандартна версія, ми її пропускаємо
-                continue
+                # Винятки для базових напоїв, якщо вони містять ці слова
+                if name_lower not in ['какао', 'матча лате', 'матча тонік']:
+                    continue
                 
         filtered_items.append(item)
 
