@@ -146,16 +146,12 @@ class AdminDatabase:
         # - Якщо це звичайний заклад, то відправляємо ТІЛЬКИ тим адмінам, які зараз на зміні в цьому закладі.
         
         if loc_id_str == "NP":
-            query = {
-                'receive_notifications': True,
-                'role': 'delivery_manager'
-            }
+            # For Nova Poshta deliveries, notify all admins who want notifications
+            query = {'receive_notifications': True}
         else:
-            query = {
-                'receive_notifications': True,
-                'role': 'admin',
-                'is_on_shift': loc_id_str
-            }
+            # For regular locations, notify admins on shift for that location
+            query = {'receive_notifications': True, 'is_on_shift': loc_id_str}
+
             
         cur = db.admins.find(query, {'_id': 0, 'user_id': 1})
         rows = await cur.to_list(length=None)
