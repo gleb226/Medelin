@@ -264,10 +264,20 @@ def get_items_kb(items, category, cart_count=0, booking_mode=False):
     
     # Фільтруємо "не стандартні" версії за назвою, якщо вони є окремими позиціями
     filtered_items = []
+    cat_lower = category.lower().strip()
+    is_customizable_cat = any(x in cat_lower for x in ['кава', 'мілк', 'матча', 'какао'])
+    
     for item in items:
         name_lower = item[1].lower()
         if 'подвій' in name_lower or 'double' in name_lower:
             continue
+        
+        # Фільтруємо flavored версії для категорій, де є вибір молока/сиропів
+        if is_customizable_cat:
+            if any(x in name_lower for x in ['бананов', 'ванільн', 'полуничн', 'шоколадн', 'великий']):
+                # Якщо це flavored або не стандартна версія, ми її пропускаємо
+                continue
+                
         filtered_items.append(item)
 
     sorted_items = sorted(filtered_items, key=lambda x: x[1])

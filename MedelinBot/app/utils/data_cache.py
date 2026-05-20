@@ -119,7 +119,7 @@ class PublicDataCache:
         def build_default_coffee_options() -> list[dict[str, Any]]:
             options: list[dict[str, Any]] = [
                 {'type': 'caffeine', 'name': 'Стандарт', 'add_price': 0},
-                {'type': 'caffeine', 'name': 'Декаф', 'add_price': 0},
+                {'type': 'caffeine', 'name': 'Декаф', 'add_price': 10},
                 {'type': 'milk', 'name': 'Звичайне', 'add_price': 0}
             ]
             
@@ -129,6 +129,15 @@ class PublicDataCache:
                     price = it[2] if len(it) > 2 else 0
                     if not name or name == 'Звичайне': continue
                     options.append({'type': 'milk', 'name': name, 'add_price': int(price or 0)})
+            else:
+                # Hardcoded defaults if no milk category in DB
+                options.extend([
+                    {'type': 'milk', 'name': 'Безлактозне', 'add_price': 15},
+                    {'type': 'milk', 'name': 'Бананове', 'add_price': 30},
+                    {'type': 'milk', 'name': 'Кокосове', 'add_price': 30},
+                    {'type': 'milk', 'name': 'Мигдалеве', 'add_price': 30},
+                    {'type': 'milk', 'name': 'Вівсяне', 'add_price': 30},
+                ])
 
             if addon_items:
                 for it in addon_items:
@@ -213,6 +222,12 @@ class PublicDataCache:
                         normalize_category('Какао')
                     ]
                     
+                    # Фільтруємо flavored версії, які мають бути в опціях
+                    name_lower = (name or '').lower()
+                    if any(x in name_lower for x in ['бананов', 'ванільн', 'полуничн', 'шоколадн']):
+                        if category_norm in ['кава', 'мілк', 'матча', 'какао']:
+                            continue
+
                     formatted.append({
                         'id': str(item_id), 'name': name or '', 'price': price or 0, 
                         'description': desc or '', 'volume': vol or '', 'calories': cal or '', 

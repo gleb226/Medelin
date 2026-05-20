@@ -541,26 +541,32 @@ async def menu_item(callback: CallbackQuery, state: FSMContext):
     is_coffee_or_milk = any(c in category_norm for c in ['кава', 'мілк', 'матча', 'какао', 'декаф'])
     
     if is_coffee_or_milk:
-        # Отримуємо дефолтні опції якщо в базі порожньо
-        if not options:
-            from app.utils.data_cache import public_data_cache
-            # Ми можемо спробувати отримати з кешу або згенерувати
-            menu_data = public_data_cache.get('menu')
-            if menu_data:
-                for section in menu_data:
-                    if section['category'] == category:
-                        for it in section['items']:
-                            if it['id'] == item_id:
-                                options = it.get('options', [])
-                                break
-            
-            if not options:
-                # Fallback якщо кеш порожній
-                options = [
-                    {'type': 'caffeine', 'name': 'Стандарт', 'add_price': 0},
-                    {'type': 'caffeine', 'name': 'Декаф', 'add_price': 10},
-                    {'type': 'milk', 'name': 'Звичайне', 'add_price': 0}
-                ]
+        from app.utils.data_cache import public_data_cache
+        # Намагаємось взяти опції з кешу (там вони вже збагачені молоком та дефолтами)
+        cached_opts = None
+        menu_data = public_data_cache.get('menu')
+        if menu_data:
+            for section in menu_data:
+                for it in section['items']:
+                    if it['id'] == item_id:
+                        cached_opts = it.get('options')
+                        break
+                if cached_opts: break
+        
+        if cached_opts:
+            options = cached_opts
+        elif not options or not any(o.get('type') == 'milk' for o in options):
+            # Якщо в базі порожньо або немає молока - додаємо дефолтний набір
+            options = [
+                {'type': 'caffeine', 'name': 'Стандарт', 'add_price': 0},
+                {'type': 'caffeine', 'name': 'Декаф', 'add_price': 10},
+                {'type': 'milk', 'name': 'Звичайне', 'add_price': 0},
+                {'type': 'milk', 'name': 'Безлактозне', 'add_price': 15},
+                {'type': 'milk', 'name': 'Бананове', 'add_price': 30},
+                {'type': 'milk', 'name': 'Кокосове', 'add_price': 30},
+                {'type': 'milk', 'name': 'Мигдалеве', 'add_price': 30},
+                {'type': 'milk', 'name': 'Вівсяне', 'add_price': 30},
+            ]
 
         reply_markup = kb.get_item_options_kb(item_id, name, options)
     else:
@@ -602,12 +608,30 @@ async def menu_toggle_option(callback: CallbackQuery, state: FSMContext):
     row = await menu_db.get_item_by_id(item_id)
     _, category, name, _, _, _, _, _, _, _, _, options = row
     
-    if not options:
+    from app.utils.data_cache import public_data_cache
+    cached_opts = None
+    menu_data = public_data_cache.get('menu')
+    if menu_data:
+        for section in menu_data:
+            for it in section['items']:
+                if it['id'] == item_id:
+                    cached_opts = it.get('options')
+                    break
+            if cached_opts: break
+    
+    if cached_opts:
+        options = cached_opts
+    elif not options or not any(o.get('type') == 'milk' for o in options):
         # Fallback на дефолтні
         options = [
             {'type': 'caffeine', 'name': 'Стандарт', 'add_price': 0},
             {'type': 'caffeine', 'name': 'Декаф', 'add_price': 10},
-            {'type': 'milk', 'name': 'Звичайне', 'add_price': 0}
+            {'type': 'milk', 'name': 'Звичайне', 'add_price': 0},
+            {'type': 'milk', 'name': 'Безлактозне', 'add_price': 15},
+            {'type': 'milk', 'name': 'Бананове', 'add_price': 30},
+            {'type': 'milk', 'name': 'Кокосове', 'add_price': 30},
+            {'type': 'milk', 'name': 'Мигдалеве', 'add_price': 30},
+            {'type': 'milk', 'name': 'Вівсяне', 'add_price': 30},
         ]
     
     await callback.message.edit_reply_markup(reply_markup=kb.get_item_options_kb(item_id, name, options, item_opts))
@@ -623,6 +647,32 @@ async def menu_add_to_cart(callback: CallbackQuery, state: FSMContext):
 
     _, category, name, base_price, _, _, _, _, _, _, _, options = row
     name = clean_coffee_name(name)
+    
+    from app.utils.data_cache import public_data_cache
+    cached_opts = None
+    menu_data = public_data_cache.get('menu')
+    if menu_data:
+        for section in menu_data:
+            for it in section['items']:
+                if it['id'] == item_id:
+                    cached_opts = it.get('options')
+                    break
+            if cached_opts: break
+    
+    if cached_opts:
+        options = cached_opts
+    elif not options or not any(o.get('type') == 'milk' for o in options):
+        # Fallback на дефолтні
+        options = [
+            {'type': 'caffeine', 'name': 'Стандарт', 'add_price': 0},
+            {'type': 'caffeine', 'name': 'Декаф', 'add_price': 10},
+            {'type': 'milk', 'name': 'Звичайне', 'add_price': 0},
+            {'type': 'milk', 'name': 'Безлактозне', 'add_price': 15},
+            {'type': 'milk', 'name': 'Бананове', 'add_price': 30},
+            {'type': 'milk', 'name': 'Кокосове', 'add_price': 30},
+            {'type': 'milk', 'name': 'Мигдалеве', 'add_price': 30},
+            {'type': 'milk', 'name': 'Вівсяне', 'add_price': 30},
+        ]
     
     state_data = await state.get_data()
     item_opts = state_data.get(f'opts_{item_id}', [])
