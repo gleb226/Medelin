@@ -176,8 +176,10 @@ def get_item_options_kb(item_id, item_name, options, current_options=None, curre
         keyboard.append(row)
 
     if milk_opts:
+        # Для бота показуємо лише стандартні варіанти молока
+        filtered_milk = [o for o in milk_opts if o['name'] in ['Звичайне', 'Безлактозне']]
         row = []
-        for o in milk_opts:
+        for o in filtered_milk:
             name = o['name']
             # Позначаємо "Звичайне" як активне, якщо нічого не обрано
             is_active = any(name in opt for opt in current_options) or (name == 'Звичайне' and not any(f"milk:" in opt for opt in current_options))

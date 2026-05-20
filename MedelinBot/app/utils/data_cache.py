@@ -121,19 +121,20 @@ class PublicDataCache:
                 {'type': 'caffeine', 'name': 'Стандарт', 'add_price': 0},
                 {'type': 'caffeine', 'name': 'Декаф', 'add_price': 10},
                 {'type': 'milk', 'name': 'Звичайне', 'add_price': 0},
-                {'type': 'milk', 'name': 'Безлактозне', 'add_price': 15}
+                {'type': 'milk', 'name': 'Безлактозне', 'add_price': 15},
+                {'type': 'milk', 'name': 'Бананове', 'add_price': 30},
+                {'type': 'milk', 'name': 'Ванільне', 'add_price': 30},
+                {'type': 'milk', 'name': 'Кокосове', 'add_price': 30},
+                {'type': 'milk', 'name': 'Мигдалеве', 'add_price': 30},
+                {'type': 'milk', 'name': 'Вівсяне', 'add_price': 30}
             ]
             
             if milk_items:
                 for it in milk_items:
                     name = (it[1] if len(it) > 1 else '') or ''
                     price = it[2] if len(it) > 2 else 0
-                    if not name or name in ['Звичайне', 'Безлактозне']: continue
-                    # Якщо є інші види молока в базі, можемо їх додати, 
-                    # але користувач попросив тільки "стандартні", 
-                    # тому ми можемо їх проігнорувати або обмежити.
-                    # Поки що ігноруємо, бо в нас є жорсткий набір вище.
-                    pass
+                    if not name or name in ['Звичайне', 'Безлактозне', 'Бананове', 'Ванільне', 'Кокосове', 'Мигдалеве', 'Вівсяне']: continue
+                    options.append({'type': 'milk', 'name': name, 'add_price': int(price or 0)})
 
             if addon_items:
                 for it in addon_items:
