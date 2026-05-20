@@ -950,9 +950,14 @@ document.addEventListener('DOMContentLoaded', () => {
             container.classList.add('cart-modal--active');
             
             fetch(`${window.API_BASE_URL}/api/orders/${orderId}`)
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) {
+                        return r.json().catch(() => ({ detail: 'Сервер повернув помилку' }));
+                    }
+                    return r.json();
+                })
                 .then(order => {
-                    if (order.order_id) {
+                    if (order && order.order_id) {
                         container.innerHTML = `
                         <div class="cart-modal__overlay" onclick="window.closeCheckoutModal()"></div>
                         <div class="cart-modal__content checkout-modal-modern">
