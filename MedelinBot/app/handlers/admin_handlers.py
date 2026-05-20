@@ -389,14 +389,23 @@ async def show_new_bookings(message: Message, state: FSMContext):
 
     role = await get_user_role(message.from_user.id)
 
-    if role in ('super', 'boss', 'owner', 'developer', 'delivery_manager'):
+    if role in ('super', 'boss', 'owner', 'developer'):
         bookings = await orders_db.get_new_orders()
+    elif role == 'delivery_manager':
+        # Delivery manager sees only Nova Poshta orders
+        all_orders = await orders_db.get_new_orders()
+        bookings = [o for o in all_orders if o.get('order_type') == 'nova_poshta']
     else:
         shift_loc = await admin_db.is_on_shift(message.from_user.id)
         if isinstance(shift_loc, str) and shift_loc not in ("True", "1", "False", "0"):
             bookings = await orders_db.get_new_orders_by_locations([shift_loc])
         else:
-            bookings = await orders_db.get_new_orders_by_locations(await admin_db.get_locations_for_admin(message.from_user.id))
+            loc_ids = await admin_db.get_locations_for_admin(message.from_user.id)
+            if loc_ids:
+                bookings = await orders_db.get_new_orders_by_locations(loc_ids)
+            else:
+                # Empty locations list = access to all locations
+                bookings = await orders_db.get_new_orders()
 
     if not bookings:
 
@@ -436,14 +445,16 @@ async def list_active_bookings(callback: CallbackQuery):
 
     role = await get_user_role(callback.from_user.id)
 
-    if role in ('super', 'boss', 'owner', 'developer', 'delivery_manager'):
+    if role in ('super', 'boss', 'owner', 'developer'):
         locs = None
+    elif role == 'delivery_manager':
+        locs = ['NP']
     else:
         shift_loc = await admin_db.is_on_shift(callback.from_user.id)
         if isinstance(shift_loc, str) and shift_loc not in ("True", "1", "False", "0"):
             locs = [shift_loc]
         else:
-            locs = await admin_db.get_locations_for_admin(callback.from_user.id)
+            locs = await admin_db.get_locations_for_admin(callback.from_user.id) or None
 
     bookings = await active_bookings_db.get_active_bookings(locs)
 
@@ -461,14 +472,16 @@ async def list_active_orders(callback: CallbackQuery):
 
     role = await get_user_role(callback.from_user.id)
 
-    if role in ('super', 'boss', 'owner', 'developer', 'delivery_manager'):
+    if role in ('super', 'boss', 'owner', 'developer'):
         locs = None
+    elif role == 'delivery_manager':
+        locs = ['NP']
     else:
         shift_loc = await admin_db.is_on_shift(callback.from_user.id)
         if isinstance(shift_loc, str) and shift_loc not in ("True", "1", "False", "0"):
             locs = [shift_loc]
         else:
-            locs = await admin_db.get_locations_for_admin(callback.from_user.id)
+            locs = await admin_db.get_locations_for_admin(callback.from_user.id) or None
 
     orders = await active_orders_db.get_active_orders(locs)
 

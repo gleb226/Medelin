@@ -401,6 +401,7 @@ async def send_order_invoice(user, chat_id, state, bot):
     )
 
     from app.common.config import WEB_APP_URL
+    from aiogram.types import WebAppInfo
     payment_url = f"{WEB_APP_URL}/index.html?order_id={rid}"
     
     title = '💳 ОПЛАТА БРОНІ + ЗАМОВЛЕННЯ' if data.get('booking_mode') else '💳 ОПЛАТА ЗАМОВЛЕННЯ'
@@ -416,6 +417,7 @@ async def send_order_invoice(user, chat_id, state, bot):
         reply_markup=kb_pay,
         parse_mode='HTML'
     )
+
 
 async def send_beans_invoice(user, chat_id, state, bot):
 

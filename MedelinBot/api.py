@@ -249,7 +249,7 @@ async def notify_admins_about_order(order_id: str):
         
     msg += f"\n🛒 Кошик:\n{items_text}"
 
-    await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id if loc_id != 'web' else None)
+    await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id)
     if BOSS_IDS:
         await orders_db.mark_admin_notified(oid, int(BOSS_IDS[0]))
 
@@ -357,6 +357,9 @@ async def process_checkout(req: CheckoutRequest):
     payment_mode = user.get('payment_mode') or 'pay_now'
     order_type = user.get('delivery_type') or ('takeaway' if user.get('type') == 'takeaway' else 'in_house')
 
+    if order_type == 'nova_poshta':
+        loc_id = 'NP'
+    
     comment = user.get('comment', '').strip()
     wishes_str = f'TG: {tg_nick}'
     if comment:
@@ -371,11 +374,22 @@ async def process_checkout(req: CheckoutRequest):
 
     if payment_mode == 'pay_at_checkout':
         msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ (#{oid})</b>\n\n👤 {user.get("name")}\n📞 {phone}\n💰 {total} грн\n💳 Оплата на касі'
+        
+        if order_type == 'nova_poshta':
+            msg += f'\n🚚 Доставка: <b>Нова Пошта</b>'
+        else:
+            loc_name_disp = location.get('name', 'Замовлення з сайту') if location else 'Замовлення з сайту'
+            msg += f'\n🏛 Заклад: {loc_name_disp}'
+            if order_type == 'in_house':
+                msg += f"\n🪑 Тип: В закладі (Столик: {user.get('table_number', '—')})"
+            else:
+                msg += f'\n📦 Тип: З собою'
+
         if comment:
             import html
             msg += f'\n💬 Коментар: {html.escape(comment)}'
         msg += f'\n\n🛒 {items_text}'
-        await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id if loc_id != 'web' else None)
+        await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id)
         return {'status': 'ok', 'manual': True, 'order_id': oid}
 
     if data.get('payment_method') == 'monobank' and MONOBANK_TOKEN:
@@ -417,7 +431,7 @@ async def process_booking(req: BookingRequest):
     phone = format_phone(data.get('phone', '')) or data.get('phone')
     oid = await orders_db.add_order(None, data.get('tg', ''), data.get('name'), phone, loc_id, f"{data.get('date')} {data.get('time')}", data.get('guests'), data.get('wishes', ''), 'Бронювання', 'booking', 'cashier')
     msg = f'🛎 <b>БРОНЮВАННЯ</b>\n\n👤 {data.get("name")}\n📞 {phone}\n📅 {data.get("date")} {data.get("time")}\n👥 {data.get("guests")}'
-    await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id if loc_id != 'unknown' else None)
+    await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id)
     return {'status': 'ok', 'order_id': oid}
 
 @app.get('/api/menu')

@@ -137,29 +137,44 @@ class AdminDatabase:
 
         return bool(r)
 
-    async def get_notification_targets(self, location_id: str) -> list:
+    async def get_notification_targets(self, location_id: str | None) -> list:
         db = await get_db()
-        loc_id_str = str(location_id)
-        
-        # Строга фільтрація:
-        # - Якщо це Нова Пошта (location_id == 'NP'), то відправляємо лише 'delivery_manager'
-        # - Якщо це звичайний заклад, то відправляємо ТІЛЬКИ тим адмінам, які зараз на зміні в цьому закладі.
-        
-        if loc_id_str == "NP":
-            # For Nova Poshta deliveries, notify all admins who want notifications
-            query = {'receive_notifications': True}
-        else:
-            # For regular locations, notify admins on shift for that location
-            query = {'receive_notifications': True, 'is_on_shift': loc_id_str}
+        loc_id_str = str(location_id) if location_id else ''
 
-            
-        cur = db.admins.find(query, {'_id': 0, 'user_id': 1})
-        rows = await cur.to_list(length=None)
-        
         targets = set()
-        for r in rows:
-            targets.add(int(r['user_id']))
-            
+
+        if not location_id or location_id in ('web', 'unknown', 'None', ''):
+            # Web/unknown order → send to ALL admins with receive_notifications=True
+            rows = await db.admins.find({'receive_notifications': True}, {'_id': 0, 'user_id': 1}).to_list(length=None)
+            for r in rows:
+                targets.add(int(r['user_id']))
+
+        elif loc_id_str == 'NP':
+            # Nova Poshta → delivery_managers first, fallback to all
+            rows = await db.admins.find({'receive_notifications': True, 'role': 'delivery_manager'}, {'_id': 0, 'user_id': 1}).to_list(length=None)
+            for r in rows:
+                targets.add(int(r['user_id']))
+            if not targets:
+                # Fallback: send to all admins if no delivery_manager found
+                rows = await db.admins.find({'receive_notifications': True}, {'_id': 0, 'user_id': 1}).to_list(length=None)
+                for r in rows:
+                    targets.add(int(r['user_id']))
+
+        else:
+            # Real location → admins currently on shift for this location
+            rows = await db.admins.find({'receive_notifications': True, 'is_on_shift': loc_id_str}, {'_id': 0, 'user_id': 1}).to_list(length=None)
+            for r in rows:
+                targets.add(int(r['user_id']))
+
+            if not targets:
+                # Nobody on shift → fallback: admins assigned to this location (or assigned to all = empty list)
+                all_rows = await db.admins.find({'receive_notifications': True}, {'_id': 0, 'user_id': 1, 'locations': 1}).to_list(length=None)
+                for r in all_rows:
+                    locs = r.get('locations') or []
+                    # Empty list means "all locations"
+                    if not locs or loc_id_str in [str(x) for x in locs]:
+                        targets.add(int(r['user_id']))
+
         return list(targets)
 
     async def get_admins_basic(self) -> list:

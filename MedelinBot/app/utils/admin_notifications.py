@@ -6,24 +6,17 @@ from app.common.config import BOSS_IDS, BOT_TOKEN
 async def send_admin_notification(text: str, reply_markup=None, location_id: str | None=None, include_boss: bool=True) -> None:
 
     if not BOT_TOKEN:
-
         return
 
     from app.databases.admin_database import admin_db
 
     targets: set[int] = set()
 
-    if include_boss:
-        pass # Boss auto-inclusion removed by request
-
-    if location_id:
-
-        shift_ids = await admin_db.get_notification_targets(location_id)
-
-        targets.update(shift_ids)
+    # Get targets based on location
+    shift_ids = await admin_db.get_notification_targets(location_id)
+    targets.update(shift_ids)
 
     if not targets:
-
         return
 
     bot = Bot(token=BOT_TOKEN)
