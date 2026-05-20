@@ -477,19 +477,19 @@ async def menu_category(callback: CallbackQuery, state: FSMContext):
 
     booking_mode = bool(data.get('booking_mode'))
 
-    items = await menu_db.get_items_by_category(cat)
+    from app.utils.data_cache import public_data_cache
+    menu_cache = public_data_cache.get('menu')
+    cached_section = next((s for s in menu_cache if s['category'] == cat), None) if menu_cache else None
+    
+    if cached_section:
+        # Використовуємо кеш, бо там вже відфільтровані позиції для чистого меню
+        items = [(it['id'], it['name'], it['price']) for it in cached_section['items']]
+    else:
+        # Fallback на БД, якщо кеш порожній
+        raw_items = await menu_db.get_items_by_category(cat)
+        items = [(i[0], clean_coffee_name(i[1]), i[2]) for i in raw_items]
 
-    cleaned_items = []
-
-    for item in items:
-
-        item_list = list(item)
-
-        item_list[1] = clean_coffee_name(item_list[1])
-
-        cleaned_items.append(tuple(item_list))
-
-    await safe_edit_message(callback.message, f'🍽️ <b>{cat}</b>\n\nОберіть позицію:', reply_markup=kb.get_items_kb(cleaned_items, cat, cart_count=len(cart), booking_mode=booking_mode), parse_mode='HTML')
+    await safe_edit_message(callback.message, f'🍽️ <b>{cat}</b>\n\nОберіть позицію:', reply_markup=kb.get_items_kb(items, cat, cart_count=len(cart), booking_mode=booking_mode), parse_mode='HTML')
 
 @user_router.callback_query(F.data.startswith('item_'))
 
@@ -767,19 +767,19 @@ async def menu_back_to_items(callback: CallbackQuery, state: FSMContext):
 
         return
 
-    items = await menu_db.get_items_by_category(cat)
+    from app.utils.data_cache import public_data_cache
+    menu_cache = public_data_cache.get('menu')
+    cached_section = next((s for s in menu_cache if s['category'] == cat), None) if menu_cache else None
+    
+    if cached_section:
+        # Використовуємо кеш, бо там вже відфільтровані позиції для чистого меню
+        items = [(it['id'], it['name'], it['price']) for it in cached_section['items']]
+    else:
+        # Fallback на БД, якщо кеш порожній
+        raw_items = await menu_db.get_items_by_category(cat)
+        items = [(i[0], clean_coffee_name(i[1]), i[2]) for i in raw_items]
 
-    cleaned_items = []
-
-    for item in items:
-
-        item_list = list(item)
-
-        item_list[1] = clean_coffee_name(item_list[1])
-
-        cleaned_items.append(tuple(item_list))
-
-    await safe_edit_message(callback.message, f'🍽️ <b>{cat}</b>\n\nОберіть позицію:', reply_markup=kb.get_items_kb(cleaned_items, cat, cart_count=len(cart), booking_mode=booking_mode), parse_mode='HTML')
+    await safe_edit_message(callback.message, f'🍽️ <b>{cat}</b>\n\nОберіть позицію:', reply_markup=kb.get_items_kb(items, cat, cart_count=len(cart), booking_mode=booking_mode), parse_mode='HTML')
 
 @user_router.message(F.text.in_([kb.BTN_LOCATIONS, '🏢 НАШІ ЗАКЛАДИ']))
 

@@ -177,7 +177,7 @@ def get_item_options_kb(item_id, item_name, options, current_options=None, curre
             row.append(InlineKeyboardButton(text=f"{prefix}{name}{price_text}", callback_data=f"opt_{item_id}_caf:{name}"))
         keyboard.append(row)
 
-    if not milk_opts and any(x in item_name.lower() or x in (str(options) if options else '') for x in ['кава', 'латте', 'капучино', 'раф', 'флет', 'американо', 'матча', 'какао', 'мілк']):
+    if not milk_opts and any(x in item_name.lower() or x in (str(options) if options else '') for x in ['кава', 'лате', 'латте', 'капучино', 'раф', 'флет', 'американо', 'матча', 'какао', 'мілк', 'глясе', 'допіо']):
         # Тимчасовий хардкод для виправлення проблем з відображенням
         milk_opts = [
             {'type': 'milk', 'name': 'Звичайне', 'add_price': 0},
@@ -283,27 +283,8 @@ def get_categories_kb(categories, booking_mode=False, cart_count=0):
 def get_items_kb(items, category, cart_count=0, booking_mode=False):
     keyboard = []
     
-    # Фільтруємо "не стандартні" версії за назвою, якщо вони є окремими позиціями
-    filtered_items = []
-    cat_lower = category.lower().strip()
-    is_customizable_cat = any(x in cat_lower for x in ['кава', 'мілк', 'матча', 'какао'])
-    
-    for item in items:
-        name_lower = item[1].lower()
-        if 'подвій' in name_lower or 'double' in name_lower:
-            continue
-        
-        # Фільтруємо flavored версії для категорій, де є вибір молока/сиропів
-        if is_customizable_cat:
-            if any(x in name_lower for x in ['бананов', 'ванільн', 'полуничн', 'шоколадн', 'кокосов', 'мигдалев', 'вівсян', 'великий', 'солев', 'солон']):
-                # Якщо це flavored або не стандартна версія, ми її пропускаємо
-                # Винятки для базових напоїв, якщо вони містять ці слова
-                if name_lower not in ['какао', 'матча лате', 'матча тонік']:
-                    continue
-                
-        filtered_items.append(item)
-
-    sorted_items = sorted(filtered_items, key=lambda x: x[1])
+    # Сортуємо та додаємо всі айтеми (фільтрація тепер в кеші)
+    sorted_items = sorted(items, key=lambda x: x[1])
     row = []
     for item in sorted_items:
 

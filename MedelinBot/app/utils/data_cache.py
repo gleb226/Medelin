@@ -1,4 +1,3 @@
-
 import json
 
 import re
@@ -91,13 +90,26 @@ class PublicDataCache:
 
         from app.databases.menu_database import menu_db
 
+        def fix_encoding(s: Any) -> str:
+            if not s: return ""
+            s = str(s)
+            if any(c in s for c in 'абвгґдеєжзиіїйклмнопрстуфхцчшщьюя'):
+                return s
+            try:
+                return s.encode('latin1').decode('utf-8')
+            except:
+                try:
+                    return s.encode('cp1252').decode('utf-8')
+                except:
+                    return s
+
         def normalize_category(value: Any) -> str:
 
-            s = str(value or '')
+            s = fix_encoding(value)
 
-            s = re.sub('[^0-9A-Za-z\\u0400-\\u04FF\\s]', ' ', s)
+            s = re.sub('[^0-9A-Za-z\u0400-\u04FF\s]', ' ', s)
 
-            s = re.sub('\\s+', ' ', s).strip().casefold()
+            s = re.sub('\s+', ' ', s).strip().casefold()
 
             return s
 
@@ -131,14 +143,14 @@ class PublicDataCache:
             
             if milk_items:
                 for it in milk_items:
-                    name = (it[1] if len(it) > 1 else '') or ''
+                    name = fix_encoding(it[1] if len(it) > 1 else '')
                     price = it[2] if len(it) > 2 else 0
                     if not name or name in ['Звичайне', 'Безлактозне', 'Бананове', 'Ванільне', 'Кокосове', 'Мигдалеве', 'Вівсяне']: continue
                     options.append({'type': 'milk', 'name': name, 'add_price': int(price or 0)})
 
             if addon_items:
                 for it in addon_items:
-                    name = (it[1] if len(it) > 1 else '') or ''
+                    name = fix_encoding(it[1] if len(it) > 1 else '')
                     price = it[2] if len(it) > 2 else 0
                     if not name: continue
                     if 'альтернатив' in name.casefold() and 'молок' in name.casefold():
@@ -178,7 +190,10 @@ class PublicDataCache:
 
         for cat in categories:
 
-            if normalize_category(cat) in hidden_categories:
+            cat_f = fix_encoding(cat)
+            cat_norm = normalize_category(cat)
+
+            if cat_norm in hidden_categories:
 
                 continue
 
@@ -192,55 +207,74 @@ class PublicDataCache:
 
                     item_id = i[0]
 
-                    name = i[1] if len(i) > 1 else ''
+                    name = fix_encoding(i[1] if len(i) > 1 else '')
 
                     price = i[2] if len(i) > 2 else 0
 
-                    desc = i[3] if len(i) > 3 else ''
+                    desc = fix_encoding(i[3] if len(i) > 3 else '')
 
                     vol = i[4] if len(i) > 4 else ''
 
                     cal = i[5] if len(i) > 5 else ''
 
                     img = i[6] if len(i) > 6 else ''
-                    comp = i[7] if len(i) > 7 else ''
+                    comp = fix_encoding(i[7] if len(i) > 7 else '')
                     strn = i[8] if len(i) > 8 else 0
                     swt = i[9] if len(i) > 9 else 0
                     opts = i[10] if len(i) > 10 else []
                     
-                    if isinstance(opts, str): # Сумісність з можливими старими даними
+                    if isinstance(opts, str): 
                         opts = []
                     
-                    category_norm = normalize_category(cat)
-                    cat_raw = str(cat or '')
-                    cat_raw_lower = cat_raw.lower()
-                    # Більш гнучка перевірка на випадок проблем з кодуванням
-                    use_default = any(x in cat_raw_lower for x in ['кава', 'ава', 'мілк', 'матча', 'какао', 'декаф'])
-                    # Додаткова перевірка на Mojibake, яку ми бачимо в логах
-                    if not use_default:
-                        if '╨Ъ╨░╨▓╨░' in cat_raw or '╨Ь╤Ц╨╗╨║' in cat_raw or '╨Ь╨░╤В╤З╨░' in cat_raw or '╨Ъ╨░╨║╨░╨╛' in cat_raw:
-                            use_default = True
+                    # Визначаємо тип напою для призначення опцій
+                    name_l = name.lower()
+                    cat_l = cat_f.lower()
                     
-                    # Проста категорія (десерти, чай тощо) - для них не додаємо дефолтні опції кави
-                    is_simple_cat = any(x in cat_raw_lower for x in ['десерт', 'чай', 'фреш', 'напої', 'напои'])
+                    # Кавовий/молочний напій?
+                    is_coffee_or_milk_drink = any(x in cat_l or x in name_l for x in [
+                        'кава', 'мілк', 'матча', 'какао', 'декаф', 
+                        'лате', 'латте', 'капуч', 'флет', 'раф', 
+                        'глясе', 'айс', 'вершк', 'молок'
+                    ])
+                    
+                    # Чи це проста категорія де не треба опцій?
+                    is_simple_cat = any(x in cat_l for x in ['десерт', 'чай', 'фреш', 'напої', 'напои', 'бургер', 'салат'])
+
+                    use_default = is_coffee_or_milk_drink
                     if not use_default and not is_simple_cat:
-                        use_default = True # Робимо кавові опції доступними для всіх інших категорій як fallback
+                        # Fallback для невідомих категорій, якщо це не десерти/чай
+                        use_default = True
+
+                    # Фільтруємо flavored версії для ЧИСТИХ напоїв, щоб лишити тільки базові
+                    if is_coffee_or_milk_drink:
+                        if any(x in name_l for x in ['бананов', 'ванільн', 'полуничн', 'шоколадн', 'кокосов', 'мигдалев', 'вівсян', 'великий', 'подвій', 'double']):
+                            # Винятки для напоїв, які мають бути в основному списку
+                            if not any(exc in name_l for exc in ['какао', 'матча лате', 'матча тонік', 'айс лате', 'айс-лате', 'глясе']):
+                                continue
+
+                    # Призначення опцій
+                    item_options = opts or []
+                    if use_default:
+                        # Якщо немає молока в опціях - додаємо дефолтний набір
+                        if not any(o.get('type') == 'milk' for o in item_options):
+                            # Використовуємо дефолтні кавові опції
+                            item_options = default_coffee_options
 
                     formatted.append({
-                        'id': str(item_id), 'name': name or '', 'price': price or 0, 
-                        'description': desc or '', 'volume': vol or '', 'calories': cal or '', 
-                        'image_url': img or '', 'composition': comp or '', 
+                        'id': str(item_id), 'name': name, 'price': price or 0, 
+                        'description': desc, 'volume': vol, 'calories': cal, 
+                        'image_url': img, 'composition': comp, 
                         'strength': strn or 0, 'sweetness': swt or 0, 
-                        'options': opts or default_coffee_options if use_default else opts or []
+                        'options': item_options
                     })
 
                 except Exception as e:
 
-                    print(f'Error caching menu item in {cat}: {e}')
+                    print(f'Error caching menu item in {cat_f}: {str(e)}')
 
                     continue
 
-            full_menu.append({'category': cat, 'items': formatted, 'simple': cat in ['➕ До Кави', '🍃 Декаф', 'Молоко', 'Додатки', 'Сиропи']})
+            full_menu.append({'category': cat_f, 'items': formatted, 'simple': cat_norm in ['➕ до кави', '🍃 декаф', 'молоко', 'додатки', 'сиропи']})
 
         return self.set('menu', full_menu)
 
