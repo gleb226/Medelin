@@ -367,6 +367,15 @@ async def process_checkout(req: CheckoutRequest):
         import aiohttp
         mono_url = 'https://api.monobank.ua/api/merchant/invoice/create'
         headers = {'X-Token': MONOBANK_TOKEN, 'Content-Type': 'application/json'}
+        
+        # Відображаємо тільки той метод, який вибрав користувач
+        methods_map = {
+            'card': ['pan'],
+            'applepay': ['applepay'],
+            'googlepay': ['googlepay'],
+            'monobank': ['monobank']
+        }
+        
         payload = {
             'amount': int(total * 100),
             'ccy': 980,
@@ -375,7 +384,8 @@ async def process_checkout(req: CheckoutRequest):
                 'destination': f'Замовлення #{oid} (Medelin)'
             },
             'redirectUrl': WEB_APP_URL,
-            'validity': 3600
+            'validity': 3600,
+            'paymentMethods': methods_map.get(payment_method, [])
         }
         try:
             async with aiohttp.ClientSession() as session:
