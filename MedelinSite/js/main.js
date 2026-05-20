@@ -485,11 +485,11 @@ window.openCheckoutModal = function () {
                         <button class="payment-btn" onclick="window.submitCheckout('googlepay')">
                             <i class="fab fa-google-pay"></i> <span>Google Pay</span>
                         </button>
-                        <button class="payment-btn" onclick="window.submitCheckout('privatpay')">
-                            <i class="fas fa-university"></i> <span>PrivatPay</span>
-                        </button>
                         <button class="payment-btn" onclick="window.submitCheckout('monobank')">
                             <i class="fas fa-wallet"></i> <span>MonoPay</span>
+                        </button>
+                        <button class="payment-btn" onclick="window.submitCheckout('privatpay')">
+                            <i class="fas fa-university"></i> <span>PrivatPay</span>
                         </button>
                     </div>
                     <div style="padding: 0 1.5rem 1.5rem;">

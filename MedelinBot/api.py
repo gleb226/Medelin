@@ -358,61 +358,61 @@ async def process_checkout(req: CheckoutRequest):
     await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id if loc_id != 'web' else None)
 
     if payment_mode == 'pay_at_checkout':
-
         return {'status': 'ok', 'manual': True, 'order_id': oid}
 
-    if payment_method == 'monobank' and MONOBANK_TOKEN:
+    # Визначаємо провайдера: Картка, Apple Pay, Google Pay та MonoPay йдуть через Монобанк
+    use_monobank = payment_method in ('monobank', 'card', 'applepay', 'googlepay')
 
+    if use_monobank and MONOBANK_TOKEN:
         import aiohttp
-
         mono_url = 'https://api.monobank.ua/api/merchant/invoice/create'
-
         headers = {'X-Token': MONOBANK_TOKEN, 'Content-Type': 'application/json'}
-
-        payload = {'amount': int(total * 100), 'ccy': 980, 'merchantPaymInfo': {'reference': str(oid), 'destination': f'Замовлення #{oid} (Medelin)'}, 'redirectUrl': WEB_APP_URL, 'validity': 3600}
-
+        payload = {
+            'amount': int(total * 100),
+            'ccy': 980,
+            'merchantPaymInfo': {
+                'reference': str(oid),
+                'destination': f'Замовлення #{oid} (Medelin)'
+            },
+            'redirectUrl': WEB_APP_URL,
+            'validity': 3600
+        }
         try:
-
             async with aiohttp.ClientSession() as session:
-
                 async with session.post(mono_url, json=payload, headers=headers, timeout=15) as resp:
-
                     resp_data = await resp.json()
-
                     if resp.status == 200:
-
                         return {'status': 'ok', 'url': resp_data['pageUrl'], 'order_id': oid, 'provider': 'monobank'}
-
                     else:
+                        # Якщо Монобанк повернув помилку, спробуємо LiqPay як запасний варіант
+                        pass
+        except Exception:
+            # Якщо Монобанк недоступний, йдемо далі до LiqPay
+            pass
 
-                        raise HTTPException(status_code=502, detail=f"Monobank API Error: {resp_data.get('errText', 'Unknown')}")
-
-        except Exception as e:
-
-            raise HTTPException(status_code=500, detail=f"Monobank connection error: {str(e)}")
-
+    # LiqPay використовується для PrivatPay або як запасний варіант
     liqpay_paytypes = 'card'
-
     if payment_method == 'applepay':
-
         liqpay_paytypes = 'apay'
-
     elif payment_method == 'googlepay':
-
         liqpay_paytypes = 'gpay'
-
     elif payment_method == 'privatpay':
-
         liqpay_paytypes = 'privat24'
 
-    liqpay_params = {'action': 'pay', 'amount': total, 'currency': 'UAH', 'description': f'Замовлення #{oid} (Medelin)', 'order_id': str(oid), 'version': '3', 'public_key': LIQPAY_PUBLIC_KEY, 'result_url': WEB_APP_URL, 'paytypes': liqpay_paytypes}
-
+    liqpay_params = {
+        'action': 'pay',
+        'amount': total,
+        'currency': 'UAH',
+        'description': f'Замовлення #{oid} (Medelin)',
+        'order_id': str(oid),
+        'version': '3',
+        'public_key': LIQPAY_PUBLIC_KEY,
+        'result_url': WEB_APP_URL,
+        'paytypes': liqpay_paytypes
+    }
     json_data = json.dumps(liqpay_params).encode('utf-8')
-
     encoded_data = base64.b64encode(json_data).decode('utf-8')
-
     sign_string = LIQPAY_PRIVATE_KEY + encoded_data + LIQPAY_PRIVATE_KEY
-
     signature = base64.b64encode(hashlib.sha1(sign_string.encode('utf-8')).digest()).decode('utf-8')
 
     return {'status': 'ok', 'data': encoded_data, 'signature': signature, 'order_id': oid, 'provider': 'liqpay'}
