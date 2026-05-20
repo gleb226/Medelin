@@ -208,21 +208,23 @@ class PublicDataCache:
                     swt = i[9] if len(i) > 9 else 0
                     opts = i[10] if len(i) > 10 else []
                     
-                    category_norm = normalize_category(cat)
-                    use_default = category_norm in [
-                        normalize_category('Кава'),
-                        normalize_category('Мілк'),
-                        normalize_category('Матча'),
-                        normalize_category('Какао')
-                    ]
+                    if isinstance(opts, str): # Сумісність з можливими старими даними
+                        opts = []
                     
-                    # Фільтруємо flavored та не стандартні версії
-                    name_lower = (name or '').lower()
-                    if category_norm in ['кава', 'мілк', 'матча', 'какао']:
-                        if any(x in name_lower for x in ['бананов', 'ванільн', 'полуничн', 'шоколадн', 'кокосов', 'мигдалев', 'вівсян', 'великий', 'подвій', 'double']):
-                            # Якщо це не базовий напій, пропускаємо
-                            if name_lower not in ['какао', 'матча лате', 'матча тонік']:
-                                continue
+                    category_norm = normalize_category(cat)
+                    cat_raw = str(cat or '')
+                    cat_raw_lower = cat_raw.lower()
+                    # Більш гнучка перевірка на випадок проблем з кодуванням
+                    use_default = any(x in cat_raw_lower for x in ['кава', 'ава', 'мілк', 'матча', 'какао', 'декаф'])
+                    # Додаткова перевірка на Mojibake, яку ми бачимо в логах
+                    if not use_default:
+                        if '╨Ъ╨░╨▓╨░' in cat_raw or '╨Ь╤Ц╨╗╨║' in cat_raw or '╨Ь╨░╤В╤З╨░' in cat_raw or '╨Ъ╨░╨║╨░╨╛' in cat_raw:
+                            use_default = True
+                    
+                    # Проста категорія (десерти, чай тощо) - для них не додаємо дефолтні опції кави
+                    is_simple_cat = any(x in cat_raw_lower for x in ['десерт', 'чай', 'фреш', 'напої', 'напои'])
+                    if not use_default and not is_simple_cat:
+                        use_default = True # Робимо кавові опції доступними для всіх інших категорій як fallback
 
                     formatted.append({
                         'id': str(item_id), 'name': name or '', 'price': price or 0, 

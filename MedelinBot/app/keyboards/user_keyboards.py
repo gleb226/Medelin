@@ -177,6 +177,18 @@ def get_item_options_kb(item_id, item_name, options, current_options=None, curre
             row.append(InlineKeyboardButton(text=f"{prefix}{name}{price_text}", callback_data=f"opt_{item_id}_caf:{name}"))
         keyboard.append(row)
 
+    if not milk_opts and any(x in item_name.lower() or x in (str(options) if options else '') for x in ['кава', 'латте', 'капучино', 'раф', 'флет', 'американо', 'матча', 'какао', 'мілк']):
+        # Тимчасовий хардкод для виправлення проблем з відображенням
+        milk_opts = [
+            {'type': 'milk', 'name': 'Звичайне', 'add_price': 0},
+            {'type': 'milk', 'name': 'Безлактозне', 'add_price': 15},
+            {'type': 'milk', 'name': 'Бананове', 'add_price': 30},
+            {'type': 'milk', 'name': 'Ванільне', 'add_price': 30},
+            {'type': 'milk', 'name': 'Кокосове', 'add_price': 30},
+            {'type': 'milk', 'name': 'Мигдалеве', 'add_price': 30},
+            {'type': 'milk', 'name': 'Вівсяне', 'add_price': 30}
+        ]
+
     if milk_opts:
         keyboard.append([InlineKeyboardButton(text="─── МОЛОКО ───", callback_data="none")])
         row = []
