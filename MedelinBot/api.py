@@ -241,10 +241,11 @@ async def notify_admins_about_order(order_id: str):
     msg += f'💰 Сума: <b>{total} грн</b>\n'
     msg += f"💳 Оплата: Онлайн (Сплачено)\n"
     
-    wishes = order.get('wishes', '')
+    wishes = order.get('wishes') or ''
     clean_wishes = wishes.replace(f"TG: {tg_nick}", "").replace("TG: ", "").replace("МЕНЮ", "").strip()
     if clean_wishes:
-        msg += f"💬 Побажання: {clean_wishes}\n"
+        import html
+        msg += f"💬 Побажання: {html.escape(clean_wishes)}\n"
         
     msg += f"\n🛒 Кошик:\n{items_text}"
 
@@ -371,7 +372,8 @@ async def process_checkout(req: CheckoutRequest):
     if payment_mode == 'pay_at_checkout':
         msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ (#{oid})</b>\n\n👤 {user.get("name")}\n📞 {phone}\n💰 {total} грн\n💳 Оплата на касі'
         if comment:
-            msg += f'\n💬 Коментар: {comment}'
+            import html
+            msg += f'\n💬 Коментар: {html.escape(comment)}'
         msg += f'\n\n🛒 {items_text}'
         await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id if loc_id != 'web' else None)
         return {'status': 'ok', 'manual': True, 'order_id': oid}

@@ -540,7 +540,8 @@ async def process_beans_final(user, chat_id, state, bot):
 
     msg = f"🌟 <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data['phone']}</code>\n🏛 <b>ОТРИМАННЯ:</b> {loc_name}\n🚚 <b>ТИП:</b> {np_info}\n☕️ <b>СОРТ:</b> {data['bean_name']} ({data['weight']}г)"
     if wishes:
-        msg += f"\n💬 <b>ПОБАЖАННЯ:</b> {wishes}"
+        import html
+        msg += f"\n💬 <b>ПОБАЖАННЯ:</b> {html.escape(wishes)}"
     msg += f"\n💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
 
     targets = set()
@@ -612,7 +613,8 @@ async def process_order_final(user, chat_id, state, bot):
 
     msg = f"🔔 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data['phone']}</code>\n🏛 <b>ЗАКЛАД:</b> {loc_name}\n{t_line}🥘 <b>ПОЗИЦІЇ:</b> {cart_s}"
     if wishes_val:
-        msg += f"\n💬 <b>ПОБАЖАННЯ:</b> {wishes_val}"
+        import html
+        msg += f"\n💬 <b>ПОБАЖАННЯ:</b> {html.escape(wishes_val)}"
     msg += f"\n{p_stat}"
 
     targets = await admin_db.get_notification_targets(loc_id)
