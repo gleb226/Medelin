@@ -26,6 +26,9 @@ def get_main_admin_menu(is_on_shift: bool=False, role: str='admin'):
         shift_text = '🔴 ЗАВЕРШИТИ ЗМІНУ' if is_on_shift else '🟢 ПОЧАТИ ЗМІНУ'
 
         keyboard.append([KeyboardButton(text=shift_text)])
+        
+        if is_on_shift:
+            keyboard.append([KeyboardButton(text='📝 ПРИЙНЯТИ ЗАМОВЛЕННЯ')])
 
     if role in ('boss', 'owner', 'developer', 'admin', 'waiter', 'delivery_manager'):
 

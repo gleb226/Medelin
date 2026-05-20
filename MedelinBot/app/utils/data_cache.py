@@ -230,23 +230,27 @@ class PublicDataCache:
                     name_l = name.lower()
                     cat_l = cat_f.lower()
                     
-                    # Кавовий/молочний напій?
-                    is_coffee_or_milk_drink = any(x in cat_l or x in name_l for x in [
-                        'кава', 'мілк', 'матча', 'какао', 'декаф', 
-                        'лате', 'латте', 'капуч', 'флет', 'раф', 
+                    # ПЕРЕВІРКА: чи це саме КАВА (для декафу та додатків)
+                    # Ми перевіряємо як категорію, так і назву
+                    is_pure_coffee = any(x in cat_l for x in ['кава', 'декаф']) or \
+                                    any(x in name_l for x in ['американо', 'еспресо', 'допіо', 'ристрето', 'латте', 'капучино', 'раф', 'флет', 'глясе'])
+                    
+                    # Кавовий/молочний напій взагалі?
+                    is_milk_based = any(x in cat_l or x in name_l for x in [
+                        'мілк', 'матча', 'какао', 'лате', 'латте', 'капуч', 'флет', 'раф', 
                         'глясе', 'айс', 'вершк', 'молок'
                     ])
                     
                     # Чи це проста категорія де не треба опцій?
-                    is_simple_cat = any(x in cat_l for x in ['десерт', 'чай', 'фреш', 'напої', 'напои', 'бургер', 'салат'])
+                    is_simple_cat = any(x in cat_l for x in ['десерт', 'чай', 'фреш', 'напої', 'напои', 'бургер', 'салат', 'сендвіч'])
 
-                    use_default = is_coffee_or_milk_drink
+                    use_default = is_pure_coffee or is_milk_based
                     if not use_default and not is_simple_cat:
-                        # Fallback для невідомих категорій, якщо це не десерти/чай
                         use_default = True
 
                     # Фільтруємо flavored версії для ЧИСТИХ напоїв, щоб лишити тільки базові
-                    if is_coffee_or_milk_drink:
+                    if use_default:
+                        # Ми фільтруємо, якщо напій містить смак, але сам не є винятком
                         if any(x in name_l for x in ['бананов', 'ванільн', 'полуничн', 'шоколадн', 'кокосов', 'мигдалев', 'вівсян', 'великий', 'подвій', 'double']):
                             # Винятки для напоїв, які мають бути в основному списку
                             if not any(exc in name_l for exc in ['какао', 'матча лате', 'матча тонік', 'айс лате', 'айс-лате', 'глясе']):
@@ -255,12 +259,10 @@ class PublicDataCache:
                     # Призначення опцій
                     item_options = opts or []
                     if use_default:
+                        # Якщо немає молока в опціях - додаємо дефолтний набір
                         if not any(o.get('type') == 'milk' for o in item_options):
-                            # Визначаємо чи це саме КАВА (для декафу та додатків)
-                            is_pure_coffee = any(x in cat_l or x in name_l for x in ['кава', 'американо', 'еспресо', 'допіо', 'ристрето', 'латте', 'капучино', 'раф', 'флет', 'глясе'])
-                            
                             if is_pure_coffee:
-                                # Для кави - повний набір (декаф + молоко + додатки)
+                                # Для кави - ПОВНИЙ набір (декаф + молоко + додатки)
                                 item_options = default_coffee_options
                             else:
                                 # Для інших напоїв (мілкшейки, матча, какао) - ТІЛЬКИ молоко

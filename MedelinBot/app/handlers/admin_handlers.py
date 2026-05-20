@@ -259,6 +259,14 @@ async def deliver_guest_message(bot: Bot, order: dict | None, text_html: str, si
 
     return 'site'
 
+@admin_router.message(F.text == '📝 ПРИЙНЯТИ ЗАМОВЛЕННЯ')
+async def admin_take_order_start(message: Message, state: FSMContext):
+    # Офіціант починає замовлення від імені клієнта (локально в боті)
+    await state.clear()
+    from app.handlers.user_handlers import open_menu
+    await message.answer('📝 <b>ПРИЙОМ ЗАМОВЛЕННЯ (РЕЖИМ ОФІЦІАНТА)</b>\n\nОберіть категорію:', parse_mode='HTML')
+    await open_menu(message, state)
+
 @admin_router.message(F.text == '↩️ НА ГОЛОВНУ')
 
 async def back_to_main_from_admin(message: Message, state: FSMContext):
