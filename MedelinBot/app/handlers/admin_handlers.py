@@ -569,12 +569,19 @@ async def clear_support_chat(callback: CallbackQuery, state: FSMContext):
 
     await callback.answer("⏳ Очищення...")
 
-    # Видалення з БД
+    # Видалення з БД ТІЛЬКИ ЦЬОГО ЧАТУ
     from app.databases.mongo_client import get_db
     from app.utils.phone_utils import normalize_phone
     db = await get_db()
+    
+    # Створюємо фільтр чітко за телефоном та order_id
     query = {'phone_digits': normalize_phone(phone)}
-    if oid != 'none': query['order_id'] = oid
+    if oid != 'none':
+        query['order_id'] = oid
+    else:
+        # Якщо oid немає, видаляємо лише ті, де order_id порожній
+        query['order_id'] = {'$in': [None, 'none', '']}
+        
     await db.guest_messages.delete_many(query)
 
     await callback.message.edit_text("✅ <b>ЧАТ ОЧИЩЕНО!</b>", parse_mode='HTML')

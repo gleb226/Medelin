@@ -445,11 +445,8 @@ def get_phone_kb():
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
 
 async def get_contact_kb():
-
     socials = await socials_db.get_all_socials()
-
     keyboard = []
-
     row = []
 
     for s in socials:
@@ -464,15 +461,22 @@ async def get_contact_kb():
         elif 'tiktok' in name_lower or 'тікток' in name_lower:
             icon = '🎵 '
 
-        keyboard.append([InlineKeyboardButton(text=f"{icon}{s['name'].upper()}", url=s['url'])])
+        row.append(InlineKeyboardButton(text=f"{icon}{s['name'].upper()}", url=s['url']))
+        if len(row) == 2:
+            keyboard.append(row)
+            row = []
+    if row:
+        keyboard.append(row)
 
-    keyboard.append([InlineKeyboardButton(text='💬 НАПИСАТИ НАМ', callback_data='contact_us_msg')])
-
-    keyboard.append([InlineKeyboardButton(text='📞 ТЕЛЕФОН', callback_data='contact_phone')])
-
-    keyboard.append([InlineKeyboardButton(text='✉️ EMAIL', callback_data='contact_email')])
-
-    keyboard.append([InlineKeyboardButton(text='🏠 НА ГОЛОВНУ', callback_data='back_main_menu_only')])
+    # Додаємо контакти та кнопку повідомлення у 2 колонки
+    keyboard.append([
+        InlineKeyboardButton(text='📞 +380503775906', callback_data='contact_phone'),
+        InlineKeyboardButton(text='✉️ EMAIL', callback_data='contact_email')
+    ])
+    keyboard.append([
+        InlineKeyboardButton(text='💬 НАПИСАТИ НАМ', callback_data='contact_us_msg'),
+        InlineKeyboardButton(text='🏠 НА ГОЛОВНУ', callback_data='back_main_menu_only')
+    ])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
