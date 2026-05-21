@@ -240,26 +240,6 @@
     "body": 3
   },
   {
-    "id": "6a0ab135bef9495874b10a21",
-    "name": "Бразилія Сантос",
-    "description": "Найпопулярніша бразильська кава. Ідеально збалансований смак без зайвої кислотності.",
-    "price_250": 235,
-    "price_500": 456,
-    "price_1000": 865,
-    "image_url": "https://images.pexels.com/photos/1695052/pexels-photo-1695052.jpeg?auto=compress&cs=tinysrgb&w=800",
-    "altitude": "1100м",
-    "sort": "Арабіка 100%",
-    "processing": "Natural",
-    "roast": "Середнє",
-    "variety": "Bourbon, Catuai",
-    "cup_score": "81",
-    "harvest": "Травень - Вересень",
-    "taste": "Смажений горіх, молочний шоколад, карамель",
-    "acidity": 2,
-    "bitterness": 2,
-    "body": 3
-  },
-  {
     "id": "6a0ab135bef9495874b10a22",
     "name": "Колумбія Ексельсо",
     "description": "Класична колумбійська кава з приємною фруктовою кислинкою та солодким післясмаком.",

@@ -107,9 +107,9 @@ class PublicDataCache:
 
             s = fix_encoding(value)
 
-            s = re.sub('[^0-9A-Za-z\u0400-\u04FF\s]', ' ', s)
+            s = re.sub(r'[^0-9A-Za-z\u0400-\u04FF\s]', ' ', s)
 
-            s = re.sub('\s+', ' ', s).strip().casefold()
+            s = re.sub(r'\s+', ' ', s).strip().casefold()
 
             return s
 
@@ -274,7 +274,11 @@ class PublicDataCache:
 
                     continue
 
-            full_menu.append({'category': cat_f, 'items': formatted, 'simple': cat_norm in ['➕ до кави', '🍃 декаф', 'молоко', 'додатки', 'сиропи']})
+            full_menu.append({
+                'category': cat_f, 
+                'items': formatted, 
+                'simple': cat_norm in ['до кави', 'декаф', 'молоко', 'додатки', 'сиропи']
+            })
 
         return self.set('menu', full_menu)
 

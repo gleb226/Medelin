@@ -1612,6 +1612,95 @@
             "add_price": 15
           }
         ]
+      },
+      {
+        "id": "6a0ecd05dc25192092d37bcf",
+        "name": "Кава",
+        "price": "54",
+        "description": "",
+        "volume": "431",
+        "calories": "",
+        "image_url": "/uploads/6246e4c8f3.webp",
+        "composition": "",
+        "strength": 0,
+        "sweetness": 0,
+        "options": [
+          {
+            "type": "caffeine",
+            "name": "Стандарт",
+            "add_price": 0
+          },
+          {
+            "type": "caffeine",
+            "name": "Декаф",
+            "add_price": 10
+          },
+          {
+            "type": "milk",
+            "name": "Звичайне",
+            "add_price": 0
+          },
+          {
+            "type": "milk",
+            "name": "Безлактозне",
+            "add_price": 15
+          },
+          {
+            "type": "milk",
+            "name": "Бананове",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Ванільне",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Кокосове",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Мигдалеве",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Вівсяне",
+            "add_price": 30
+          },
+          {
+            "type": "addon",
+            "name": "Молоко 70мл",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Вершки 70мл",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Вершки порційні",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Мед",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Згущене молоко",
+            "add_price": 15
+          },
+          {
+            "type": "addon",
+            "name": "Карамель",
+            "add_price": 15
+          }
+        ]
       }
     ],
     "simple": false

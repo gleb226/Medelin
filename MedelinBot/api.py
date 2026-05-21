@@ -444,26 +444,22 @@ async def process_booking(req: BookingRequest):
 
 @app.get('/api/menu')
 async def get_menu():
-    data = public_data_cache.get('menu')
-    if data is None: data = await public_data_cache.refresh_menu()
+    data = await public_data_cache.refresh_menu()
     return data
 
 @app.get('/api/coffee')
 async def get_coffee():
-    data = public_data_cache.get('coffee')
-    if data is None: data = await public_data_cache.refresh_coffee()
+    data = await public_data_cache.refresh_coffee()
     return data
 
 @app.get('/api/locations')
 async def get_locations():
-    data = public_data_cache.get('locations')
-    if data is None: data = await public_data_cache.refresh_locations()
+    data = await public_data_cache.refresh_locations()
     return data
 
 @app.get('/api/socials')
 async def get_socials():
-    data = public_data_cache.get('socials')
-    if data is None: data = await public_data_cache.refresh_socials()
+    data = await public_data_cache.refresh_socials()
     return data
 
 app.mount('/', StaticFiles(directory=str(_site_dir), html=True), name='site')

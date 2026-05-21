@@ -2,14 +2,20 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Встановлюємо залежності для Pillow (якщо потрібні для WebP)
+RUN apt-get update && apt-get install -y \
+    libwebp-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Експортуємо порти для API та Бота (якщо потрібно)
+# Експортуємо порт
 EXPOSE 8000
 
-# Запускаємо і бота, і API (можна через скрипт або просто API, якщо бот в окремому процесі)
-# Для простоти запустимо API, а бота можна окремим контейнером або фоновим процесом
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Запускаємо main.py, який стартує і бота, і API в одному процесі
+CMD ["python", "main.py"]
