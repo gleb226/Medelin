@@ -1241,6 +1241,8 @@ async def menu_add_save(callback: CallbackQuery, state: FSMContext):
 
         await coffee_beans_db.add_bean(data['name'], data['price'], data.get('description', ''), 'Сорт', 'Смак', 'Обсмажка', image_url=data.get('image_url', ''))
 
+        await public_data_cache.refresh('coffee')
+
         await safe_edit_message(callback.message, '✅ ЗЕРНО ДОДАНО!', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
 
     else:
@@ -1363,6 +1365,8 @@ async def beans_del_confirm(callback: CallbackQuery):
 
     await coffee_beans_db.delete_bean(bid)
 
+    await public_data_cache.refresh('coffee')
+
     await callback.answer('Видалено!')
 
     await beans_del_start(callback)
@@ -1448,6 +1452,8 @@ async def admin_edit_value_save(message: Message, state: FSMContext, bot: Bot):
                 except: pass
 
             await coffee_beans_db.update_bean(bid, upd)
+
+            await public_data_cache.refresh('coffee')
 
             await message.answer('✅ Оновлено зерно!', reply_markup=akb.get_beans_manage_kb())
 
