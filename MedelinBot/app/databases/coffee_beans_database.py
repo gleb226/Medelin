@@ -23,9 +23,14 @@ class CoffeeBeansDatabase:
 
         db = await get_db()
 
-        prices = self.calculate_prices(float(price_250), price_500=price_500, price_1000=price_1000)
+        try:
+            p_250 = float(str(price_250).replace(',', '.'))
+        except:
+            p_250 = 0.0
 
-        res = await db.coffee_beans.insert_one({'name': name, 'price_250': prices['250'], 'price_500': prices['500'], 'price_1000': prices['1000'], 'description': description, 'sort': sort, 'taste': taste, 'roast': roast, 'image_url': image_url, 'country': country, 'altitude': altitude, 'processing': processing, 'recommendation': recommendation, 'variety': variety, 'cup_score': cup_score, 'harvest': harvest, 'acidity': acidity, 'bitterness': bitterness, 'body': body, 'extra': extra or {}})
+        prices = self.calculate_prices(p_250, price_500=price_500, price_1000=price_1000)
+
+        res = await db.coffee_beans.insert_one({'name': name, 'price_250': prices['250'], 'price_500': prices['500'], 'price_1000': prices['1000'], 'description': description or '', 'sort': sort or '', 'taste': taste or '', 'roast': roast or '', 'image_url': image_url or '', 'country': country or '', 'altitude': altitude or '', 'processing': processing or '', 'recommendation': recommendation or '', 'variety': variety or '', 'cup_score': cup_score or '', 'harvest': harvest or '', 'acidity': int(acidity or 0), 'bitterness': int(bitterness or 0), 'body': int(body or 0), 'extra': extra or {}})
 
         inserted_id = str(res.inserted_id)
 

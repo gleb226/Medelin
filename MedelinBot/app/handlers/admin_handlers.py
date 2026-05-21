@@ -290,6 +290,49 @@ async def back_to_main_cb(callback: CallbackQuery, state: FSMContext):
 
     await cmd_start(callback.message, state)
 
+@admin_router.message(F.text == '🔄 СИНХРОНІЗУВАТИ САЙТ')
+async def sync_website_handler(message: Message, state: FSMContext):
+    if not await admin_db.is_admin(message.from_user.id): return
+    if await get_user_role(message.from_user.id) not in ('boss', 'owner', 'developer'): return
+    
+    await message.answer('⏳ <b>СИНХРОНІЗАЦІЯ З САЙТОМ РОЗПОЧАТА...</b>\nЦе може зайняти до 30 секунд.', parse_mode='HTML')
+    
+    try:
+        # 1. Refresh all cache
+        await public_data_cache.warm_all()
+        
+        # 2. Try to run git commands
+        import subprocess
+        from pathlib import Path
+        
+        root_dir = Path(__file__).resolve().parent.parent.parent.parent
+        
+        # Перевіряємо чи є гіт
+        try:
+            subprocess.run(['git', '--version'], check=True, capture_output=True)
+        except:
+            await message.answer('❌ <b>ПОМИЛКА:</b> Git не встановлений на сервері. Зверніться до розробника.', parse_mode='HTML')
+            return
+
+        # Виконуємо синхронізацію
+        commands = [
+            ['git', 'add', 'MedelinSite/cache/*.json'],
+            ['git', 'commit', '-m', f"Manual sync from bot by {message.from_user.id}"],
+            ['git', 'push', 'origin', 'release']
+        ]
+        
+        results = []
+        for cmd in commands:
+            process = subprocess.run(cmd, cwd=str(root_dir), capture_output=True, text=True)
+            results.append(f"<code>{' '.join(cmd)}</code>: {'✅' if process.returncode == 0 else '⚠️'}")
+            if process.returncode != 0 and 'push' in cmd:
+                 results.append(f"<i>Error: {process.stderr}</i>")
+
+        await message.answer('✅ <b>СИНХРОНІЗАЦІЮ ЗАВЕРШЕНО!</b>\n\n' + '\n'.join(results), parse_mode='HTML')
+        
+    except Exception as e:
+        await message.answer(f'❌ <b>КРИТИЧНА ПОМИЛКА:</b>\n<code>{str(e)}</code>', parse_mode='HTML')
+
 @admin_router.message(F.text.in_([kb.BTN_ADMIN, '🔐 АДМІН-ПАНЕЛЬ', '🛰 АДМІН-ПАНЕЛЬ']))
 
 async def admin_panel_enter(message: Message, state: FSMContext):
@@ -1047,7 +1090,7 @@ async def adm_remove_list(callback: CallbackQuery):
 
 @admin_router.callback_query(F.data.startswith('adm_delete_'))
 
-async def adm_remove_confirm(callback: CallbackQuery):
+async def adm_remove_confirm_ask(callback: CallbackQuery):
 
     uid = int(callback.data.replace('adm_delete_', ''))
 
@@ -1057,13 +1100,24 @@ async def adm_remove_confirm(callback: CallbackQuery):
 
         return
 
+    admin = await admin_db.get_admin_by_id(uid)
+    name = admin.get('display_name') or admin.get('username') or str(uid)
+
+    await safe_edit_message(callback.message, f"❓ Ви впевнені, що хочете видалити <b>{name}</b> з команди?", reply_markup=akb.get_yes_no_kb(f'adm_del_yes_{uid}', 'adm_remove'), parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('adm_del_yes_'))
+
+async def adm_remove_confirm_yes(callback: CallbackQuery):
+
+    uid = int(callback.data.replace('adm_del_yes_', ''))
+
     caller_role = await get_user_role(callback.from_user.id)
 
     target_admin = await admin_db.get_admin_by_id(uid)
 
     if not target_admin or not can_manage(caller_role, target_admin.get('role', 'admin')):
 
-        await callback.answer("❌ Недостатньо прав для видалення цього співробітника!", show_alert=True)
+        await callback.answer("❌ Недостатньо прав!", show_alert=True)
 
         return
 
@@ -1109,17 +1163,141 @@ async def menu_del_items(callback: CallbackQuery):
 
 @admin_router.callback_query(F.data.startswith('m_del_it_'))
 
-async def menu_del_confirm(callback: CallbackQuery):
+async def menu_del_confirm_ask(callback: CallbackQuery):
 
     iid = callback.data.replace('m_del_it_', '')
 
-    await menu_db.delete_item(iid)
+    item = await menu_db.get_item_by_id(iid)
 
-    await public_data_cache.refresh('menu')
+    await safe_edit_message(callback.message, f"❓ Ви впевнені, що хочете видалити <b>{item[2]}</b>?", reply_markup=akb.get_yes_no_kb(f'm_del_yes_{iid}', 'menu_del'), parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('m_del_yes_'))
+
+async def menu_del_confirm_yes(callback: CallbackQuery):
+
+    iid = callback.data.replace('m_del_yes_', '')
+
+    await menu_db.delete_item(iid)
 
     await callback.answer('Видалено!')
 
     await menu_del_start(callback)
+
+@admin_router.callback_query(F.data.startswith('beans_del_it_'))
+
+async def beans_del_confirm_ask(callback: CallbackQuery):
+
+    bid = callback.data.replace('beans_del_it_', '')
+
+    bean = await coffee_beans_db.get_bean_by_id(bid)
+
+    await safe_edit_message(callback.message, f"❓ Ви впевнені, що хочете видалити зерно <b>{bean['name']}</b>?", reply_markup=akb.get_yes_no_kb(f'beans_del_yes_{bid}', 'beans_del'), parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('beans_del_yes_'))
+
+async def beans_del_confirm_yes(callback: CallbackQuery):
+
+    bid = callback.data.replace('beans_del_yes_', '')
+
+    await coffee_beans_db.delete_bean(bid)
+
+    await callback.answer('Видалено!')
+
+    await beans_del_start(callback)
+
+@admin_router.callback_query(F.data == 'locs_del')
+
+async def locs_del_start(callback: CallbackQuery):
+
+    locs = await location_db.get_all_locations()
+
+    if not locs:
+
+        await callback.answer('Порожньо.')
+
+        return
+
+    await safe_edit_message(callback.message, '🗑 Оберіть локацію для ВИДАЛЕННЯ:', reply_markup=akb.get_locations_list_kb(locs, 'locs_del_it'), parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('locs_del_it_'))
+
+async def locs_del_confirm_ask(callback: CallbackQuery):
+
+    lid = callback.data.replace('locs_del_it_', '')
+
+    loc = await location_db.get_location_by_id(lid)
+
+    await safe_edit_message(callback.message, f"❓ Ви впевнені, що хочете видалити локацію <b>{loc['name']}</b>?", reply_markup=akb.get_yes_no_kb(f'locs_del_yes_{lid}', 'locs_del'), parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('locs_del_yes_'))
+
+async def locs_del_confirm_yes(callback: CallbackQuery):
+
+    lid = callback.data.replace('locs_del_yes_', '')
+
+    await location_db.delete_location(lid)
+
+    await callback.answer('Видалено!')
+
+    await locs_del_start(callback)
+
+@admin_router.callback_query(F.data == 'soc_edit')
+
+async def edit_socials_start(callback: CallbackQuery):
+
+    socs = await socials_db.get_all_socials()
+
+    if not socs:
+
+        await callback.answer('Порожньо.')
+
+        return
+
+    await safe_edit_message(callback.message, '✏️ Редагування соцмережі:', reply_markup=akb.get_socials_list_kb(socs, 'soc_edt_it'), parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('soc_edt_it_'))
+
+async def edit_social_sel(callback: CallbackQuery, state: FSMContext):
+
+    sid = callback.data.replace('soc_edt_it_', '')
+
+    soc = await socials_db.get_social_by_id(sid)
+
+    await state.update_data(edit_id=sid)
+
+    kb_edit = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='Назву', callback_data='ed_s_name'), InlineKeyboardButton(text='URL посилання', callback_data='ed_s_url')], [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='soc_edit')]])
+
+    await safe_edit_message(callback.message, f"Редагування <b>{soc['name']}</b>", reply_markup=kb_edit, parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('ed_s_'))
+
+async def edit_social_field_start(callback: CallbackQuery, state: FSMContext):
+
+    field = callback.data.replace('ed_s_', '')
+
+    await state.update_data(edit_field=field)
+
+    await callback.message.answer('✏️ Введіть нове значення:')
+
+    await state.set_state(SocialStates.edit_value)
+
+    await callback.answer()
+
+@admin_router.message(SocialStates.edit_value)
+
+async def edit_social_value_save(message: Message, state: FSMContext):
+
+    if await restart_fsm_on_command(message, state): return
+
+    data = await state.get_data()
+
+    field = data.get('edit_field')
+
+    await socials_db.update_social(data.get('edit_id'), {field: message.text.strip()})
+
+    await message.answer('✅ Оновлено!', reply_markup=akb.get_socials_manage_kb(), parse_mode='HTML')
+
+    await state.clear()
 
 @admin_router.callback_query(F.data == 'menu_add')
 
@@ -1181,11 +1359,23 @@ async def menu_add_name(message: Message, state: FSMContext):
 
 async def menu_add_price(message: Message, state: FSMContext):
 
-    await state.update_data(price=message.text)
+    text = (message.text or '').strip().replace(',', '.')
 
-    await message.answer('📜 Введіть опис (або "ні"):')
+    try:
 
-    await state.set_state(MenuStates.waiting_desc)
+        price = float(text)
+
+        if price < 0: raise ValueError
+
+        await state.update_data(price=price)
+
+        await message.answer('📜 Введіть опис (або "ні"):')
+
+        await state.set_state(MenuStates.waiting_desc)
+
+    except ValueError:
+
+        await message.answer('❌ Будь ласка, введіть коректне число (ціну). Наприклад: 120 або 150.50')
 
 @admin_router.message(MenuStates.waiting_desc)
 
@@ -1447,6 +1637,10 @@ async def admin_edit_value_save(message: Message, state: FSMContext, bot: Bot):
 
     val = (await process_photo(message, bot)) if field == 'image_url' else (message.text or '').strip()
 
+    if not val and field != 'image_url':
+        await message.answer('❌ Значення не може бути порожнім.')
+        return
+
     if is_bean:
 
         bid = data.get('edit_bean_id')
@@ -1459,15 +1653,20 @@ async def admin_edit_value_save(message: Message, state: FSMContext, bot: Bot):
 
                 try:
 
-                    p = coffee_beans_db.calculate_prices(float(val))
+                    val_f = float(val.replace(',', '.'))
+                    p = coffee_beans_db.calculate_prices(val_f)
 
                     upd = {'price_250': p['250'], 'price_500': p['500'], 'price_1000': p['1000']}
 
-                except: pass
+                except ValueError:
+                    await message.answer('❌ Введіть коректне число для ціни.')
+                    return
             
             elif field in ('acidity', 'bitterness', 'body'):
                 try: upd[field] = int(val)
-                except: pass
+                except ValueError:
+                    await message.answer('❌ Введіть ціле число (0-5).')
+                    return
 
             await coffee_beans_db.update_bean(bid, upd)
 
@@ -1483,10 +1682,15 @@ async def admin_edit_value_save(message: Message, state: FSMContext, bot: Bot):
         
         if field in ('strength', 'sweetness', 'calories'):
             try: upd[field] = int(val)
-            except: pass
+            except ValueError:
+                await message.answer('❌ Введіть ціле число.')
+                return
         elif field == 'price':
-            try: upd[field] = float(val)
-            except: pass
+            try: 
+                upd[field] = float(val.replace(',', '.'))
+            except ValueError:
+                await message.answer('❌ Введіть коректне число для ціни.')
+                return
 
         await menu_db.update_item(iid, upd)
 
