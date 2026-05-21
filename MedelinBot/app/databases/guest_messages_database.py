@@ -67,4 +67,20 @@ class GuestMessagesDatabase:
 
         return int(res.modified_count or 0)
 
+    async def get_unique_chats(self, limit: int = 20):
+        db = await get_db()
+        pipeline = [
+            {"$sort": {"created_at": -1}},
+            {"$group": {
+                "_id": {"phone": "$phone_digits", "order_id": "$order_id"},
+                "last_text": {"$first": "$text"},
+                "last_time": {"$first": "$created_at"},
+                "unread_count": {"$sum": {"$cond": [{"$and": [{"$eq": ["$read", False]}, {"$eq": ["$source", "guest"]}]}, 1, 0]}}
+            }},
+            {"$sort": {"last_time": -1}},
+            {"$limit": limit}
+        ]
+        cur = db.guest_messages.aggregate(pipeline)
+        return await cur.to_list(length=limit)
+
 guest_messages_db = GuestMessagesDatabase()

@@ -101,7 +101,15 @@ async def resolve_location(value: str | None):
     if not target:
         return None
     normalized = target.casefold()
-    for loc in await location_db.get_all_locations():
+    all_locs = await location_db.get_all_locations()
+    
+    # Спроба знайти за індексом (1, 2, 3...)
+    if target.isdigit():
+        idx = int(target) - 1
+        if 0 <= idx < len(all_locs):
+            return all_locs[idx]
+
+    for loc in all_locs:
         loc_id = str(loc.get('_id', ''))
         name = str(loc.get('name', '')).strip()
         address = str(loc.get('address', '')).strip()

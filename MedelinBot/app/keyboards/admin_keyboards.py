@@ -53,6 +53,9 @@ def get_main_admin_menu(is_on_shift: bool=False, role: str='admin'):
     elif role == 'super':
         keyboard.append([KeyboardButton(text='🆕 НОВІ ЗАПИТИ'), KeyboardButton(text='⚡️ АКТИВНІ')])
 
+    if role in ('super', 'boss', 'owner', 'developer'):
+        keyboard.append([KeyboardButton(text='💬 ПІДТРИМКА')])
+
     if role in ('boss', 'owner', 'developer'):
 
         keyboard.append([KeyboardButton(text='👥 КОМАНДА')])
@@ -279,6 +282,19 @@ def get_locations_list_kb(locs, prefix='locs_delete'):
 
     buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='locs_back')])
 
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_support_chats_kb(chats):
+    buttons = []
+    for c in chats:
+        cid = c['_id']
+        phone = cid.get('phone') or '—'
+        oid = cid.get('order_id') or 'none'
+        unread = f" ({c['unread_count']})" if c['unread_count'] > 0 else ""
+        text = f"{phone} | {oid[-6:] if oid != 'none' else 'Без замовл.'}{unread}"
+        buttons.append([InlineKeyboardButton(text=text, callback_data=f"support_chat_{phone}_{oid}")])
+    
+    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_socials_list_kb(socs, prefix='soc_delete'):

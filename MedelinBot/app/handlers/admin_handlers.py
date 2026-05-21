@@ -68,16 +68,15 @@ ROLE_LEVELS = {
 }
 
 def can_manage(caller_role: str, target_role: str) -> bool:
-
     if caller_role == 'developer': return True
-
     if target_role == 'developer': return False
-
     if caller_role in ('owner', 'boss'): return True
-
     if target_role in ('owner', 'boss'): return False
-
     if target_role == 'super': return False
+
+    if caller_role == 'super':
+        # Супер-адмін може керувати ТІЛЬКИ адмінами та менеджерами доставки
+        return target_role in ('admin', 'delivery_manager')
 
     return ROLE_LEVELS.get(caller_role, 0) > ROLE_LEVELS.get(target_role, 0)
 
@@ -514,6 +513,54 @@ async def finish_order(callback: CallbackQuery):
     await callback.answer('Замовлення виконано!')
 
     await list_active_orders(callback)
+
+@admin_router.message(F.text == '💬 ПІДТРИМКА')
+async def show_support_panel(message: Message, state: FSMContext):
+    if not await admin_db.is_admin(message.from_user.id): return
+    if await get_user_role(message.from_user.id) not in ('super', 'boss', 'owner', 'developer'): return
+    
+    await state.clear()
+    chats = await guest_messages_db.get_unique_chats()
+    if not chats:
+        await message.answer('📭 <b>Наразі немає повідомлень у підтримці.</b>', parse_mode='HTML')
+        return
+        
+    await message.answer('💬 <b>ПІДТРИМКА / ЧАТИ З КОРИСТУВАЧАМИ</b>\nОберіть чат для перегляду:', reply_markup=akb.get_support_chats_kb(chats), parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('support_chat_'))
+async def view_support_chat(callback: CallbackQuery, state: FSMContext):
+    parts = callback.data.split('_')
+    phone = parts[2]
+    oid = parts[3]
+    
+    messages = await guest_messages_db.get_messages(phone, order_id=None if oid == 'none' else oid)
+    await guest_messages_db.mark_messages_read(phone, order_id=None if oid == 'none' else oid)
+    
+    text = f"💬 <b>ЧАТ: {phone}</b>\n"
+    if oid != 'none':
+        text += f"📦 Замовлення: #{oid[-6:]}\n"
+    text += "────────────────────\n"
+    
+    for m in messages:
+        sender = "👤 Гість" if m['source'] == 'guest' else "👨‍💼 Адмін"
+        time_str = m['created_at'].strftime('%d.%m %H:%M')
+        text += f"<b>{sender}</b> ({time_str}):\n{m['text']}\n\n"
+        
+    # Знаходимо user_id по телефону
+    user = await user_db.get_user_by_phone(phone)
+    uid_str = str(user[0]) if user else "none"
+    
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='💬 ВІДПОВІСТИ', callback_data=f'adm_msg_{uid_str}_{oid}')],
+        [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='adm_support_back')]
+    ])
+    
+    await safe_edit_message(callback.message, text, reply_markup=markup, parse_mode='HTML')
+
+@admin_router.callback_query(F.data == 'adm_support_back')
+async def back_to_support_list(callback: CallbackQuery, state: FSMContext):
+    chats = await guest_messages_db.get_unique_chats()
+    await safe_edit_message(callback.message, '💬 <b>ПІДТРИМКА / ЧАТИ З КОРИСТУВАЧАМИ</b>\nОберіть чат для перегляду:', reply_markup=akb.get_support_chats_kb(chats), parse_mode='HTML')
 
 @admin_router.message(F.text == '📋 МЕНЮ')
 

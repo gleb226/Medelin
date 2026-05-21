@@ -570,8 +570,16 @@ async def menu_item(callback: CallbackQuery, state: FSMContext):
         reply_markup = kb.get_item_actions_kb(item_id)
 
     if image_url:
-        await callback.message.delete()
-        await callback.message.answer_photo(photo=image_url, caption=text, reply_markup=reply_markup, parse_mode='HTML')
+        try:
+            if callback.message.photo:
+                await callback.message.edit_caption(caption=text, reply_markup=reply_markup, parse_mode='HTML')
+            else:
+                await callback.message.delete()
+                await callback.message.answer_photo(photo=image_url, caption=text, reply_markup=reply_markup, parse_mode='HTML')
+        except Exception:
+            try:
+                await callback.message.answer_photo(photo=image_url, caption=text, reply_markup=reply_markup, parse_mode='HTML')
+            except: pass
     else:
         await safe_edit_message(callback.message, text, reply_markup=reply_markup, parse_mode='HTML')
 
@@ -1441,6 +1449,11 @@ async def contact_us_send(message: Message, state: FSMContext, bot: Bot):
     
     admin_msg = f'📩 <b>НОВЕ ПОВІДОМЛЕННЯ ВІД КОРИСТУВАЧА</b>\n\n👤 Від: {user_link}\n💬 <b>Текст:</b>\n{msg_text}'
     
+    # Зберігаємо в БД
+    from app.databases.guest_messages_database import guest_messages_db
+    phone = await user_db.get_phone(uid)
+    await guest_messages_db.add_message(order_id=None, phone=phone, source='guest', text=msg_text)
+
     markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='💬 ВІДПОВІСТИ', callback_data=f'adm_msg_{uid}_none')]])
     
     for aid in targets:
