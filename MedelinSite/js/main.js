@@ -938,6 +938,20 @@ function showNotification(t) {
 document.addEventListener('DOMContentLoaded', () => {
     updateCartBadge();
     window.setupMobileMenu?.();
+    
+    // Intersection Observer для анімацій появи
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('u-reveal--active');
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.u-reveal, .product-card, .promo-card, .category').forEach(el => {
+        if (!el.classList.contains('u-reveal')) el.classList.add('u-reveal');
+        revealObserver.observe(el);
+    });
 
     const orderId = window.getURLParameter('order_id');
     if (orderId) {

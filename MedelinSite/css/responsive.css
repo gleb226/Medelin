@@ -17,8 +17,23 @@
         --space-xl: 2rem;
     }
     .section-title {
-        font-size: 2.2rem;
+        font-size: 2.4rem; /* Трохи більше */
         margin-bottom: var(--space-xl);
+    }
+
+    .promo-card__title {
+        font-size: 1.8rem; /* Збільшено з 1.4 */
+        line-height: 1.2;
+    }
+
+    .promo-card__text {
+        font-size: 1.05rem; /* Збільшено з 0.9 */
+        line-height: 1.6;
+    }
+
+    .about-summary__text {
+        font-size: 1.1rem; /* Збільшено з 0.95 */
+        line-height: 1.7;
     }
 }
 

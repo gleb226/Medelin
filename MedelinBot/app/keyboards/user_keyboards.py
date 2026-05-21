@@ -44,13 +44,13 @@ def cat_key(category: str) -> str:
     return hashlib.blake2s(category.encode('utf-8'), digest_size=6).hexdigest()
 
 def get_main_menu(is_admin: bool=False):
-
-    keyboard = [[KeyboardButton(text=BTN_BOOK_TABLE)], [KeyboardButton(text=BTN_MENU)], [KeyboardButton(text=BTN_BEANS)], [KeyboardButton(text=BTN_LOCATIONS), KeyboardButton(text=BTN_CONTACTS)]]
-
+    keyboard = [
+        [KeyboardButton(text=BTN_BOOK_TABLE)],
+        [KeyboardButton(text=BTN_MENU), KeyboardButton(text=BTN_BEANS)],
+        [KeyboardButton(text=BTN_LOCATIONS), KeyboardButton(text=BTN_CONTACTS)]
+    ]
     if is_admin:
-
         keyboard.append([KeyboardButton(text=BTN_ADMIN)])
-
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
 def get_date_kb():
