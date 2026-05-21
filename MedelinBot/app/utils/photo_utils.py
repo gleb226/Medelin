@@ -39,7 +39,11 @@ async def process_photo(message: Message, bot: Bot) -> str:
 
             img = Image.open(file_bytes)
 
-            img = img.convert('RGB')
+            # Перетворюємо в RGBA якщо є прозорість, або в RGB якщо немає
+            if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
+                img = img.convert('RGBA')
+            else:
+                img = img.convert('RGB')
 
             _site_dir.mkdir(parents=True, exist_ok=True)
 
@@ -47,7 +51,8 @@ async def process_photo(message: Message, bot: Bot) -> str:
 
             filepath = _site_dir / filename
 
-            img.save(str(filepath), 'WEBP', quality=85, method=6)
+            # Зберігаємо як WEBP, зберігаючи прозорість якщо вона є
+            img.save(str(filepath), 'WEBP', quality=85, method=6, lossless=False)
 
             return f'/uploads/{filename}'
 

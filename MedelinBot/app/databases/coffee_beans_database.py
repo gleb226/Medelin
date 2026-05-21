@@ -27,7 +27,13 @@ class CoffeeBeansDatabase:
 
         res = await db.coffee_beans.insert_one({'name': name, 'price_250': prices['250'], 'price_500': prices['500'], 'price_1000': prices['1000'], 'description': description, 'sort': sort, 'taste': taste, 'roast': roast, 'image_url': image_url, 'country': country, 'altitude': altitude, 'processing': processing, 'recommendation': recommendation, 'variety': variety, 'cup_score': cup_score, 'harvest': harvest, 'acidity': acidity, 'bitterness': bitterness, 'body': body, 'extra': extra or {}})
 
-        return str(res.inserted_id)
+        inserted_id = str(res.inserted_id)
+
+        from app.utils.data_cache import public_data_cache
+
+        await public_data_cache.refresh_coffee()
+
+        return inserted_id
 
     async def get_all_beans(self):
 
@@ -71,7 +77,15 @@ class CoffeeBeansDatabase:
 
         res = await db.coffee_beans.update_one({'_id': oid}, {'$set': update})
 
-        return bool(res.matched_count)
+        success = bool(res.matched_count)
+
+        if success:
+
+            from app.utils.data_cache import public_data_cache
+
+            await public_data_cache.refresh_coffee()
+
+        return success
 
     async def delete_bean(self, bean_id):
 
@@ -79,9 +93,17 @@ class CoffeeBeansDatabase:
 
         try:
 
-            await db.coffee_beans.delete_one({'_id': ObjectId(bean_id)})
+            res = await db.coffee_beans.delete_one({'_id': ObjectId(bean_id)})
 
-            return True
+            success = bool(res.deleted_count)
+
+            if success:
+
+                from app.utils.data_cache import public_data_cache
+
+                await public_data_cache.refresh_coffee()
+
+            return success
 
         except:
 

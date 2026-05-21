@@ -89,7 +89,13 @@ class MenuDatabase:
 
         res = await db.menu.insert_one({'category': category, 'name': name, 'price': price, 'description': description or '', 'volume': volume or '', 'calories': calories or '', 'image_url': image_url or '', 'composition': composition or '', 'strength': strength or 0, 'sweetness': sweetness or 0, 'options': options or [], 'country': country or '', 'altitude': altitude or '', 'sort': sort or '', 'processing': processing or '', 'roast': roast or '', 'taste': taste or '', 'extra': extra or {}})
 
-        return str(res.inserted_id)
+        inserted_id = str(res.inserted_id)
+
+        from app.utils.data_cache import public_data_cache
+
+        await public_data_cache.refresh_menu()
+
+        return inserted_id
 
     async def get_menu_structured(self):
 
@@ -171,7 +177,15 @@ class MenuDatabase:
 
             res = await db.menu.delete_one({'_id': ObjectId(item_id)})
 
-            return bool(res.deleted_count)
+            success = bool(res.deleted_count)
+
+            if success:
+
+                from app.utils.data_cache import public_data_cache
+
+                await public_data_cache.refresh_menu()
+
+            return success
 
         except:
 
@@ -185,7 +199,15 @@ class MenuDatabase:
 
             res = await db.menu.update_one({'_id': ObjectId(item_id)}, {'$set': update_data})
 
-            return bool(res.matched_count)
+            success = bool(res.matched_count)
+
+            if success:
+
+                from app.utils.data_cache import public_data_cache
+
+                await public_data_cache.refresh_menu()
+
+            return success
 
         except:
 

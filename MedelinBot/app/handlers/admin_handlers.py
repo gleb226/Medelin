@@ -39,6 +39,8 @@ from app.utils.phone_utils import normalize_phone
 
 from app.utils.data_cache import public_data_cache
 
+from app.utils.photo_utils import process_photo
+
 from app.utils.payment_refunds import refund_telegram_payment
 
 from app.utils.message_utils import safe_edit_message
@@ -1219,8 +1221,6 @@ async def menu_add_image(message: Message, state: FSMContext, bot: Bot):
 
     if not (message.text and message.text.lower() in ('ні', 'немає', '-')):
 
-        from app.utils.photo_utils import process_photo
-
         img = await process_photo(message, bot)
 
     await state.update_data(image_url=img)
@@ -1239,11 +1239,11 @@ async def menu_add_save(callback: CallbackQuery, state: FSMContext):
 
     if data.get('bean_mode'):
 
-        await coffee_beans_db.add_bean(data['name'], data['price'], data.get('description', ''), 'Сорт', 'Смак', 'Обсмажка', image_url=data.get('image_url', ''))
+        await coffee_beans_db.add_bean(data['name'], data['price'], data.get('description', ''), '', '', '', image_url=data.get('image_url', ''), acidity=0, bitterness=0, body=0)
 
         await public_data_cache.refresh('coffee')
 
-        await safe_edit_message(callback.message, '✅ ЗЕРНО ДОДАНО!', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
+        await safe_edit_message(callback.message, '✅ ЗЕРНО ДОДАНО! Тепер ви можете доповнити деталі через редагування.', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
 
     else:
 
@@ -1294,6 +1294,12 @@ async def menu_edit_fields(callback: CallbackQuery, state: FSMContext):
         [InlineKeyboardButton(text='Назву', callback_data='ed_m_name'), InlineKeyboardButton(text='Ціну', callback_data='ed_m_price')],
 
         [InlineKeyboardButton(text='Опис', callback_data='ed_m_description'), InlineKeyboardButton(text='🖼 Фото', callback_data='ed_m_image_url')],
+        
+        [InlineKeyboardButton(text='Обʼєм', callback_data='ed_m_volume'), InlineKeyboardButton(text='Кал', callback_data='ed_m_calories')],
+        
+        [InlineKeyboardButton(text='Склад', callback_data='ed_m_composition')],
+        
+        [InlineKeyboardButton(text='Міцність (0-5)', callback_data='ed_m_strength'), InlineKeyboardButton(text='Солодкість (0-5)', callback_data='ed_m_sweetness')],
 
         [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='menu_edit')]
 
@@ -1400,6 +1406,14 @@ async def beans_edit_sel(callback: CallbackQuery, state: FSMContext):
         [InlineKeyboardButton(text='Назву', callback_data='ed_b_name'), InlineKeyboardButton(text='Ціну 250г', callback_data='ed_b_price_250')],
 
         [InlineKeyboardButton(text='Опис', callback_data='ed_b_description'), InlineKeyboardButton(text='🖼 Фото', callback_data='ed_b_image_url')],
+        
+        [InlineKeyboardButton(text='Склад', callback_data='ed_b_sort'), InlineKeyboardButton(text='Смак', callback_data='ed_b_taste')],
+        
+        [InlineKeyboardButton(text='Обсмажка', callback_data='ed_b_roast')],
+        
+        [InlineKeyboardButton(text='Кисл (0-5)', callback_data='ed_b_acidity'), InlineKeyboardButton(text='Гірк (0-5)', callback_data='ed_b_bitterness')],
+        
+        [InlineKeyboardButton(text='Тіло (0-5)', callback_data='ed_b_body')],
 
         [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='beans_edit')]
 
@@ -1450,6 +1464,10 @@ async def admin_edit_value_save(message: Message, state: FSMContext, bot: Bot):
                     upd = {'price_250': p['250'], 'price_500': p['500'], 'price_1000': p['1000']}
 
                 except: pass
+            
+            elif field in ('acidity', 'bitterness', 'body'):
+                try: upd[field] = int(val)
+                except: pass
 
             await coffee_beans_db.update_bean(bid, upd)
 
@@ -1460,20 +1478,23 @@ async def admin_edit_value_save(message: Message, state: FSMContext, bot: Bot):
     else:
 
         iid = data.get('edit_id')
+        
+        upd = {field: val}
+        
+        if field in ('strength', 'sweetness', 'calories'):
+            try: upd[field] = int(val)
+            except: pass
+        elif field == 'price':
+            try: upd[field] = float(val)
+            except: pass
 
-        await menu_db.update_item(iid, {field: val})
+        await menu_db.update_item(iid, upd)
 
         await public_data_cache.refresh('menu')
 
         await message.answer('✅ Оновлено страву!', reply_markup=akb.get_menu_manage_kb())
 
     await state.clear()
-
-async def process_photo(message: Message, bot: Bot) -> str:
-
-    from app.utils.photo_utils import process_photo as pp
-
-    return await process_photo(message, bot)
 
 @admin_router.callback_query(F.data == 'soc_list')
 
