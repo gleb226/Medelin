@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://gleb226.github.io/MedelineSite/sitemap.xml

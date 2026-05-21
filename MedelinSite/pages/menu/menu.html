@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="uk">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="description"
+            content="Ознайомтеся з нашим меню: від класичного еспресо до авторських десертів. Найкраща кава в Ужгороді."
+        />
+        <meta name="robots" content="index, follow" />
+        <meta name="theme-color" content="#ffffff" />
+        <link rel="canonical" href="https://gleb226.github.io/MedelineSite/pages/menu/menu.html" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Меню - Medelin Coffee" />
+        <meta
+            property="og:description"
+            content="Ознайомтеся з нашим меню: від класичного еспресо до авторських десертів. Найкраща кава в Ужгороді."
+        />
+        <meta property="og:url" content="https://gleb226.github.io/MedelineSite/pages/menu/menu.html" />
+        <meta property="og:site_name" content="Medelin Coffee (Меделін)" />
+        <meta property="og:locale" content="uk_UA" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Меню - Medelin Coffee" />
+        <meta
+            name="twitter:description"
+            content="Ознайомтеся з нашим меню: від класичного еспресо до авторських десертів. Найкраща кава в Ужгороді."
+        />
+        <title>Меню - Medelin Coffee</title>
+        <link
+            rel="icon"
+            href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ50BUE2d30GBASKRdrCoBgrFBfvjFTiAKCYA&s"
+            type="image/png"
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Marcellus&family=Manrope:wght@300;400;500;600;700;800&family=Oswald:wght@400;500;600;700&family=Jost:wght@300;400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="../../css/style.css?v=1.4" />
+        <link rel="stylesheet" href="../../css/responsive.css?v=1.4" />
+        <link rel="stylesheet" href="../../css/components/mobile-menu.css?v=1.0" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    </head>
+    <body>
+        <header class="header">
+            <div class="header__container">
+                <a href="../../index.html" class="header__logo">Medelin</a>
+                <nav class="nav">
+                    <ul class="nav__list">
+                        <li class="nav__item"><a href="../../index.html" class="nav__link">Головна</a></li>
+                        <li class="nav__item"><a href="menu.html" class="nav__link nav__link--active">Меню</a></li>
+                        <li class="nav__item"><a href="../coffee/beans.html" class="nav__link">Кава в зернах</a></li>
+                        <li class="nav__item"><a href="../contact/contact.html" class="nav__link">Контакти</a></li>
+                    </ul>
+                </nav>
+                <div class="mobile-menu" data-mobile-menu>
+                    <button class="mobile-menu__toggle" type="button" aria-expanded="false" aria-controls="mobileMenuPanel" data-mobile-menu-toggle>
+                        <span class="mobile-menu__icon" aria-hidden="true"></span>
+                        <span class="sr-only">Меню</span>
+                    </button>
+                    <nav class="mobile-menu__panel" id="mobileMenuPanel" data-mobile-menu-panel aria-label="Навігація">
+                        <div class="mobile-menu__inner">
+                            <div class="mobile-menu__header">
+                                <button class="mobile-menu__close" type="button" aria-label="Закрити меню" data-mobile-menu-close>
+                                    <span class="mobile-menu__close-icon" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                            <div class="mobile-menu__links">
+                                <a href="../../index.html" class="mobile-menu__link">Головна</a>
+                                <a href="menu.html" class="mobile-menu__link is-active">Меню</a>
+                                <a href="../coffee/beans.html" class="mobile-menu__link">Кава в зернах</a>
+                                <a href="../contact/contact.html" class="mobile-menu__link">Контакти</a>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <nav class="menu-subnav" aria-label="Навігація по меню">
+                <ul class="menu-subnav__list" id="subnav-list"></ul>
+            </nav>
+            <section class="menu">
+                <h1 class="section-title section-title--mb-5">Карта напоїв та страв</h1>
+                <div id="menu-root" class="menu__categories"></div>
+            </section>
+
+            <div class="cart-fab" onclick="window.openCartModal()" id="cart-fab">
+                <i class="fas fa-shopping-basket"></i>
+                <div class="cart-badge" id="cart-badge">0</div>
+            </div>
+
+            <div id="cart-modal-container"></div>
+            <div id="checkout-modal-container"></div>
+        </main>
+
+        <div class="popup" id="item-popup">
+            <div class="popup__overlay" onclick="closePopup('item-popup')"></div>
+            <div class="popup__content">
+                <button class="popup__close" onclick="closePopup('item-popup')"><i class="fas fa-times"></i></button>
+                <img id="popup-img" src="" class="popup__image" alt="" />
+                <h3 id="popup-title" class="popup__title"></h3>
+                <p id="popup-price" class="popup__price"></p>
+                <div id="popup-body" class="popup__info"></div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="footer__content">
+                <div class="footer__section">
+                    <h3 class="footer__title">Medelin Coffee</h3>
+                    <p class="footer__text">Найкраща кава в Ужгороді</p>
+                    <p class="footer__text">Смак, якість, атмосфера</p>
+                </div>
+                <div class="footer__section">
+                    <h3 class="footer__title">Контакти</h3>
+                    <p class="footer__text">
+                        <i class="fas fa-phone-alt footer__icon"></i> +38 (050) 377-59-06
+                    </p>
+                    <p class="footer__text">
+                        <i class="fas fa-envelope footer__icon"></i> medelin.social@gmail.com
+                    </p>
+                </div>
+                <div class="footer__section">
+                    <h3 class="footer__title">Навігація</h3>
+                    <a href="../../index.html" class="footer__link">Головна</a>
+                    <a href="menu.html" class="footer__link">Меню</a>
+                    <a href="../coffee/beans.html" class="footer__link">Кава в зернах</a>
+                    <a href="../contact/contact.html" class="footer__link">Контакти</a>
+                </div>
+                <div class="footer__section">
+                    <h3 class="footer__title">Соцмережі</h3>
+                    <a
+                        href="https://www.instagram.com/medelin_com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="footer__link"
+                        >Instagram</a
+                    >
+                    <a
+                        href="https://www.facebook.com/medelin.uzh/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="footer__link"
+                        >Facebook</a
+                    >
+                    <a
+                        href="https://github.com/gleb226/MedelineSite"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="footer__link"
+                        >GitHub</a
+                    >
+                </div>
+            </div>
+            <div class="footer__bottom">
+                <p class="footer__copyright">© 2026 Medelin Coffee. Усі права захищені.</p>
+                <p class="footer__copyright">Сайт створено <strong>Глєбом</strong> — веброзробником з Ужгорода.</p>
+            </div>
+        </footer>
+
+        <script src="../../js/components/mobile-menu.js?v=1.0" defer></script>
+        <script src="../../js/main.js?v=1.5" defer></script>
+        <script src="../../js/menu.js?v=1.5" defer></script>
+    </body>
+</html>
