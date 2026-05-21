@@ -813,6 +813,95 @@
         ]
       },
       {
+        "id": "6a0ab132bef9495874b109d9",
+        "name": "Капучіно на подвійному",
+        "price": "75",
+        "description": "Фірмова кава Medelin зі свіжим обсмаженням.",
+        "volume": "200 мл",
+        "calories": "120 ккал",
+        "image_url": "https://images.unsplash.com/photo-1630040995437-80b01c5dd52d?q=80&w=687&auto=format&fit=crop",
+        "composition": "Еспресо, молоко",
+        "strength": 3,
+        "sweetness": 1,
+        "options": [
+          {
+            "type": "caffeine",
+            "name": "Стандарт",
+            "add_price": 0
+          },
+          {
+            "type": "caffeine",
+            "name": "Декаф",
+            "add_price": 10
+          },
+          {
+            "type": "milk",
+            "name": "Звичайне",
+            "add_price": 0
+          },
+          {
+            "type": "milk",
+            "name": "Безлактозне",
+            "add_price": 15
+          },
+          {
+            "type": "milk",
+            "name": "Бананове",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Ванільне",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Кокосове",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Мигдалеве",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Вівсяне",
+            "add_price": 30
+          },
+          {
+            "type": "addon",
+            "name": "Молоко 70мл",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Вершки 70мл",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Вершки порційні",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Мед",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Згущене молоко",
+            "add_price": 15
+          },
+          {
+            "type": "addon",
+            "name": "Карамель",
+            "add_price": 15
+          }
+        ]
+      },
+      {
         "id": "6a0ab132bef9495874b109da",
         "name": "Капучино",
         "price": "57",
@@ -1000,6 +1089,95 @@
         "image_url": "https://images.unsplash.com/photo-1630040995437-80b01c5dd52d?q=80&w=687&auto=format&fit=crop",
         "composition": "100% арабіка + молоко",
         "strength": 1,
+        "sweetness": 1,
+        "options": [
+          {
+            "type": "caffeine",
+            "name": "Стандарт",
+            "add_price": 0
+          },
+          {
+            "type": "caffeine",
+            "name": "Декаф",
+            "add_price": 10
+          },
+          {
+            "type": "milk",
+            "name": "Звичайне",
+            "add_price": 0
+          },
+          {
+            "type": "milk",
+            "name": "Безлактозне",
+            "add_price": 15
+          },
+          {
+            "type": "milk",
+            "name": "Бананове",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Ванільне",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Кокосове",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Мигдалеве",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Вівсяне",
+            "add_price": 30
+          },
+          {
+            "type": "addon",
+            "name": "Молоко 70мл",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Вершки 70мл",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Вершки порційні",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Мед",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Згущене молоко",
+            "add_price": 15
+          },
+          {
+            "type": "addon",
+            "name": "Карамель",
+            "add_price": 15
+          }
+        ]
+      },
+      {
+        "id": "6a0ab132bef9495874b109dd",
+        "name": "Лате на подвійному",
+        "price": "85",
+        "description": "Фірмова кава Medelin зі свіжим обсмаженням.",
+        "volume": "300 мл",
+        "calories": "150 ккал",
+        "image_url": "https://images.unsplash.com/photo-1630040995437-80b01c5dd52d?q=80&w=687&auto=format&fit=crop",
+        "composition": "Еспресо, молоко",
+        "strength": 2,
         "sweetness": 1,
         "options": [
           {
@@ -1446,6 +1624,95 @@
         "composition": "Еспресо, молоко",
         "strength": 2,
         "sweetness": 1,
+        "options": [
+          {
+            "type": "caffeine",
+            "name": "Стандарт",
+            "add_price": 0
+          },
+          {
+            "type": "caffeine",
+            "name": "Декаф",
+            "add_price": 10
+          },
+          {
+            "type": "milk",
+            "name": "Звичайне",
+            "add_price": 0
+          },
+          {
+            "type": "milk",
+            "name": "Безлактозне",
+            "add_price": 15
+          },
+          {
+            "type": "milk",
+            "name": "Бананове",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Ванільне",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Кокосове",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Мигдалеве",
+            "add_price": 30
+          },
+          {
+            "type": "milk",
+            "name": "Вівсяне",
+            "add_price": 30
+          },
+          {
+            "type": "addon",
+            "name": "Молоко 70мл",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Вершки 70мл",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Вершки порційні",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Мед",
+            "add_price": 10
+          },
+          {
+            "type": "addon",
+            "name": "Згущене молоко",
+            "add_price": 15
+          },
+          {
+            "type": "addon",
+            "name": "Карамель",
+            "add_price": 15
+          }
+        ]
+      },
+      {
+        "id": "6a0ec4e9e358685ca55aaa78",
+        "name": "Кумис",
+        "price": "2",
+        "description": "іва",
+        "volume": "32",
+        "calories": "",
+        "image_url": "/uploads/8a3946f8e7.webp",
+        "composition": "",
+        "strength": 0,
+        "sweetness": 0,
         "options": [
           {
             "type": "caffeine",

@@ -39,7 +39,9 @@ window.fetchMedelinData = async function (key) {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 2000);
             
-            const response = await fetch(url, { signal: controller.signal });
+            // Додаємо cache-buster (timestamp)
+            const finalUrl = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`;
+            const response = await fetch(finalUrl, { signal: controller.signal });
             clearTimeout(timeoutId);
 
             if (response.ok) {
