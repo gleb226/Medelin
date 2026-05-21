@@ -290,49 +290,6 @@ async def back_to_main_cb(callback: CallbackQuery, state: FSMContext):
 
     await cmd_start(callback.message, state)
 
-@admin_router.message(F.text == '🔄 СИНХРОНІЗУВАТИ САЙТ')
-async def sync_website_handler(message: Message, state: FSMContext):
-    if not await admin_db.is_admin(message.from_user.id): return
-    if await get_user_role(message.from_user.id) not in ('boss', 'owner', 'developer'): return
-    
-    await message.answer('⏳ <b>СИНХРОНІЗАЦІЯ З САЙТОМ РОЗПОЧАТА...</b>\nЦе може зайняти до 30 секунд.', parse_mode='HTML')
-    
-    try:
-        # 1. Refresh all cache
-        await public_data_cache.warm_all()
-        
-        # 2. Try to run git commands
-        import subprocess
-        from pathlib import Path
-        
-        root_dir = Path(__file__).resolve().parent.parent.parent.parent
-        
-        # Перевіряємо чи є гіт
-        try:
-            subprocess.run(['git', '--version'], check=True, capture_output=True)
-        except:
-            await message.answer('❌ <b>ПОМИЛКА:</b> Git не встановлений на сервері. Зверніться до розробника.', parse_mode='HTML')
-            return
-
-        # Виконуємо синхронізацію
-        commands = [
-            ['git', 'add', 'MedelinSite/cache/*.json'],
-            ['git', 'commit', '-m', f"Manual sync from bot by {message.from_user.id}"],
-            ['git', 'push', 'origin', 'release']
-        ]
-        
-        results = []
-        for cmd in commands:
-            process = subprocess.run(cmd, cwd=str(root_dir), capture_output=True, text=True)
-            results.append(f"<code>{' '.join(cmd)}</code>: {'✅' if process.returncode == 0 else '⚠️'}")
-            if process.returncode != 0 and 'push' in cmd:
-                 results.append(f"<i>Error: {process.stderr}</i>")
-
-        await message.answer('✅ <b>СИНХРОНІЗАЦІЮ ЗАВЕРШЕНО!</b>\n\n' + '\n'.join(results), parse_mode='HTML')
-        
-    except Exception as e:
-        await message.answer(f'❌ <b>КРИТИЧНА ПОМИЛКА:</b>\n<code>{str(e)}</code>', parse_mode='HTML')
-
 @admin_router.message(F.text.in_([kb.BTN_ADMIN, '🔐 АДМІН-ПАНЕЛЬ', '🛰 АДМІН-ПАНЕЛЬ']))
 
 async def admin_panel_enter(message: Message, state: FSMContext):

@@ -15,21 +15,27 @@ window.fetchMedelinData = async function (key) {
     const endpoints = [];
     const fileName = `${key}.json`;
     
-    const isRoot = !window.location.pathname.includes('/pages/');
+    // ПРІОРИТЕТ 1: Прямий API запит до сервера (завжди актуальні дані з пам'яті)
+    if (window.API_BASE_URL) {
+        endpoints.push(`${window.API_BASE_URL}/api/${key}`);
+    } else {
+        // Якщо ми на самому сервері, використовуємо відносний шлях
+        endpoints.push(`/api/${key}`);
+    }
+
+    // ПРІОРИТЕТ 2: Статичні JSON файли (кеш на диску)
+    if (window.API_BASE_URL) {
+        endpoints.push(`${window.API_BASE_URL}/cache/${fileName}`);
+    }
     
+    const isRoot = !window.location.pathname.includes('/pages/');
     if (isRoot) {
         endpoints.push(`./cache/${fileName}`);
     } else {
         endpoints.push(`../../cache/${fileName}`);
         endpoints.push(`../cache/${fileName}`);
     }
-
-    if (window.API_BASE_URL) {
-        endpoints.push(`${window.API_BASE_URL}/api/${key}`);
-        endpoints.push(`${window.API_BASE_URL}/cache/${fileName}`);
-    }
     
-    if (!isRoot) endpoints.push(`./cache/${fileName}`);
     endpoints.push(`/cache/${fileName}`);
 
     console.log(`[Medelin] Пошук даних: ${key}`);

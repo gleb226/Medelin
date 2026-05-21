@@ -60,8 +60,6 @@ def get_main_admin_menu(is_on_shift: bool=False, role: str='admin'):
         keyboard.append([KeyboardButton(text='📋 МЕНЮ'), KeyboardButton(text='☕ ЗЕРНО')])
 
         keyboard.append([KeyboardButton(text='📍 ЛОКАЦІЇ'), KeyboardButton(text='📱 СОЦМЕРЕЖІ')])
-        
-        keyboard.append([KeyboardButton(text='🔄 СИНХРОНІЗУВАТИ САЙТ')])
 
     keyboard.append([KeyboardButton(text='↩️ НА ГОЛОВНУ')])
 
