@@ -30,13 +30,13 @@ window.openItemPopup = function (item, category) {
 
     const defImg = 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?q=80&w=1061&auto=format&fit=crop';
 
-    const basePrice = Number(item?.price || 0);
+    const basePrice = Number((item && item.price) || 0);
     const safeBasePrice = Number.isFinite(basePrice) ? basePrice : 0;
     const safeCategory = category ? String(category) : '';
-    const safeName = item?.name ? String(item.name) : 'Item';
+    const safeName = item && item.name ? String(item.name) : 'Item';
 
     const renderScale = (val, iconClass) => {
-        const n = Math.min(Math.max(parseInt(val ?? 0, 10) || 0, 0), 5);
+        const n = Math.min(Math.max(parseInt(val == null ? 0 : val, 10) || 0, 0), 5);
         if (n <= 0) return null;
         let html = '';
         for (let i = 0; i < 5; i++) {
@@ -49,8 +49,7 @@ window.openItemPopup = function (item, category) {
     const formatMoney = (n) => `${Math.round(Number(n) || 0)} ₴`;
 
     try {
-        const imgUrlRaw = item?.image_url != null ? String(item.image_url).trim() : '';
-        const imgUrlSafe = imgUrlRaw && (/^https?:\/\//i.test(imgUrlRaw) || imgUrlRaw.startsWith('/')) ? imgUrlRaw : '';
+        const imgUrlSafe = resolveAssetUrl(item && item.image_url);
 
         if (popupImg) {
             popupImg.src = imgUrlSafe || defImg;
@@ -58,27 +57,28 @@ window.openItemPopup = function (item, category) {
         }
         if (popupTitle) popupTitle.textContent = safeName;
 
-        const strength = renderScale(item?.strength, 'fa-fire');
-        const sweetness = renderScale(item?.sweetness, 'fa-cubes');
+        const strength = renderScale(item && item.strength, 'fa-fire');
+        const sweetness = renderScale(item && item.sweetness, 'fa-cubes');
 
-        const options = Array.isArray(item?.options) ? item.options : [];
-        const caffeineOpts = options.filter((o) => o?.type === 'caffeine');
-        const milkOpts = options.filter((o) => o?.type === 'milk');
-        const addonOpts = options.filter((o) => o?.type === 'addon');
+        const options = item && Array.isArray(item.options) ? item.options : [];
+        const caffeineOpts = options.filter((o) => o && o.type === 'caffeine');
+        const milkOpts = options.filter((o) => o && o.type === 'milk');
+        const addonOpts = options.filter((o) => o && o.type === 'addon');
 
         const infoChips = [
-            item?.composition ? `<div class="popup__info-chip"><strong><i class="fas fa-layer-group"></i> Склад</strong><span>${item.composition}</span></div>` : '',
-            item?.volume ? `<div class="popup__info-chip"><strong><i class="fas fa-wine-glass"></i> Обʼєм</strong><span>${item.volume}</span></div>` : '',
-            item?.calories ? `<div class="popup__info-chip"><strong><i class="fas fa-bolt"></i> Калорійність</strong><span>${item.calories}</span></div>` : '',
+            item && item.composition ? `<div class="popup__info-chip"><strong><i class="fas fa-layer-group"></i> Склад</strong><span>${item.composition}</span></div>` : '',
+            item && item.volume ? `<div class="popup__info-chip"><strong><i class="fas fa-wine-glass"></i> Обʼєм</strong><span>${item.volume}</span></div>` : '',
+            item && item.calories ? `<div class="popup__info-chip"><strong><i class="fas fa-bolt"></i> Калорійність</strong><span>${item.calories}</span></div>` : '',
         ]
             .filter(Boolean)
             .join('');
 
         const makeOptionChip = (o, type, active) => {
-            const add = Number(o?.add_price || 0);
+            const add = Number((o && o.add_price) || 0);
             const addText = add > 0 ? ` +${add}` : add < 0 ? ` ${add}` : '';
             const cls = active ? 'choice-chip is-active' : 'choice-chip';
-            return `<button type="button" class="${cls}" data-opt-type="${type}" data-add="${Number.isFinite(add) ? add : 0}" data-name="${String(o?.name || '').replace(/\"/g, '&quot;')}">${o?.name || ''}${addText ? `<span style="margin-left:8px; opacity:.8;">${addText}₴</span>` : ''}</button>`;
+            const name = (o && o.name) || '';
+            return `<button type="button" class="${cls}" data-opt-type="${type}" data-add="${Number.isFinite(add) ? add : 0}" data-name="${String(name).replace(/\"/g, '&quot;')}">${name}${addText ? `<span style="margin-left:8px; opacity:.8;">${addText}₴</span>` : ''}</button>`;
         };
 
         const optionsHtml = (() => {
@@ -113,7 +113,7 @@ window.openItemPopup = function (item, category) {
             return `<div class="popup__info-list" style="display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:18px;">${caffeineBlock}${milkBlock}${addonsBlock}</div>`;
         })();
 
-        const desc = item?.description ? String(item.description) : '';
+        const desc = item && item.description ? String(item.description) : '';
 
         if (popupBody) {
             popupBody.innerHTML = `
@@ -180,7 +180,7 @@ window.openItemPopup = function (item, category) {
                     });
                 }
                 const suffix = selected.length ? ` (${selected.join(', ')})` : '';
-                const idBase = item?.id != null && String(item.id).trim() ? String(item.id) : `${safeCategory || 'menu'}:${safeName}`;
+                const idBase = item && item.id != null && String(item.id).trim() ? String(item.id) : `${safeCategory || 'menu'}:${safeName}`;
                 const id = selected.length ? `${idBase}|${selected.join('|')}` : idBase;
                 window.addMenuToCart(id, `${safeName}${suffix}`, Math.round(total));
             };
@@ -276,8 +276,7 @@ function renderMenuData(menuData) {
                 section.items.forEach((item) => {
                     const div = document.createElement('div');
                     div.className = 'menu-item';
-                    const imgUrlRaw = item?.image_url != null ? String(item.image_url).trim() : '';
-                    const imgUrlSafe = imgUrlRaw && (/^https?:\/\//i.test(imgUrlRaw) || imgUrlRaw.startsWith('/')) ? imgUrlRaw : '';
+                    const imgUrlSafe = resolveAssetUrl(item && item.image_url);
                     div.innerHTML = `
                         <div class="menu-item__image" style="background-image:url('${imgUrlSafe || defImg}')"></div>
                         <div class="menu-item__info">
@@ -293,12 +292,12 @@ function renderMenuData(menuData) {
                             e.preventDefault();
                             e.stopPropagation();
                             const id =
-                                item?.id != null && String(item.id).trim()
+                                item && item.id != null && String(item.id).trim()
                                     ? String(item.id)
-                                    : `${getCleanCatName(section.category) || 'menu'}:${item?.name || 'item'}`;
-                            const priceNum = Number(item?.price || 0);
+                                    : `${getCleanCatName(section.category) || 'menu'}:${(item && item.name) || 'item'}`;
+                            const priceNum = Number((item && item.price) || 0);
                             if (typeof window.addMenuToCart === 'function') {
-                                window.addMenuToCart(id, item?.name || 'Item', Number.isFinite(priceNum) ? priceNum : 0);
+                                window.addMenuToCart(id, (item && item.name) || 'Item', Number.isFinite(priceNum) ? priceNum : 0);
                             }
                         });
                     }

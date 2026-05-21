@@ -25,10 +25,12 @@ window.setupMobileMenu = function () {
         else open();
     });
 
-    closeBtn?.addEventListener('click', (event) => {
-        event.preventDefault();
-        close();
-    });
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            close();
+        });
+    }
 
     panel.addEventListener('click', (event) => {
         if (event.target === panel) {
@@ -36,7 +38,8 @@ window.setupMobileMenu = function () {
             return;
         }
 
-        const link = event.target?.closest?.('a');
+        const target = event.target;
+        const link = target && target.closest ? target.closest('a') : null;
         if (link) close();
     });
 
@@ -54,4 +57,3 @@ window.setupMobileMenu = function () {
         if (window.innerWidth > 992) close();
     });
 };
-

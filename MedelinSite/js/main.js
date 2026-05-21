@@ -183,19 +183,19 @@ if (typeof window.openItemPopup !== 'function') {
         const popupBody = document.getElementById('popup-body');
 
         const defImg = 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?q=80&w=1061&auto=format&fit=crop';
-        const safeName = item?.name ? String(item.name) : 'Item';
-        const priceNum = Number(item?.price || 0);
+        const safeName = item && item.name ? String(item.name) : 'Item';
+        const priceNum = Number((item && item.price) || 0);
         const safePrice = Number.isFinite(priceNum) ? priceNum : 0;
 
         if (popupImg) {
-            popupImg.src = item?.image_url || defImg;
+            popupImg.src = (item && item.image_url) || defImg;
             popupImg.alt = safeName;
         }
         if (popupTitle) popupTitle.textContent = safeName;
         if (popupPrice) popupPrice.textContent = `${Math.round(safePrice)} ₴`;
-        if (popupBody) popupBody.innerHTML = item?.description ? `<p>${String(item.description)}</p>` : '';
+        if (popupBody) popupBody.innerHTML = item && item.description ? `<p>${String(item.description)}</p>` : '';
 
-        window.openPopup?.('item-popup');
+        if (window.openPopup) window.openPopup('item-popup');
     };
 }
 
@@ -515,7 +515,7 @@ window.openCheckoutModal = function () {
             container.querySelectorAll('select[name="location"]').forEach((select) => (select.disabled = true));
             const btn = container.querySelector('.btn-checkout-primary');
             if (btn) btn.disabled = true;
-            window.showToast?.('Не вдалося завантажити список кавʼярень. Спробуйте оновити сторінку.', 'error');
+            if (window.showToast) window.showToast('Не вдалося завантажити список кавʼярень. Спробуйте оновити сторінку.', 'error');
         }
     })();
 };
@@ -643,16 +643,19 @@ window.goToPaymentStep = function () {
             return;
         }
     }
-    if (!isBeans && f.elements['type']?.value === 'in_house') {
-        const tableNum = f.elements['table_number']?.value.trim();
+    if (!isBeans && f.elements['type'] && f.elements['type'].value === 'in_house') {
+        const tableNum =
+            f.elements['table_number'] && typeof f.elements['table_number'].value === 'string'
+                ? f.elements['table_number'].value.trim()
+                : '';
         if (!tableNum) {
             window.showToast('Будь ласка, вкажіть номер столика', 'error');
             f.elements['table_number'].focus();
             return;
         }
     }
-    const orderType = f.elements['type']?.value;
-    const paymentMode = f.elements['payment_mode']?.value;
+    const orderType = f.elements['type'] ? f.elements['type'].value : '';
+    const paymentMode = f.elements['payment_mode'] ? f.elements['payment_mode'].value : '';
     if (!isBeans && orderType === 'takeaway') {
         document.getElementById('checkout-details-step').style.display = 'none';
         document.getElementById('checkout-payment-step').style.display = 'block';
@@ -878,7 +881,7 @@ window.openBookingWizard = function (e) {
             sel.innerHTML = '<option value="" disabled selected>Локації недоступні</option>';
             sel.disabled = true;
             if (submitBtn) submitBtn.disabled = true;
-            window.showToast?.('Не вдалося завантажити список кавʼярень. Спробуйте оновити сторінку.', 'error');
+            if (window.showToast) window.showToast('Не вдалося завантажити список кавʼярень. Спробуйте оновити сторінку.', 'error');
         }
     })();
     document.getElementById('booking-form').onsubmit = function (ev) {
@@ -945,7 +948,7 @@ function showNotification(t) {
 
 document.addEventListener('DOMContentLoaded', () => {
     updateCartBadge();
-    window.setupMobileMenu?.();
+    if (window.setupMobileMenu) window.setupMobileMenu();
     
     // Intersection Observer для анімацій появи
     const revealObserver = new IntersectionObserver((entries) => {
