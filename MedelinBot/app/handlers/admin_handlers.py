@@ -43,7 +43,7 @@ from app.utils.payment_refunds import refund_telegram_payment
 
 from app.utils.message_utils import safe_edit_message
 
-import re, time
+import re, time, asyncio
 
 from aiogram.filters import CommandStart
 
@@ -541,21 +541,46 @@ async def view_support_chat(callback: CallbackQuery, state: FSMContext):
         text += f"📦 Замовлення: #{oid[-6:]}\n"
     text += "────────────────────\n"
     
-    for m in messages:
-        sender = "👤 Гість" if m['source'] == 'guest' else "👨‍💼 Адмін"
-        time_str = m['created_at'].strftime('%d.%m %H:%M')
-        text += f"<b>{sender}</b> ({time_str}):\n{m['text']}\n\n"
-        
+    if not messages:
+        text += "<i>Повідомлень немає або чат очищено.</i>"
+    else:
+        for m in messages:
+            sender = "👤 Гість" if m['source'] == 'guest' else "👨‍💼 Адмін"
+            time_str = m['created_at'].strftime('%d.%m %H:%M')
+            text += f"<b>{sender}</b> ({time_str}):\n{m['text']}\n\n"
+
     # Знаходимо user_id по телефону
     user = await user_db.get_user_by_phone(phone)
     uid_str = str(user[0]) if user else "none"
-    
+
     markup = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='💬 ВІДПОВІСТИ', callback_data=f'adm_msg_{uid_str}_{oid}')],
+        [InlineKeyboardButton(text='🗑 ОЧИСТИТИ ЧАТ', callback_data=f'support_clear_{phone}_{oid}')],
         [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='adm_support_back')]
     ])
-    
+
     await safe_edit_message(callback.message, text, reply_markup=markup, parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('support_clear_'))
+async def clear_support_chat(callback: CallbackQuery, state: FSMContext):
+    parts = callback.data.split('_')
+    phone = parts[2]
+    oid = parts[3]
+
+    await callback.answer("⏳ Очищення...")
+
+    # Видалення з БД
+    from app.databases.mongo_client import get_db
+    from app.utils.phone_utils import normalize_phone
+    db = await get_db()
+    query = {'phone_digits': normalize_phone(phone)}
+    if oid != 'none': query['order_id'] = oid
+    await db.guest_messages.delete_many(query)
+
+    await callback.message.edit_text("✅ <b>ЧАТ ОЧИЩЕНО!</b>", parse_mode='HTML')
+    import asyncio
+    await asyncio.sleep(0.8)
+    await back_to_support_list(callback, state)
 
 @admin_router.callback_query(F.data == 'adm_support_back')
 async def back_to_support_list(callback: CallbackQuery, state: FSMContext):

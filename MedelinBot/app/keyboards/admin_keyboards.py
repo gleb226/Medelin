@@ -48,17 +48,12 @@ def get_main_admin_menu(is_on_shift: bool=False, role: str='admin'):
         if is_on_shift:
             keyboard.append([KeyboardButton(text='📝 ПРИЙНЯТИ ЗАМОВЛЕННЯ')])
 
-    if role in ('boss', 'owner', 'developer', 'admin', 'delivery_manager'):
-        keyboard.append([KeyboardButton(text='🆕 НОВІ ЗАПИТИ'), KeyboardButton(text='⚡️ АКТИВНІ')])
-    elif role == 'super':
+    if role in ('boss', 'owner', 'developer', 'admin', 'delivery_manager', 'super'):
         keyboard.append([KeyboardButton(text='🆕 НОВІ ЗАПИТИ'), KeyboardButton(text='⚡️ АКТИВНІ')])
 
     if role in ('super', 'boss', 'owner', 'developer'):
-        keyboard.append([KeyboardButton(text='💬 ПІДТРИМКА')])
-
-    if role in ('boss', 'owner', 'developer'):
-
-        keyboard.append([KeyboardButton(text='👥 КОМАНДА')])
+        # Об'єднуємо ПІДТРИМКА та КОМАНДА в один рядок
+        keyboard.append([KeyboardButton(text='💬 ПІДТРИМКА'), KeyboardButton(text='👥 КОМАНДА')])
 
     if role in ('boss', 'owner', 'developer'):
 

@@ -27,11 +27,15 @@ async def cleanup_old_data():
 
         res_sales = await db.sales.delete_many({'timestamp': {'$lt': cutoff}})
 
-        deleted_total = int(deleted_bookings) + int(res_logs.deleted_count or 0) + int(res_errors.deleted_count or 0) + int(res_sales.deleted_count or 0)
+        # Видалення повідомлень підтримки старше 30 днів
+        support_cutoff = datetime.utcnow() - timedelta(days=30)
+        res_msgs = await db.guest_messages.delete_many({'created_at': {'$lt': support_cutoff}})
+
+        deleted_total = int(deleted_bookings) + int(res_logs.deleted_count or 0) + int(res_errors.deleted_count or 0) + int(res_sales.deleted_count or 0) + int(res_msgs.deleted_count or 0)
 
         if deleted_total > 0:
 
-            await log_activity(0, 'system', 'db_cleanup', f'Deleted old records: bookings={deleted_bookings}, logs={res_logs.deleted_count}, errors={res_errors.deleted_count}, sales={res_sales.deleted_count}')
+            await log_activity(0, 'system', 'db_cleanup', f'Deleted old records: bookings={deleted_bookings}, logs={res_logs.deleted_count}, errors={res_errors.deleted_count}, sales={res_sales.deleted_count}, support_msgs={res_msgs.deleted_count}')
 
     except Exception as e:
 
