@@ -857,7 +857,7 @@ async def location_info_back(callback: CallbackQuery):
 
 async def show_contacts(message: Message, state: FSMContext):
 
-    await message.answer('☎️ <b>КОНТАКТИ</b>\n\n<i class="fas fa-phone"></i> <code>+380503775906</code>\n<i class="fas fa-envelope"></i> <code>medelin.social@gmail.com</code>\n\nОберіть, куди перейти:', reply_markup=await kb.get_contact_kb(), parse_mode='HTML')
+    await message.answer('Оберіть, куди перейти:', reply_markup=await kb.get_contact_kb(), parse_mode='HTML')
 
 @user_router.callback_query(F.data == 'contact_phone')
 

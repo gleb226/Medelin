@@ -54,13 +54,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Medelin Menu API", default_response_class=CustomJSONResponse, lifespan=lifespan)
 
+# Монтуємо статичні файли
 _root_dir = pathlib.Path(__file__).parent.parent
 _site_dir = _root_dir / "MedelinSite"
+
+# Пріоритет для Render: папка /app/uploads (якщо використовується Persistent Disk)
+# Інакше використовуємо локальну папку в MedelinSite
 _uploads_dir = pathlib.Path("/app/uploads")
 if not _uploads_dir.exists():
     _uploads_dir = _site_dir / "images" / "uploads"
+
 _uploads_dir.mkdir(parents=True, exist_ok=True)
 
+# Монтуємо /uploads для доступу через URL
 app.mount("/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
 app.mount("/cache", StaticFiles(directory=str(public_data_cache._dir)), name="cache")
 
