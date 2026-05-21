@@ -282,6 +282,25 @@ window.closePopup = closePopup;
             return;
         }
     });
+
+    document.addEventListener('change', (event) => {
+        const target = event.target;
+        if (!target || !target.closest) return;
+
+        const el = target.closest('[data-action]');
+        if (!el) return;
+        const action = el.getAttribute('data-action') || '';
+        if (!action) return;
+
+        if (action === 'toggle-bean-delivery') {
+            if (typeof window.toggleBeanDelivery === 'function') window.toggleBeanDelivery(el.value);
+            return;
+        }
+        if (action === 'toggle-table-input') {
+            if (typeof window.toggleTableInput === 'function') window.toggleTableInput(el.value);
+            return;
+        }
+    });
 })();
 
 if (typeof window.openItemPopup !== 'function') {
@@ -528,7 +547,7 @@ window.openCheckoutModal = function () {
                                 ? `
                             <div class="delivery-section">
                                 <p class="form-label">Спосіб отримання:</p>
-                                <select name="delivery_type" id="delivery_type" onchange="window.toggleBeanDelivery(this.value)" required>
+                                <select name="delivery_type" id="delivery_type" data-action="toggle-bean-delivery" required>
                                     <option value="" disabled selected>Оберіть спосіб...</option>
                                     <option value="pickup">Самовивіз з кав'ярні</option>
                                     <option value="nova_poshta">Нова Пошта (по Україні)</option>
@@ -567,7 +586,7 @@ window.openCheckoutModal = function () {
                             </div>
                             <div class="delivery-section" ${qrStolyk && hasLocationMatch ? 'style="display:none;"' : ''}>
                                 <p class="form-label">Як ви будете забирати?</p>
-                                <select name="type" onchange="window.toggleTableInput(this.value)">
+                                <select name="type" data-action="toggle-table-input">
                                     <option value="takeaway" ${qrStolyk && hasLocationMatch ? '' : 'selected'}>З собою</option>
                                     <option value="in_house" ${qrStolyk && hasLocationMatch ? 'selected' : ''}>В закладі</option>
                                 </select>

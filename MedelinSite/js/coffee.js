@@ -82,6 +82,10 @@ function openCoffeePopup(item) {
     const bitterness = renderScale(item.bitterness, 'fa-mug-hot');
     const body = renderScale(item.body, 'fa-seedling');
 
+    const price250 = item && item.price_250 != null ? item.price_250 : '';
+    const price500 = item && item.price_500 != null ? item.price_500 : '';
+    const price1000 = item && item.price_1000 != null ? item.price_1000 : '';
+
     let html = `
     <div class="popup__body-inner">
         <p class="popup__description">${item.description || 'Преміальна свіжообсмажена кава Medelin.'}</p>
@@ -99,17 +103,17 @@ function openCoffeePopup(item) {
             <label class="weight-label is-active" data-action="select-weight">
                 <input type="radio" name="bean_weight_${item.id}" value="250" data-price="${item.price_250}" checked style="display:none;">
                 <div class="weight-label__size">250г</div>
-                <div class="weight-label__price">${item.price_250}₴</div>
+                <div class="weight-label__price">${price250}₴</div>
             </label>
             <label class="weight-label" data-action="select-weight">
                 <input type="radio" name="bean_weight_${item.id}" value="500" data-price="${item.price_500}" style="display:none;">
                 <div class="weight-label__size">500г</div>
-                <div class="weight-label__price">${item.price_500}₴</div>
+                <div class="weight-label__price">${price500}₴</div>
             </label>
             <label class="weight-label" data-action="select-weight">
                 <input type="radio" name="bean_weight_${item.id}" value="1000" data-price="${item.price_1000}" style="display:none;">
                 <div class="weight-label__size">1кг</div>
-                <div class="weight-label__price">${item.price_1000}₴</div>
+                <div class="weight-label__price">${price1000}₴</div>
             </label>
         </div>
         <button class="btn btn--full-width" type="button" data-action="add-bean-to-cart" data-bean-id="${item.id}" data-bean-name="${String(item.name || '').replace(/[\"']/g, '')}" data-weight-name="bean_weight_${item.id}"><i class="fas fa-shopping-cart" style="margin-right:10px;"></i> Додати до кошика</button>
