@@ -28,7 +28,7 @@ async function initLocations() {
             window.setCachedData('locations', data);
             renderLocations(data);
         } else if (!cached) {
-            gridRoot.innerHTML = '<div class="error-msg">Не вдалося завантажити список локацій. <br><button onclick="location.reload()" class="btn btn--sm u-mt-md">Оновити сторінку</button></div>';
+            gridRoot.innerHTML = '<div class="error-msg">Не вдалося завантажити список локацій. <br><button type="button" data-action="reload-page" class="btn btn--sm u-mt-md">Оновити сторінку</button></div>';
         }
     } catch (err) {
         console.error('initLocations error:', err);
@@ -63,9 +63,9 @@ function renderLocations(locations) {
         popup.className = 'popup';
         popup.id = locId;
         popup.innerHTML = `
-            <div class="popup__overlay" onclick="window.closePopup('${locId}')"></div>
+            <div class="popup__overlay" data-action="close-popup" data-popup-id="${locId}"></div>
             <div class="popup__content">
-                <button class="popup__close" onclick="window.closePopup('${locId}')"><i class="fas fa-times"></i></button>
+                <button class="popup__close" type="button" data-action="close-popup" data-popup-id="${locId}"><i class="fas fa-times"></i></button>
                 <img src="${loc.image_url}" class="popup__image">
                 <div class="popup__body-inner">
                     <h3 class="popup__title u-mb-md">${loc.name}</h3>

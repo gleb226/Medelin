@@ -87,7 +87,7 @@
                 <div id="menu-root" class="menu__categories"></div>
             </section>
 
-            <div class="cart-fab" onclick="window.openCartModal()" id="cart-fab">
+            <div class="cart-fab" data-action="open-cart-modal" id="cart-fab">
                 <i class="fas fa-shopping-basket"></i>
                 <div class="cart-badge" id="cart-badge">0</div>
             </div>
@@ -97,9 +97,9 @@
         </main>
 
         <div class="popup" id="item-popup">
-            <div class="popup__overlay" onclick="closePopup('item-popup')"></div>
+            <div class="popup__overlay" data-action="close-popup" data-popup-id="item-popup"></div>
             <div class="popup__content">
-                <button class="popup__close" onclick="closePopup('item-popup')"><i class="fas fa-times"></i></button>
+                <button class="popup__close" type="button" data-action="close-popup" data-popup-id="item-popup"><i class="fas fa-times"></i></button>
                 <img id="popup-img" src="" class="popup__image" alt="" />
                 <h3 id="popup-title" class="popup__title"></h3>
                 <p id="popup-price" class="popup__price"></p>

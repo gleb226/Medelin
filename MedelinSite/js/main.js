@@ -175,6 +175,115 @@ function closePopup(id) {
 window.openPopup = openPopup;
 window.closePopup = closePopup;
 
+(function setupMedelinActionDelegation() {
+    if (window.__MEDELIN_ACTIONS_READY) return;
+    window.__MEDELIN_ACTIONS_READY = true;
+
+    document.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!target || !target.closest) return;
+
+        const el = target.closest('[data-action]');
+        if (!el) return;
+
+        const action = el.getAttribute('data-action') || '';
+        if (!action) return;
+
+        const stop = () => {
+            if (event && event.preventDefault) event.preventDefault();
+            if (event && event.stopPropagation) event.stopPropagation();
+        };
+
+        if (action === 'open-cart-modal') {
+            stop();
+            if (typeof window.openCartModal === 'function') window.openCartModal();
+            return;
+        }
+        if (action === 'close-cart-modal') {
+            stop();
+            if (typeof window.closeCartModal === 'function') window.closeCartModal();
+            return;
+        }
+        if (action === 'open-checkout-modal') {
+            stop();
+            if (typeof window.openCheckoutModal === 'function') window.openCheckoutModal();
+            return;
+        }
+        if (action === 'close-checkout-modal') {
+            stop();
+            if (typeof window.closeCheckoutModal === 'function') window.closeCheckoutModal();
+            return;
+        }
+        if (action === 'close-booking-modal') {
+            stop();
+            if (typeof window.closeBookingModal === 'function') window.closeBookingModal();
+            return;
+        }
+        if (action === 'open-booking-wizard') {
+            stop();
+            if (typeof window.openBookingWizard === 'function') window.openBookingWizard(event);
+            return;
+        }
+        if (action === 'close-popup') {
+            stop();
+            const popupId = el.getAttribute('data-popup-id') || '';
+            if (popupId && typeof window.closePopup === 'function') window.closePopup(popupId);
+            return;
+        }
+        if (action === 'reload-page') {
+            stop();
+            window.location.reload();
+            return;
+        }
+        if (action === 'repeat-order') {
+            stop();
+            const idx = parseInt(el.getAttribute('data-order-index') || '', 10);
+            if (Number.isFinite(idx) && typeof window.repeatOrder === 'function') window.repeatOrder(idx);
+            return;
+        }
+        if (action === 'remove-from-cart') {
+            stop();
+            const cartType = el.getAttribute('data-cart-type') || '';
+            const idx = parseInt(el.getAttribute('data-cart-index') || '', 10);
+            if (cartType && Number.isFinite(idx) && typeof window.removeFromCart === 'function') {
+                window.removeFromCart(cartType, idx);
+            }
+            return;
+        }
+        if (action === 'go-to-payment-step') {
+            stop();
+            if (typeof window.goToPaymentStep === 'function') window.goToPaymentStep();
+            return;
+        }
+        if (action === 'back-to-details') {
+            stop();
+            if (typeof window.backToDetails === 'function') window.backToDetails();
+            return;
+        }
+        if (action === 'submit-checkout') {
+            stop();
+            const method = el.getAttribute('data-method') || '';
+            if (method && typeof window.submitCheckout === 'function') window.submitCheckout(method);
+            return;
+        }
+        if (action === 'select-weight') {
+            stop();
+            if (typeof window.selectWeight === 'function') window.selectWeight(el);
+            return;
+        }
+        if (action === 'add-bean-to-cart') {
+            stop();
+            const id = el.getAttribute('data-bean-id') || '';
+            const name = el.getAttribute('data-bean-name') || '';
+            const weightName = el.getAttribute('data-weight-name') || '';
+            if (id && weightName && typeof window.addBeanToCart === 'function') {
+                window.addBeanToCart(id, name || 'Item', weightName);
+            }
+            return;
+        }
+    });
+})();
+
 if (typeof window.openItemPopup !== 'function') {
     window.openItemPopup = function (item) {
         const popupImg = document.getElementById('popup-img');
@@ -251,9 +360,9 @@ window.openCartModal = function () {
     const typeLabel = isBeans ? 'beans' : 'menu';
 
     let html = `
-    <div class="cart-modal__overlay" onclick="window.closeCartModal()"></div>
+    <div class="cart-modal__overlay" data-action="close-cart-modal"></div>
     <div class="cart-modal__content">
-        <button class="cart-modal__close" onclick="window.closeCartModal()"><i class="fas fa-times"></i></button>
+        <button class="cart-modal__close" type="button" data-action="close-cart-modal"><i class="fas fa-times"></i></button>
         <h3 class="cart-modal__title">Кошик</h3>
         <div class="cart-modal__body">
             <ul class="cart-modal__list">`;
@@ -263,7 +372,7 @@ window.openCartModal = function () {
     } else {
         activeCart.forEach((item, index) => {
             html += `<li><div><strong>${item.name}</strong><div class="item-price">${item.price} ₴</div></div>
-            <div class="cart-item-end"><button class="btn-remove-item" onclick="window.removeFromCart('${typeLabel}', ${index})"><i class="fas fa-trash"></i></button></div></li>`;
+            <div class="cart-item-end"><button class="btn-remove-item" type="button" data-action="remove-from-cart" data-cart-type="${typeLabel}" data-cart-index="${index}"><i class="fas fa-trash"></i></button></div></li>`;
         });
     }
 
@@ -281,7 +390,7 @@ window.openCartModal = function () {
                     <strong>${order.items.length} тов. — ${order.total} ₴</strong>
                     <div class="past-order__date">${date}</div>
                 </div>
-                <button class="btn past-order__btn" onclick="window.repeatOrder(${idx})">Повторити</button>
+                <button class="btn past-order__btn" type="button" data-action="repeat-order" data-order-index="${idx}">Повторити</button>
             </div>`;
         });
 
@@ -301,7 +410,7 @@ window.openCartModal = function () {
             `
                     : ''
             }
-            <button class="btn btn--outline btn--full-width" onclick="window.closeCartModal()"><i class="fas fa-shopping-bag cart-modal__continue-btn-icon"></i> Продовжити замовлення</button>
+            <button class="btn btn--outline btn--full-width" type="button" data-action="close-cart-modal"><i class="fas fa-shopping-bag cart-modal__continue-btn-icon"></i> Продовжити замовлення</button>
         </div>
     </div>`;
     html += `</div></div>`;
@@ -311,7 +420,7 @@ window.openCartModal = function () {
     document.body.style.overflow = 'hidden';
 
     const btn = document.getElementById('btn-open-checkout');
-    if (btn) btn.onclick = () => window.openCheckoutModal();
+    if (btn) btn.setAttribute('data-action', 'open-checkout-modal');
 };
 
 window.repeatOrder = function (idx) {
@@ -389,9 +498,9 @@ window.openCheckoutModal = function () {
         const userData = window.getUserData();
 
         container.innerHTML = `
-            <div class="cart-modal__overlay" onclick="window.closeCheckoutModal()"></div>
+            <div class="cart-modal__overlay" data-action="close-checkout-modal"></div>
             <div class="cart-modal__content checkout-modal-modern checkout-modal-container--large">
-                <button class="cart-modal__close" onclick="window.closeCheckoutModal()"><i class="fas fa-times"></i></button>
+                <button class="cart-modal__close" type="button" data-action="close-checkout-modal"><i class="fas fa-times"></i></button>
 
                 <h3 class="checkout-title">Оформлення замовлення</h3>
 
@@ -481,31 +590,31 @@ window.openCheckoutModal = function () {
                         <div class="total-row">
                             <span>Всього:</span><span>${total} ₴</span>
                         </div>
-                        <button type="button" class="btn-checkout-primary" onclick="window.goToPaymentStep()">Продовжити</button>
+                        <button type="button" class="btn-checkout-primary" data-action="go-to-payment-step">Продовжити</button>
                     </div>
                 </div>
 
                 <div id="checkout-payment-step" style="display:none;">
                     <p class="payment-title">Оберіть метод оплати:</p>
                     <div class="payment-methods-grid">
-                        <button class="payment-btn" onclick="window.submitCheckout('card')">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="card">
                             <i class="fas fa-credit-card"></i> <span>Оплата картою</span>
                         </button>
-                        <button class="payment-btn" onclick="window.submitCheckout('applepay')">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="applepay">
                             <i class="fab fa-apple-pay"></i> <span>Apple Pay</span>
                         </button>
-                        <button class="payment-btn" onclick="window.submitCheckout('googlepay')">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="googlepay">
                             <i class="fab fa-google-pay"></i> <span>Google Pay</span>
                         </button>
-                        <button class="payment-btn" onclick="window.submitCheckout('privatpay')">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="privatpay">
                             <i class="fas fa-university"></i> <span>PrivatPay</span>
                         </button>
-                        <button class="payment-btn" onclick="window.submitCheckout('monobank')">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="monobank">
                             <i class="fas fa-wallet"></i> <span>MonoPay</span>
                         </button>
                     </div>
                     <div style="padding: 0 1.5rem 1.5rem;">
-                        <button class="btn-back" onclick="window.backToDetails()"><i class="fas fa-arrow-left u-mr-xs"></i> Назад до деталей</button>
+                        <button class="btn-back" type="button" data-action="back-to-details"><i class="fas fa-arrow-left u-mr-xs"></i> Назад до деталей</button>
                     </div>
                 </div>
             </div>`;
@@ -821,9 +930,9 @@ window.openBookingWizard = function (e) {
     }
     const userData = window.getUserData();
     container.innerHTML = `
-    <div class="booking-modal__overlay" onclick="window.closeBookingModal()"></div>
+    <div class="booking-modal__overlay" data-action="close-booking-modal"></div>
     <div class="booking-modal__content checkout-modal-modern">
-        <button class="booking-modal__close" onclick="window.closeBookingModal()"><i class="fas fa-times"></i></button>
+        <button class="booking-modal__close" type="button" data-action="close-booking-modal"><i class="fas fa-times"></i></button>
         <h3 class="checkout-title">Бронювання столика</h3>
         <form id="booking-form" class="booking-form" style="padding: 0 2rem 2rem;">
             <div class="form-group">
@@ -989,9 +1098,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(order => {
                     if (order && order.order_id) {
                         container.innerHTML = `
-                        <div class="cart-modal__overlay" onclick="window.closeCheckoutModal()"></div>
+                        <div class="cart-modal__overlay" data-action="close-checkout-modal"></div>
                         <div class="cart-modal__content checkout-modal-modern">
-                            <button class="cart-modal__close" onclick="window.closeCheckoutModal()"><i class="fas fa-times"></i></button>
+                            <button class="cart-modal__close" type="button" data-action="close-checkout-modal"><i class="fas fa-times"></i></button>
                             <h3 class="checkout-title">Оплата замовлення</h3>
                             <div id="checkout-payment-step">
                                 <div style="padding: 0 1.5rem 1rem; text-align: center;">
@@ -1000,19 +1109,19 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                                 <p class="payment-title">Оберіть метод оплати:</p>
                                 <div class="payment-methods-grid">
-                                    <button class="payment-btn" onclick="window.submitCheckout('card')">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="card">
                                         <i class="fas fa-credit-card"></i> <span>Оплата картою</span>
                                     </button>
-                                    <button class="payment-btn" onclick="window.submitCheckout('applepay')">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="applepay">
                                         <i class="fab fa-apple-pay"></i> <span>Apple Pay</span>
                                     </button>
-                                    <button class="payment-btn" onclick="window.submitCheckout('googlepay')">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="googlepay">
                                         <i class="fab fa-google-pay"></i> <span>Google Pay</span>
                                     </button>
-                                    <button class="payment-btn" onclick="window.submitCheckout('privatpay')">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="privatpay">
                                         <i class="fas fa-university"></i> <span>PrivatPay</span>
                                     </button>
-                                    <button class="payment-btn" onclick="window.submitCheckout('monobank')">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="monobank">
                                         <i class="fas fa-wallet"></i> <span>MonoPay</span>
                                     </button>
                                 </div>

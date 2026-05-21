@@ -15,7 +15,7 @@ async function fetchCoffee() {
             window.setCachedData('coffee', data);
             renderCoffeeData(data);
         } else if (!cached) {
-            root.innerHTML = `<div class="error-msg">Помилка завантаження даних про каву. <br><button onclick="location.reload()" class="btn btn--sm u-mt-md">Оновити сторінку</button></div>`;
+            root.innerHTML = `<div class="error-msg">Помилка завантаження даних про каву. <br><button type="button" data-action="reload-page" class="btn btn--sm u-mt-md">Оновити сторінку</button></div>`;
         }
     } catch (err) {
         console.error('fetchCoffee error:', err);
@@ -96,23 +96,23 @@ function openCoffeePopup(item) {
             ${body ? `<div class="scale-row"><span>Тіло (Насиченість)</span> <span>${body}</span></div>` : ''}
         </div>
         <div class="popup__weights-selection">
-            <label class="weight-label is-active" onclick="window.selectWeight(this)">
+            <label class="weight-label is-active" data-action="select-weight">
                 <input type="radio" name="bean_weight_${item.id}" value="250" data-price="${item.price_250}" checked style="display:none;">
                 <div class="weight-label__size">250г</div>
                 <div class="weight-label__price">${item.price_250}₴</div>
             </label>
-            <label class="weight-label" onclick="window.selectWeight(this)">
+            <label class="weight-label" data-action="select-weight">
                 <input type="radio" name="bean_weight_${item.id}" value="500" data-price="${item.price_500}" style="display:none;">
                 <div class="weight-label__size">500г</div>
                 <div class="weight-label__price">${item.price_500}₴</div>
             </label>
-            <label class="weight-label" onclick="window.selectWeight(this)">
+            <label class="weight-label" data-action="select-weight">
                 <input type="radio" name="bean_weight_${item.id}" value="1000" data-price="${item.price_1000}" style="display:none;">
                 <div class="weight-label__size">1кг</div>
                 <div class="weight-label__price">${item.price_1000}₴</div>
             </label>
         </div>
-        <button class="btn btn--full-width" onclick="window.addBeanToCart('${item.id}', '${item.name.replace(/'/g, '')}', 'bean_weight_${item.id}')"><i class="fas fa-shopping-cart" style="margin-right:10px;"></i> Додати до кошика</button>
+        <button class="btn btn--full-width" type="button" data-action="add-bean-to-cart" data-bean-id="${item.id}" data-bean-name="${String(item.name || '').replace(/[\"']/g, '')}" data-weight-name="bean_weight_${item.id}"><i class="fas fa-shopping-cart" style="margin-right:10px;"></i> Додати до кошика</button>
     </div>`;
     if (popupBody) popupBody.innerHTML = html;
     window.openPopup('item-popup');
