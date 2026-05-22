@@ -1,7 +1,13 @@
 FROM python:3.11-slim
 
-# Встановлюємо Nginx та psmisc (для fuser)
-RUN apt-get update && apt-get install -y nginx psmisc && rm -rf /var/lib/apt/lists/*
+# Встановлюємо Nginx, psmisc та бібліотеки для обробки зображень (Pillow)
+RUN apt-get update && apt-get install -y \
+    nginx \
+    psmisc \
+    libwebp-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

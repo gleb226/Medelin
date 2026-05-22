@@ -1404,7 +1404,7 @@ async def menu_add_volume(message: Message, state: FSMContext):
 
     await state.set_state(MenuStates.waiting_image)
 
-@admin_router.message(MenuStates.waiting_image, F.photo | F.text)
+@admin_router.message(MenuStates.waiting_image, F.photo | F.document | F.text)
 
 async def menu_add_image(message: Message, state: FSMContext, bot: Bot):
 
@@ -1635,7 +1635,7 @@ async def beans_edit_field_start(callback: CallbackQuery, state: FSMContext):
 
     await callback.answer()
 
-@admin_router.message(MenuStates.edit_waiting_value, F.photo | F.text)
+@admin_router.message(MenuStates.edit_waiting_value, F.photo | F.document | F.text)
 
 async def admin_edit_value_save(message: Message, state: FSMContext, bot: Bot):
 
@@ -1928,7 +1928,7 @@ async def add_loc_amenities(message: Message, state: FSMContext):
 
     await state.set_state(LocationStates.waiting_image)
 
-@admin_router.message(LocationStates.waiting_image, F.photo | F.text)
+@admin_router.message(LocationStates.waiting_image, F.photo | F.document | F.text)
 
 async def add_loc_image(message: Message, state: FSMContext, bot: Bot):
 
@@ -2039,7 +2039,7 @@ async def edit_location_field_start(callback: CallbackQuery, state: FSMContext):
 
     await callback.answer()
 
-@admin_router.message(LocationStates.edit_value, F.photo | F.text)
+@admin_router.message(LocationStates.edit_value, F.photo | F.document | F.text)
 
 async def edit_location_value_save(message: Message, state: FSMContext, bot: Bot):
 
