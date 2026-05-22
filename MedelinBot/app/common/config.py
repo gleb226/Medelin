@@ -21,6 +21,9 @@ MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'medelin').strip()
 BOT_TOKEN = os.getenv('BOT_TOKEN', '').strip()
 PORTMONE_TOKEN = os.getenv('PORTMONE_TOKEN', '').strip()
 PAYMENT_TOKEN = os.getenv('PAYMENT_TOKEN', PORTMONE_TOKEN).strip()
+
+if not PAYMENT_TOKEN and PORTMONE_TOKEN:
+    PAYMENT_TOKEN = PORTMONE_TOKEN
 MONOBANK_TOKEN = os.getenv('MONOBANK_TOKEN', '').strip()
 NP_API_KEY = os.getenv('NP_API_KEY', '').strip()
 LIQPAY_PUBLIC_KEY = os.getenv('LIQPAY_PUBLIC_KEY', '').strip()
