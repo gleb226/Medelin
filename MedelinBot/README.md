@@ -70,6 +70,10 @@
     - Додаткові інгредієнти (сироп, вершки, молоко)
     - Онлайн оплата або готівка
 
+- 🖼️ **Intelligent Photo Processing**: 
+    - Automatic detection of photos and document-sent images.
+    - Smart conversion to **WebP** (85% quality) for optimal web performance.
+    - Robust path resolution for Docker and Local environments.
 - 🚀 **Доставка та самовивіз**
     - Доставка по Ужгороду
     - Самовивіз зі знижкою 10%

@@ -69,7 +69,30 @@
    - API: `http://localhost/api/`
    - Бот: Почне працювати автоматично після встановлення токена.
 
-## 🔧 Конфігурація завантаження фото
+## 🏗️ Архітектура системи
+
+```mermaid
+graph TD
+    User([Користувач]) <--> Web[MedelinSite / Frontend]
+    User <--> Bot[Telegram Bot / MedelinBot]
+    
+    subgraph "Infrastructure (Docker)"
+        Nginx[Nginx Edge Server] --> Web
+        Nginx -- "/api/*" --> API[FastAPI Backend]
+        
+        subgraph "Backend Services"
+            API <--> DB[(MongoDB)]
+            Bot <--> DB
+            Bot -- "Generate Cache" --> Cache[JSON Cache]
+            Cache --> Web
+        end
+        
+        Bot -- "Uploads" --> Vol[Shared Volume: /images/uploads]
+        Vol --> Nginx
+    end
+```
+
+## 🔧 Як це працює (Deep Dive)
 
 Проект використовує інтелектуальну систему збереження фото. При додаванні товару через бота:
 1. Фото завантажується з серверів Telegram.
