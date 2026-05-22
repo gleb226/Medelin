@@ -11,6 +11,9 @@ import datetime
 
 import hashlib
 
+def truncate(text, length):
+    return text[:length] + '..' if len(text) > length else text
+
 BTN_BOOK_TABLE = '📅 ЗАБРОНЮВАТИ СТОЛИК'
 
 BTN_MENU = '🍽️ МЕНЮ / ЗАМОВЛЕННЯ'
