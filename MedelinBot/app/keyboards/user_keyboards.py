@@ -48,7 +48,6 @@ def cat_key(category: str) -> str:
 
 def get_main_menu(is_admin: bool=False):
     keyboard = [
-        [KeyboardButton(text=BTN_BOOK_TABLE)],
         [KeyboardButton(text=BTN_MENU), KeyboardButton(text=BTN_BEANS)],
         [KeyboardButton(text=BTN_LOCATIONS), KeyboardButton(text=BTN_CONTACTS)]
     ]
@@ -227,7 +226,7 @@ def get_item_options_kb(item_id, item_name, options, current_options=None, curre
     keyboard.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data=f'item_{item_id}')])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-def get_categories_kb(categories, booking_mode=False, cart_count=0):
+def get_categories_kb(categories, cart_count=0):
     keyboard = []
     row = []
 
@@ -259,15 +258,14 @@ def get_categories_kb(categories, booking_mode=False, cart_count=0):
     if row:
         keyboard.append(row)
 
-    if cart_count > 0 and (not booking_mode):
+    if cart_count > 0:
         keyboard.append([InlineKeyboardButton(text=f'🛍 КОШИК ({cart_count})', callback_data='checkout_order')])
 
-    bt, bd = ('⬅️ ДО БРОНІ', 'back_to_booking_summary') if booking_mode else ('🏠 НА ГОЛОВНУ', 'back_main_menu_only')
-    keyboard.append([InlineKeyboardButton(text=bt, callback_data=bd)])
+    keyboard.append([InlineKeyboardButton(text='🏠 НА ГОЛОВНУ', callback_data='back_main_menu_only')])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-def get_items_kb(items, category, cart_count=0, booking_mode=False):
+def get_items_kb(items, category, cart_count=0):
     keyboard = []
     sorted_items = sorted(items, key=lambda x: x[1])
     row = []
@@ -284,7 +282,7 @@ def get_items_kb(items, category, cart_count=0, booking_mode=False):
     if row:
         keyboard.append(row)
 
-    if cart_count > 0 and (not booking_mode):
+    if cart_count > 0:
         keyboard.append([InlineKeyboardButton(text=f'🛍 КОШИК ({cart_count})', callback_data='checkout_order')])
 
     keyboard.append([InlineKeyboardButton(text='⬅️ ДО КАТЕГОРІЙ', callback_data='back_cats')])
