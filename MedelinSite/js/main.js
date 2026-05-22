@@ -4,29 +4,19 @@ const _proto = window.location.protocol;
 const isFileProto = _proto === 'file:';
 const isLocal = _host === 'localhost' || _host === '127.0.0.1' || _host === '';
 
-window.API_BASE_URL = '';
-if (isFileProto) {
-    window.API_BASE_URL = 'https://medelin.onrender.com';
-} else if (isLocal && _port !== '8000' && _port !== '') {
+// Завжди використовуємо абсолютний URL для Render, щоб уникнути проблем з кешуванням статики
+window.API_BASE_URL = 'https://medelin.onrender.com';
+
+if (isLocal && _port === '8000') {
     window.API_BASE_URL = 'http://localhost:8000';
 }
 
 window.fetchMedelinData = async function (key) {
-    const endpoints = [];
     const fileName = `${key}.json`;
-    
-    // ПРІОРИТЕТ 1: Прямий API запит до сервера (завжди актуальні дані з пам'яті)
-    if (window.API_BASE_URL) {
-        endpoints.push(`${window.API_BASE_URL}/api/${key}`);
-    } else {
-        // Якщо ми на самому сервері, використовуємо відносний шлях
-        endpoints.push(`/api/${key}`);
-    }
-
-    // ПРІОРИТЕТ 2: Статичні JSON файли (кеш на диску)
-    if (window.API_BASE_URL) {
-        endpoints.push(`${window.API_BASE_URL}/cache/${fileName}`);
-    }
+    const endpoints = [
+        `${window.API_BASE_URL}/api/${key}`, // Свіжі дані з БД через API
+        `${window.API_BASE_URL}/cache/${fileName}` // Кеш на сервері
+    ];
     
     const isRoot = !window.location.pathname.includes('/pages/');
     if (isRoot) {

@@ -825,9 +825,9 @@ async def beans_np_city_search(message: Message, state: FSMContext):
 
         city = cities[0]
 
-        city_ref = city.get('DeliveryCity', '') or city.get('Ref', '')
+        city_ref = city.get('DeliveryCity') or city.get('Ref')
 
-        city_name = city.get('Present', '')
+        city_name = city.get('Present') or city.get('MainDescription')
 
         await state.update_data(np_city_ref=city_ref, np_city_name=city_name)
 
