@@ -23,10 +23,10 @@ class PublicDataCache:
         repo_root = Path(__file__).resolve().parents[3]
         dev_path = repo_root / 'MedelinSite' / 'cache'
         
-        if docker_path.exists() or docker_path.parent.exists():
-            self._dir = docker_path
-        elif unified_path.parent.exists():
+        if unified_path.parent.exists():
             self._dir = unified_path
+        elif docker_path.exists() or docker_path.parent.exists():
+            self._dir = docker_path
         else:
             self._dir = dev_path
 
