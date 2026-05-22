@@ -143,13 +143,21 @@ def build_cart_text(cart_menu: list) -> tuple[int, str]:
 
 @app.get('/api/nova-poshta/cities')
 async def get_np_cities(search: str):
+    logger.info(f"NP: Searching cities for '{search}'")
     payload = {'apiKey': NP_API_KEY, 'modelName': 'Address', 'calledMethod': 'searchSettlements', 'methodProperties': {'CityName': search, 'Limit': '50'}}
     async with aiohttp.ClientSession() as session:
-        async with session.post('https://api.novaposhta.ua/v2.0/json/', json=payload) as resp:
-            data = await resp.json()
-            res_data = data.get('data', [])
-            if res_data and isinstance(res_data, list) and (len(res_data) > 0):
-                return res_data[0].get('Addresses', [])
+        try:
+            async with session.post('https://api.novaposhta.ua/v2.0/json/', json=payload) as resp:
+                data = await resp.json()
+                if not data.get('success'):
+                    logger.error(f"NP Error: {data.get('errors')}")
+                    return []
+                res_data = data.get('data', [])
+                if res_data and isinstance(res_data, list) and (len(res_data) > 0):
+                    return res_data[0].get('Addresses', [])
+                return []
+        except Exception as e:
+            logger.error(f"NP Exception (cities): {e}")
             return []
 
 @app.get('/api/nova-poshta/warehouses')
@@ -157,9 +165,16 @@ async def get_np_warehouses(cityRef: str, cityName: str = None, search: str = No
     async def fetch_wh(props):
         payload = {'apiKey': NP_API_KEY, 'modelName': 'Address', 'calledMethod': 'getWarehouses', 'methodProperties': props}
         async with aiohttp.ClientSession() as session:
-            async with session.post('https://api.novaposhta.ua/v2.0/json/', json=payload) as resp:
-                data = await resp.json()
-                return data.get('data', [])
+            try:
+                async with session.post('https://api.novaposhta.ua/v2.0/json/', json=payload) as resp:
+                    data = await resp.json()
+                    if not data.get('success'):
+                        logger.error(f"NP Error (warehouses): {data.get('errors')}")
+                        return []
+                    return data.get('data', [])
+            except Exception as e:
+                logger.error(f"NP Exception (fetch_wh): {e}")
+                return []
 
     props = {'SettlementRef': cityRef}
     if search:
@@ -228,11 +243,15 @@ async def notify_admins_about_order(order_id: str):
     fullname = order.get('fullname', 'Не вказано')
     phone = order.get('phone', 'Не вказано')
     tg_nick = order.get('username', '')
+    user_id = order.get('user_id')
     loc_id = order.get('location_id', 'web')
     order_type = order.get('order_type', 'takeaway')
     total = order.get('total_amount', 0)
     items_text = order.get('cart', '')
     table_number = order.get('table_number', '')
+    date_time = order.get('date_time', '—')
+    people_count = order.get('people_count', '—')
+    wishes = order.get('wishes') or ''
 
     location_name = 'Замовлення з сайту'
     for loc in await location_db.get_all_locations():
@@ -246,8 +265,18 @@ async def notify_admins_about_order(order_id: str):
     if tg_nick:
         msg += f"✈️ Telegram: {(tg_nick if tg_nick.startswith('@') else '@' + tg_nick)}\n"
     
-    if order_type == 'nova_poshta':
+    if order_type == 'nova_poshta' or order_type == 'beans_delivery':
         msg += f'🚚 Доставка: <b>Нова Пошта</b>\n'
+        if 'НП:' in wishes:
+            msg += f"📍 Адреса: {wishes.split('НП:')[1].split('|')[0].strip()}\n"
+    elif order_type == 'beans_booking':
+        msg += f'🏛 Заклад: {location_name}\n'
+        msg += f'📦 Тип: Самовивіз зерен\n'
+    elif order_type == 'order_with_booking':
+        msg += f'🏛 Заклад: {location_name}\n'
+        msg += f'🕒 Час: {date_time}\n'
+        msg += f'👥 Гостей: {people_count}\n'
+        msg += f'📝 Тип: Бронювання + Замовлення\n'
     else:
         msg += f'🏛 Заклад: {location_name}\n'
         if order_type == 'in_house':
@@ -258,13 +287,21 @@ async def notify_admins_about_order(order_id: str):
     msg += f'💰 Сума: <b>{total} грн</b>\n'
     msg += f"💳 Оплата: Онлайн (Сплачено)\n"
     
-    wishes = order.get('wishes') or ''
     clean_wishes = wishes.replace(f"TG: {tg_nick}", "").replace("TG: ", "").replace("МЕНЮ", "").strip()
     if clean_wishes:
         import html
         msg += f"💬 Побажання: {html.escape(clean_wishes)}\n"
         
     msg += f"\n🛒 Кошик:\n{items_text}"
+
+    # Додаємо в активні якщо ще немає
+    from app.databases.active_orders_database import active_orders_db
+    from app.databases.active_bookings_database import active_bookings_db
+    
+    if order_type == 'order_with_booking':
+        await active_bookings_db.add_active_booking(oid, user_id, fullname, phone, loc_id, date_time, people_count, wishes)
+    else:
+        await active_orders_db.add_active_order(oid, user_id, fullname, phone, loc_id, items_text, order_type, table_number)
 
     await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id)
     if BOSS_IDS:

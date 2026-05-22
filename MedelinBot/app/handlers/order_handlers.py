@@ -420,22 +420,50 @@ async def send_order_invoice(user, chat_id, state, bot):
 
 
 async def send_beans_invoice(user, chat_id, state, bot):
-
     data = await state.get_data()
-
-    base = int(''.join(filter(str.isdigit, str(data.get('base_price') or '')))) or 300
-
+    base_val = data.get('base_price') or '300'
+    base = int(''.join(filter(str.isdigit, str(base_val)))) or 300
     weight = int(str(data.get('weight') or '250'))
-
     total = int(base) if weight == 250 else int(base * (weight / 250) * (0.95 if weight == 500 else 0.9))
 
     pay_id = f'beans_{user.id}_{int(time.time())}'
-
     await state.update_data(pay_id=pay_id)
-
     name = str(data.get('bean_name') or '')
 
-    await bot.send_invoice(chat_id=chat_id, title='☕️ ОПЛАТА КАВИ', description=f'{name} ({weight}г)', payload=pay_id, provider_token=PAYMENT_TOKEN, currency='UAH', prices=[LabeledPrice(label=name, amount=int(total) * 100)], start_parameter='beans-payment')
+    # Створюємо замовлення перед оплатою на сайті
+    loc_id = data.get('location_id')
+    is_np = data.get('delivery_type') == 'nova_poshta'
+    np_info = f"НП: {data.get('np_city_name')}, {data.get('np_warehouse')}" if is_np else "САМОВИВІЗ"
+    time_info = 'НОВА ПОШТА' if is_np else 'БРОНЬ 2 ДНІ'
+    order_type = 'beans_delivery' if is_np else 'beans_booking'
+    
+    wishes = data.get('wishes', '')
+    wishes_str = f"ВАГА: {weight}г | {np_info}"
+    if wishes:
+        wishes_str += f"\nПОБАЖАННЯ: {wishes}"
+
+    rid = await orders_db.add_order(
+        user.id, user.username, user.full_name, data['phone'], 
+        loc_id or "NP", time_info, '0', wishes_str, 
+        f"ЗЕРНА: {name}", order_type,
+        payment_mode='pay_now',
+        total_amount=total
+    )
+
+    from app.common.config import WEB_APP_URL
+    payment_url = f"{WEB_APP_URL}/index.html?order_id={rid}"
+    
+    kb_pay = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='💳 ПЕРЕЙТИ ДО ОПЛАТИ', url=payment_url)],
+        [InlineKeyboardButton(text='❌ Скасувати', callback_data='back_main_menu_only')]
+    ])
+
+    await bot.send_message(
+        chat_id, 
+        f"<b>💳 ОПЛАТА КАВИ</b>\n\n<b>Сорт:</b> {name}\n<b>Вага:</b> {weight}г\n<b>Сума:</b> {total} ₴\n\nБудь ласка, натисніть кнопку нижче, щоб обрати спосіб оплати та завершити замовлення:",
+        reply_markup=kb_pay,
+        parse_mode='HTML'
+    )
 
 @order_router.pre_checkout_query()
 
