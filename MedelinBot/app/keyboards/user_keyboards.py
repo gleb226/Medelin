@@ -225,250 +225,110 @@ def get_item_options_kb(item_id, item_name, options, current_options=None, curre
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 def get_categories_kb(categories, booking_mode=False, cart_count=0):
-
     keyboard = []
-
     row = []
 
-    emoji_map = {'Кава': '☕', 'До кави': '➕', 'Декаф': '🍃', 'Мілк': '🥛', 'Десерти': '🍰', 'Напої': '🍹', 'Масала': '🌶️', 'Фреш': '🍊', 'Чай': '🍵', 'Напої': '🥤', 'Матча': '🍵', 'Какао': '🍫'}
+    emoji_map = {
+        'Кава': '☕', 'До кави': '➕', 'Декаф': '🍃', 'Мілк': '🥛', 
+        'Десерти': '🍰', 'Напої': '🍹', 'Масала': '🌶️', 'Фреш': '🍊', 
+        'Чай': '🍵', 'Матча': '🍵', 'Какао': '🍫'
+    }
 
     fixed_order = ['Кава', 'До Кави', 'Декаф', 'Десерти', 'Напої', 'Масала', 'Фреш', 'Чай', 'Мілк', 'Матча', 'Какао']
 
     def normalize_cat(cat):
-
         cat = str(cat)
-
         for emoji in emoji_map.values():
-
             cat = cat.replace(emoji, '').strip()
-
-        if cat == 'Мільк':
-
-            return 'Мілк'
-
+        if cat == 'Мільк': return 'Мілк'
         return cat
 
     sorted_cats = sorted(categories, key=lambda x: fixed_order.index(normalize_cat(x)) if normalize_cat(x) in fixed_order else 999)
-
     filtered_cats = [c for c in sorted_cats if 'зерн' not in c.lower()]
 
     for cat in filtered_cats:
-
         cat_s = normalize_cat(cat)
-
         emoji = emoji_map.get(cat_s, '🍽️')
-
         row.append(InlineKeyboardButton(text=f'{emoji} {cat_s}', callback_data=f'cat_{cat_key(cat_s)}'))
-
         if len(row) == 2:
-
             keyboard.append(row)
-
             row = []
-
     if row:
-
         keyboard.append(row)
 
     if cart_count > 0 and (not booking_mode):
-
         keyboard.append([InlineKeyboardButton(text=f'🛍 КОШИК ({cart_count})', callback_data='checkout_order')])
 
     bt, bd = ('⬅️ ДО БРОНІ', 'back_to_booking_summary') if booking_mode else ('🏠 НА ГОЛОВНУ', 'back_main_menu_only')
-
     keyboard.append([InlineKeyboardButton(text=bt, callback_data=bd)])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 def get_items_kb(items, category, cart_count=0, booking_mode=False):
     keyboard = []
-    
-    # Сортуємо та додаємо всі айтеми (фільтрація тепер в кеші)
     sorted_items = sorted(items, key=lambda x: x[1])
     row = []
     for item in sorted_items:
-
-        btn_text = f'{truncate(item[1])} - {item[2]}'
-
+        # Форматуємо ціну без .0 якщо вона ціла
+        price = float(item[2])
+        price_str = f"{int(price)}" if price.is_integer() else f"{price}"
+        btn_text = f'{truncate(item[1], 18)} | {price_str}₴'
+        
         row.append(InlineKeyboardButton(text=btn_text, callback_data=f'item_{item[0]}'))
-
         if len(row) == 2:
-
             keyboard.append(row)
-
             row = []
-
     if row:
-
         keyboard.append(row)
 
     if cart_count > 0 and (not booking_mode):
-
         keyboard.append([InlineKeyboardButton(text=f'🛍 КОШИК ({cart_count})', callback_data='checkout_order')])
 
     keyboard.append([InlineKeyboardButton(text='⬅️ ДО КАТЕГОРІЙ', callback_data='back_cats')])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-def truncate(text, length=22):
-
-    if len(text) <= length:
-
-        return text
-
-    return text[:length - 1] + '…'
-
-def get_item_actions_kb(item_id):
-
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='➕ ДОДАТИ В КОШИК', callback_data=f'add_to_cart_{item_id}')], [InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data='back_items')]])
-
 def get_beans_kb(items):
-
     keyboard = []
-
     row = []
-
     for item in items:
-
-        name = truncate(item[1], 25)
-
+        name = truncate(item[1], 18)
         row.append(InlineKeyboardButton(text=f'☕️ {name}', callback_data=f'bean_{item[0]}'))
-
         if len(row) == 2:
-
             keyboard.append(row)
-
             row = []
-
     if row:
-
         keyboard.append(row)
 
     keyboard.append([InlineKeyboardButton(text='🏠 НА ГОЛОВНУ', callback_data='back_main_menu_only')])
-
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
-
-def get_beans_weight_kb():
-
-    weights = ['250', '500', '1000']
-
-    keyboard = [[InlineKeyboardButton(text=f'⚖️ {w} г', callback_data=f'bean_w_{w}') for w in weights]]
-
-    keyboard.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='bean_back')])
-
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
-
-def get_beans_delivery_kb():
-
-    keyboard = [
-
-        [InlineKeyboardButton(text='🚶 САМОВИВІЗ', callback_data='bean_del_pickup')],
-
-        [InlineKeyboardButton(text='🚚 НОВА ПОШТА', callback_data='bean_del_np')],
-
-        [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='bean_back')]
-
-    ]
-
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
-
-def get_np_cities_kb(cities: list):
-
-    keyboard = []
-
-    for city in cities:
-
-        city_name = city.get('Present', '')
-
-        city_ref = city.get('DeliveryCity', '') or city.get('Ref', '')
-
-        if city_name and city_ref:
-
-            keyboard.append([InlineKeyboardButton(text=city_name, callback_data=f"np_city_{city_ref}")])
-
-    keyboard.append([InlineKeyboardButton(text='⬅️ ПОШУК ЗНОВУ', callback_data='bean_del_np')])
-
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
-
-def get_np_warehouses_kb(warehouses: list, page: int = 0):
-
-    keyboard = []
-
-    per_page = 8
-
-    start = page * per_page
-
-    end = start + per_page
-
-    current_batch = warehouses[start:end]
-
-    for wh in current_batch:
-
-        wh_name = wh.get('Description', '')
-
-        wh_ref = wh.get('Ref', '')
-
-        if wh_name and wh_ref:
-
-            short_name = truncate(wh_name, 35)
-
-            keyboard.append([InlineKeyboardButton(text=short_name, callback_data=f"np_wh_{wh_ref}")])
-
-    nav_row = []
-
-    if page > 0:
-
-        nav_row.append(InlineKeyboardButton(text='⬅️', callback_data=f"np_wh_page_{page-1}"))
-
-    if end < len(warehouses):
-
-        nav_row.append(InlineKeyboardButton(text='➡️', callback_data=f"np_wh_page_{page+1}"))
-
-    if nav_row:
-
-        keyboard.append(nav_row)
-
-    keyboard.append([InlineKeyboardButton(text='⬅️ ЗМІНИТИ МІСТО', callback_data='bean_del_np')])
-
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
-
-def get_location_request_kb():
-
-    keyboard = [[KeyboardButton(text='📍 НАДІСЛАТИ ГЕОЛОКАЦІЮ', request_location=True)], [KeyboardButton(text='🏠 НА ГОЛОВНУ')]]
-
-    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
-
-def get_phone_kb():
-
-    keyboard = [[KeyboardButton(text='📱 НАДІСЛАТИ НОМЕР', request_contact=True)], [KeyboardButton(text='🏠 НА ГОЛОВНУ')]]
-
-    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
 
 async def get_contact_kb():
     socials = await socials_db.get_all_socials()
     keyboard = []
     row = []
 
-    for s in socials:
-        name_lower = s['name'].lower()
-        icon = '🌐 '
-        if 'telegram' in name_lower or 'тг' in name_lower or 'tg' in name_lower:
-            icon = '✈️ '
-        elif 'instagram' in name_lower or 'інста' in name_lower or 'insta' in name_lower:
-            icon = '📸 '
-        elif 'facebook' in name_lower or 'фейсбук' in name_lower or 'fb' in name_lower:
-            icon = '📘 '
-        elif 'tiktok' in name_lower or 'тікток' in name_lower:
-            icon = '🎵 '
+    def get_social_icon(url, name):
+        u = str(url).lower()
+        n = str(name).lower()
+        if 'instagram' in u or 'insta' in n or 'інста' in n: return '📸'
+        if 'facebook' in u or 'fb' in n or 'фейс' in n: return '📘'
+        if 'telegram' in u or 't.me' in u or 'тг' in n: return '✈️'
+        if 'tiktok' in u or 'тікток' in n: return '🎵'
+        if 'youtube' in u or 'ютуб' in n: return '🎬'
+        if 'viber' in u or 'вайбер' in n: return '💜'
+        return '🌐'
 
-        row.append(InlineKeyboardButton(text=f"{icon}{s['name'].upper()}", url=s['url']))
+    for s in socials:
+        icon = get_social_icon(s['url'], s['name'])
+        row.append(InlineKeyboardButton(text=f"{icon} {s['name'].upper()}", url=s['url']))
         if len(row) == 2:
             keyboard.append(row)
             row = []
     if row:
         keyboard.append(row)
 
-    # Додаємо контакти та кнопку повідомлення у 2 колонки
+    # Контакти у 2 колонки
     keyboard.append([
         InlineKeyboardButton(text='📞 +380503775906', callback_data='contact_phone'),
         InlineKeyboardButton(text='✉️ EMAIL', callback_data='contact_email')
@@ -481,29 +341,19 @@ async def get_contact_kb():
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 async def get_locations_info_kb():
-
     keyboard = []
-
     row = []
-
     locations = await location_db.get_all_locations()
 
     for loc in locations:
-
         loc_id = str(loc['_id'])
-
-        row.append(InlineKeyboardButton(text=f"📍 {loc['name']}", callback_data=f'locinfo_{loc_id}'))
-
+        name = loc['name'].replace('Medelin ', '')
+        row.append(InlineKeyboardButton(text=f"📍 {name}", callback_data=f'locinfo_{loc_id}'))
         if len(row) == 2:
-
             keyboard.append(row)
-
             row = []
-
     if row:
-
         keyboard.append(row)
 
     keyboard.append([InlineKeyboardButton(text='🏠 НА ГОЛОВНУ', callback_data='back_main_menu_only')])
-
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
