@@ -111,8 +111,6 @@ async def open_menu(message: Message, state: FSMContext):
 
     await message.answer('🍽️ <b>МЕНЮ / ЗАМОВЛЕННЯ</b>\n\nОберіть категорію:', reply_markup=kb.get_categories_kb(categories, cart_count=len(cart)), parse_mode='HTML')
 
-    await state.set_state(BookingStates.browsing_menu)
-
 @user_router.callback_query(F.data.startswith('cat_'))
 
 async def menu_category(callback: CallbackQuery, state: FSMContext):
@@ -135,8 +133,6 @@ async def menu_category(callback: CallbackQuery, state: FSMContext):
 
     cart = data.get('cart', [])
 
-    booking_mode = bool(data.get('booking_mode'))
-
     from app.utils.data_cache import public_data_cache
     menu_cache = public_data_cache.get('menu')
     cached_section = next((s for s in menu_cache if s['category'] == cat), None) if menu_cache else None
@@ -149,7 +145,7 @@ async def menu_category(callback: CallbackQuery, state: FSMContext):
         raw_items = await menu_db.get_items_by_category(cat)
         items = [(i[0], clean_coffee_name(i[1]), i[2]) for i in raw_items]
 
-    await safe_edit_message(callback.message, f'🍽️ <b>{cat}</b>\n\nОберіть позицію:', reply_markup=kb.get_items_kb(items, cat, cart_count=len(cart), booking_mode=booking_mode), parse_mode='HTML')
+    await safe_edit_message(callback.message, f'🍽️ <b>{cat}</b>\n\nОберіть позицію:', reply_markup=kb.get_items_kb(items, cat, cart_count=len(cart)), parse_mode='HTML')
 
 @user_router.callback_query(F.data.startswith('item_'))
 
@@ -397,11 +393,9 @@ async def menu_add_to_cart(callback: CallbackQuery, state: FSMContext):
 
     await callback.answer(f'Додано: {final_name}')
 
-    booking_mode = bool(state_data.get('booking_mode'))
-
     categories = await menu_db.get_categories()
 
-    await safe_edit_message(callback.message, '🍽️ <b>МЕНЮ / ЗАМОВЛЕННЯ</b>\n\nДодано в кошик. Оберіть категорію:', reply_markup=kb.get_categories_kb(categories, booking_mode=booking_mode, cart_count=len(cart)), parse_mode='HTML')
+    await safe_edit_message(callback.message, '🍽️ <b>МЕНЮ / ЗАМОВЛЕННЯ</b>\n\nДодано в кошик. Оберіть категорію:', reply_markup=kb.get_categories_kb(categories, cart_count=len(cart)), parse_mode='HTML')
 
 @user_router.callback_query(F.data == 'back_cats')
 
@@ -411,11 +405,9 @@ async def menu_back_to_categories(callback: CallbackQuery, state: FSMContext):
 
     cart = data.get('cart', [])
 
-    booking_mode = bool(data.get('booking_mode'))
-
     categories = await menu_db.get_categories()
 
-    await safe_edit_message(callback.message, '🍽️ <b>МЕНЮ / ЗАМОВЛЕННЯ</b>\n\nОберіть категорію:', reply_markup=kb.get_categories_kb(categories, booking_mode=booking_mode, cart_count=len(cart)), parse_mode='HTML')
+    await safe_edit_message(callback.message, '🍽️ <b>МЕНЮ / ЗАМОВЛЕННЯ</b>\n\nОберіть категорію:', reply_markup=kb.get_categories_kb(categories, cart_count=len(cart)), parse_mode='HTML')
 
 @user_router.callback_query(F.data == 'back_items')
 
@@ -426,8 +418,6 @@ async def menu_back_to_items(callback: CallbackQuery, state: FSMContext):
     cart = data.get('cart', [])
 
     cat = data.get('current_category')
-
-    booking_mode = bool(data.get('booking_mode'))
 
     if not cat:
 
@@ -447,7 +437,7 @@ async def menu_back_to_items(callback: CallbackQuery, state: FSMContext):
         raw_items = await menu_db.get_items_by_category(cat)
         items = [(i[0], clean_coffee_name(i[1]), i[2]) for i in raw_items]
 
-    await safe_edit_message(callback.message, f'🍽️ <b>{cat}</b>\n\nОберіть позицію:', reply_markup=kb.get_items_kb(items, cat, cart_count=len(cart), booking_mode=booking_mode), parse_mode='HTML')
+    await safe_edit_message(callback.message, f'🍽️ <b>{cat}</b>\n\nОберіть позицію:', reply_markup=kb.get_items_kb(items, cat, cart_count=len(cart)), parse_mode='HTML')
 
 @user_router.message(F.text.in_([kb.BTN_LOCATIONS, '🏢 НАШІ ЗАКЛАДИ']))
 

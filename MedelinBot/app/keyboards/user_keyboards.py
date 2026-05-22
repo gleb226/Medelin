@@ -304,6 +304,58 @@ def get_beans_kb(items):
     keyboard.append([InlineKeyboardButton(text='🏠 НА ГОЛОВНУ', callback_data='back_main_menu_only')])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
+def get_beans_weight_kb():
+    keyboard = [
+        [InlineKeyboardButton(text='⚖️ 250г', callback_data='bean_w_250'),
+         InlineKeyboardButton(text='⚖️ 500г', callback_data='bean_w_500')],
+        [InlineKeyboardButton(text='⚖️ 1000г (1кг)', callback_data='bean_w_1000')],
+        [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='bean_back')]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def get_beans_delivery_kb():
+    keyboard = [
+        [InlineKeyboardButton(text='🏬 САМОВИВІЗ З КАВ\'ЯРНІ', callback_data='bean_del_pickup')],
+        [InlineKeyboardButton(text='🚚 НОВА ПОШТА', callback_data='bean_del_np')],
+        [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='bean_back')]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def get_location_request_kb():
+    keyboard = [[KeyboardButton(text='📍 НАДІСЛАТИ ГЕОЛОКАЦІЮ', request_location=True)], [KeyboardButton(text='🏠 НА ГОЛОВНУ')]]
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
+
+def get_np_cities_kb(cities):
+    keyboard = []
+    for city in cities[:8]:
+        name = city.get('Present', 'Місто')
+        ref = city.get('DeliveryCity', '') or city.get('Ref', '')
+        keyboard.append([InlineKeyboardButton(text=name, callback_data=f'np_city_{ref}')])
+    keyboard.append([InlineKeyboardButton(text='🏠 НА ГОЛОВНУ', callback_data='back_main_menu_only')])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def get_np_warehouses_kb(warehouses, page=0):
+    keyboard = []
+    per_page = 6
+    start = page * per_page
+    end = start + per_page
+    
+    for wh in warehouses[start:end]:
+        name = wh.get('Description', 'Відділення')
+        ref = wh.get('Ref', '')
+        keyboard.append([InlineKeyboardButton(text=name, callback_data=f'np_wh_{ref}')])
+        
+    nav_row = []
+    if page > 0:
+        nav_row.append(InlineKeyboardButton(text='⬅️', callback_data=f'np_wh_page_{page-1}'))
+    if end < len(warehouses):
+        nav_row.append(InlineKeyboardButton(text='➡️', callback_data=f'np_wh_page_{page+1}'))
+    if nav_row:
+        keyboard.append(nav_row)
+        
+    keyboard.append([InlineKeyboardButton(text='🏠 НА ГОЛОВНУ', callback_data='back_main_menu_only')])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
 async def get_contact_kb():
     socials = await socials_db.get_all_socials()
     keyboard = []
