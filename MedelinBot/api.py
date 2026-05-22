@@ -58,9 +58,12 @@ app = FastAPI(title="Medelin Menu API", default_response_class=CustomJSONRespons
 _root_dir = pathlib.Path(__file__).parent.parent
 _site_dir = _root_dir / "MedelinSite"
 
-# Пріоритет для Render: папка /app/uploads (якщо використовується Persistent Disk)
+# Пріоритет для Render/Unified: папка /usr/share/nginx/html/images/uploads
+# Потім папка /app/uploads (якщо використовується Persistent Disk)
 # Інакше використовуємо локальну папку в MedelinSite
-_uploads_dir = pathlib.Path("/app/uploads")
+_uploads_dir = pathlib.Path("/usr/share/nginx/html/images/uploads")
+if not _uploads_dir.exists():
+    _uploads_dir = pathlib.Path("/app/uploads")
 if not _uploads_dir.exists():
     _uploads_dir = _site_dir / "images" / "uploads"
 

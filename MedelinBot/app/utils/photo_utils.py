@@ -14,35 +14,36 @@ def _get_uploads_dir() -> pathlib.Path:
     Determines the directory for photo uploads based on the environment.
     Priority:
     1. UPLOADS_DIR environment variable.
-    2. /app/uploads (Docker volume mount in separate container setup).
-    3. /usr/share/nginx/html/images/uploads (Unified Dockerfile setup).
+    2. /usr/share/nginx/html/images/uploads (Unified Dockerfile setup - MOST COMMON IN PROD).
+    3. /app/uploads (Docker volume mount in separate container setup).
     4. Local development path (MedelinSite/images/uploads).
     """
+    # 1. Manual override
     env_dir = (os.getenv('UPLOADS_DIR') or '').strip()
     if env_dir:
         return pathlib.Path(env_dir)
 
-    # 1. Separate containers: /app/uploads is usually mapped to MedelinSite/images/uploads
-    docker_mount = pathlib.Path('/app/uploads')
-    if docker_mount.exists() or os.path.exists('/.dockerenv'):
-        # Even if it doesn't exist yet, if we are in Docker, this is a good candidate
-        # if it's the expected volume mount point.
-        if docker_mount.parent.exists(): 
-             return docker_mount
-
-    # 2. Unified container: Site is at /usr/share/nginx/html
+    # 2. Unified container (Nginx + Bot): Site is at /usr/share/nginx/html
     unified_path = pathlib.Path('/usr/share/nginx/html/images/uploads')
     if unified_path.parent.exists():
         return unified_path
 
-    # 3. Local development (fallback)
+    # 3. Separate containers: /app/uploads is usually mapped to MedelinSite/images/uploads
+    docker_mount = pathlib.Path('/app/uploads')
+    if docker_mount.exists():
+        return docker_mount
+
+    # 4. Local development (fallback)
     # Repo layout (dev): <repo>/MedelinBot/app/utils/photo_utils.py -> parents[3] == <repo>
     try:
         repo_root = pathlib.Path(__file__).resolve().parents[3]
         dev_path = repo_root / 'MedelinSite' / 'images' / 'uploads'
-        return dev_path
+        if dev_path.parent.exists():
+            return dev_path
     except Exception:
-        return pathlib.Path('uploads')
+        pass
+        
+    return pathlib.Path('uploads')
 
 async def process_photo(message: Message, bot: Bot) -> str:
     file_id = None

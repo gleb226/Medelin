@@ -11,8 +11,19 @@ class PublicDataCache:
     def __init__(self) -> None:
 
         self._memory: dict[str, Any] = {}
-
-        self._dir = Path(__file__).resolve().parents[3] / 'MedelinSite' / 'cache'
+        
+        # Robust path detection (similar to photo_utils)
+        # 1. Unified container (Nginx + Bot): Site is at /usr/share/nginx/html
+        unified_path = Path('/usr/share/nginx/html/cache')
+        
+        # 2. Local development fallback
+        repo_root = Path(__file__).resolve().parents[3]
+        dev_path = repo_root / 'MedelinSite' / 'cache'
+        
+        if unified_path.parent.exists():
+            self._dir = unified_path
+        else:
+            self._dir = dev_path
 
         self._dir.mkdir(parents=True, exist_ok=True)
 
