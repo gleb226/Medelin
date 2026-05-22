@@ -1924,7 +1924,7 @@
         "volume": "250 мл",
         "calories": "200 ккал",
         "image_url": "https://images.unsplash.com/photo-1630040995437-80b01c5dd52d?q=80&w=687&auto=format&fit=crop",
-        "composition": "Молоко, наповнювач",
+        "composition": "хуй",
         "strength": 1,
         "sweetness": 3,
         "options": [
@@ -2221,19 +2221,6 @@
         "strength": 1,
         "sweetness": 3,
         "options": []
-      },
-      {
-        "id": "6a1024320caf54a32e5b1c81",
-        "name": "Вода з лимоном 0,5л",
-        "price": "30",
-        "description": "Фірмова позиція Medelin. Деталі уточнюй у бариста.",
-        "volume": "300 мл",
-        "calories": "120 ккал",
-        "image_url": "https://images.unsplash.com/photo-1630040995437-80b01c5dd52d?q=80&w=687&auto=format&fit=crop",
-        "composition": "Фірмовий напій",
-        "strength": 1,
-        "sweetness": 3,
-        "options": []
       }
     ],
     "simple": false
@@ -2291,6 +2278,19 @@
         "composition": "Натуральний фреш",
         "strength": 1,
         "sweetness": 3,
+        "options": []
+      },
+      {
+        "id": "6a102757354f48e62d28fb4e",
+        "name": "Цфів",
+        "price": 22.0,
+        "description": "22",
+        "volume": "22",
+        "calories": "",
+        "image_url": "/uploads/c67b9c406b.webp",
+        "composition": "",
+        "strength": 0,
+        "sweetness": 0,
         "options": []
       }
     ],

@@ -12,15 +12,20 @@ class PublicDataCache:
 
         self._memory: dict[str, Any] = {}
         
-        # Robust path detection (similar to photo_utils)
-        # 1. Unified container (Nginx + Bot): Site is at /usr/share/nginx/html
+        # Robust path detection
+        # 1. Docker container path (mapped in docker-compose)
+        docker_path = Path('/app/cache')
+        
+        # 2. Unified container (Nginx + Bot): Site is at /usr/share/nginx/html
         unified_path = Path('/usr/share/nginx/html/cache')
         
-        # 2. Local development fallback
+        # 3. Local development fallback
         repo_root = Path(__file__).resolve().parents[3]
         dev_path = repo_root / 'MedelinSite' / 'cache'
         
-        if unified_path.parent.exists():
+        if docker_path.exists() or docker_path.parent.exists():
+            self._dir = docker_path
+        elif unified_path.parent.exists():
             self._dir = unified_path
         else:
             self._dir = dev_path

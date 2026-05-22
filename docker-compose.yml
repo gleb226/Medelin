@@ -21,7 +21,7 @@ services:
       - ./MedelinBot/.env.docker
     volumes:
       - ./MedelinBot/app/databases:/app/app/databases
-      - ./MedelinBot/cache:/app/cache
+      - ./MedelinSite/cache:/app/cache
       - ./MedelinSite/images/uploads:/app/uploads
     ports:
       - "8000:8000"

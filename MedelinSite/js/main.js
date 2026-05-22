@@ -5,7 +5,7 @@ const isFileProto = _proto === 'file:';
 const isLocal = _host === 'localhost' || _host === '127.0.0.1' || _host === '';
 
 // Завжди використовуємо абсолютний URL для Render, щоб уникнути проблем з кешуванням статики
-window.API_BASE_URL = 'https://medelin.onrender.com';
+window.API_BASE_URL = '';
 
 if (isLocal && _port === '8000') {
     window.API_BASE_URL = 'http://localhost:8000';

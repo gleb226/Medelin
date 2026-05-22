@@ -74,33 +74,29 @@ async def run():
     from app.utils.data_cache import public_data_cache
 
     @asynccontextmanager
-
     async def merged_lifespan(app: FastAPI):
-
         logger.info("Starting Bot and warming cache...")
-
         cache_task = asyncio.create_task(public_data_cache.warm_all(max_retries=3))
+        
+        async def polling_with_retry():
+            while True:
+                try:
+                    logger.info("Starting Telegram Bot polling...")
+                    await dp.start_polling(bot)
+                except Exception as e:
+                    logger.error(f"Polling error: {e}. Restarting in 10 seconds...")
+                    await asyncio.sleep(10)
 
-        polling_task = asyncio.create_task(dp.start_polling(bot))
-
+        polling_task = asyncio.create_task(polling_with_retry())
         start_scheduler()
-
         yield
-
         logger.info("Shutting down...")
-
         polling_task.cancel()
-
         cache_task.cancel()
-
         try:
-
             await asyncio.gather(polling_task, cache_task, return_exceptions=True)
-
         except Exception:
-
             pass
-
         await bot.session.close()
 
     fastapi_app.router.lifespan_context = merged_lifespan
