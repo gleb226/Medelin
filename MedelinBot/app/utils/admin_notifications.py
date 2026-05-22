@@ -1,12 +1,7 @@
 
-from aiogram import Bot
-
-from app.common.config import BOSS_IDS, BOT_TOKEN
+from app.common.bot_instance import bot
 
 async def send_admin_notification(text: str, reply_markup=None, location_id: str | None=None, include_boss: bool=True) -> None:
-
-    if not BOT_TOKEN:
-        return
 
     from app.databases.admin_database import admin_db
 
@@ -19,30 +14,19 @@ async def send_admin_notification(text: str, reply_markup=None, location_id: str
     if not targets:
         return
 
-    bot = Bot(token=BOT_TOKEN)
+    for uid in targets:
 
-    try:
+        try:
 
-        for uid in targets:
+            await bot.send_message(uid, text, parse_mode='HTML', reply_markup=reply_markup)
 
-            try:
+        except Exception:
 
-                await bot.send_message(uid, text, parse_mode='HTML', reply_markup=reply_markup)
-
-            except Exception:
-
-                pass
-
-    finally:
-
-        await bot.session.close()
+            pass
 
 async def send_developer_error(error_text: str) -> None:
 
-    if not BOT_TOKEN:
-
-        return
-
+    from app.common.config import BOSS_IDS
     from app.databases.admin_database import admin_db
 
     targets = set()
@@ -53,7 +37,8 @@ async def send_developer_error(error_text: str) -> None:
 
         if bid:
 
-            targets.add(int(bid))
+            try: targets.add(int(bid))
+            except: pass
 
     devs = await admin_db.get_developers()
 
@@ -63,20 +48,12 @@ async def send_developer_error(error_text: str) -> None:
 
         return
 
-    bot = Bot(token=BOT_TOKEN)
+    for uid in targets:
 
-    try:
+        try:
 
-        for uid in targets:
+            await bot.send_message(uid, f"🛠 <b>DEVELOPER ALERT</b>\n\n{error_text}", parse_mode='HTML')
 
-            try:
+        except Exception:
 
-                await bot.send_message(uid, f"🛠 <b>DEVELOPER ALERT</b>\n\n{error_text}", parse_mode='HTML')
-
-            except Exception:
-
-                pass
-
-    finally:
-
-        await bot.session.close()
+            pass

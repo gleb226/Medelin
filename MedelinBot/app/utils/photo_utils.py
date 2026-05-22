@@ -5,49 +5,62 @@ import uuid
 
 import pathlib
 
+import io
+
+import logging
+
 from aiogram import Bot
 
 from aiogram.types import Message
 
+from app.common.bot_instance import bot as global_bot
+
+logger = logging.getLogger(__name__)
+
 def _get_uploads_dir() -> pathlib.Path:
     """
     Determines the directory for photo uploads based on the environment.
-    Priority:
-    1. UPLOADS_DIR environment variable.
-    2. /usr/share/nginx/html/images/uploads (Unified Dockerfile setup - MOST COMMON IN PROD).
-    3. /app/uploads (Docker volume mount in separate container setup).
-    4. Local development path (MedelinSite/images/uploads).
     """
     # 1. Manual override
     env_dir = (os.getenv('UPLOADS_DIR') or '').strip()
     if env_dir:
         return pathlib.Path(env_dir)
 
-    # 2. Unified container (Nginx + Bot): Site is at /usr/share/nginx/html
-    unified_path = pathlib.Path('/usr/share/nginx/html/images/uploads')
-    if unified_path.parent.exists():
-        return unified_path
+    # 2. Docker / Unified environment (Nginx + Bot)
+    # Common path for shared volume between Nginx and Bot
+    paths_to_try = [
+        pathlib.Path('/usr/share/nginx/html/images/uploads'),
+        pathlib.Path('/app/uploads'),
+        pathlib.Path('/app/MedelinSite/images/uploads'),
+    ]
+    
+    for p in paths_to_try:
+        if p.exists() or p.parent.exists():
+            try:
+                p.mkdir(parents=True, exist_ok=True)
+                return p
+            except:
+                continue
 
-    # 3. Separate containers: /app/uploads is usually mapped to MedelinSite/images/uploads
-    docker_mount = pathlib.Path('/app/uploads')
-    if docker_mount.exists():
-        return docker_mount
-
-    # 4. Local development (fallback)
-    # Repo layout (dev): <repo>/MedelinBot/app/utils/photo_utils.py -> parents[3] == <repo>
+    # 3. Local development (fallback)
     try:
         repo_root = pathlib.Path(__file__).resolve().parents[3]
         dev_path = repo_root / 'MedelinSite' / 'images' / 'uploads'
-        if dev_path.parent.exists():
-            return dev_path
+        dev_path.mkdir(parents=True, exist_ok=True)
+        return dev_path
     except Exception:
         pass
         
     return pathlib.Path('uploads')
 
-async def process_photo(message: Message, bot: Bot) -> str:
+async def process_photo(message: Message, bot: Bot = None) -> str:
+    """
+    Processes a photo from a message (either PhotoSize or Document).
+    Returns a URL-friendly path starting with /uploads/.
+    """
+    target_bot = bot or global_bot
     file_id = None
-    original_ext = ".jpg" # Default fallback
+    original_ext = ".jpg"
 
     if message.photo:
         file_id = message.photo[-1].file_id
@@ -61,32 +74,36 @@ async def process_photo(message: Message, bot: Bot) -> str:
         return '' if val == '-' else val
 
     try:
-        import io
         file_bytes_io = io.BytesIO()
 
         # Download file
         try:
-            f = await bot.get_file(file_id)
-            await bot.download_file(f.file_path, destination=file_bytes_io)
+            f = await target_bot.get_file(file_id)
+            await target_bot.download_file(f.file_path, destination=file_bytes_io)
             if f.file_path:
                 original_ext = pathlib.Path(f.file_path).suffix.lower()
-        except Exception:
-            await bot.download(file_id, destination=file_bytes_io)
+        except Exception as e:
+            logger.warning(f"Failed to get_file, trying direct download: {e}")
+            await target_bot.download(file_id, destination=file_bytes_io)
         
         file_bytes = file_bytes_io.getvalue()
         if not file_bytes:
             return ''
 
         uploads_dir = _get_uploads_dir()
-        uploads_dir.mkdir(parents=True, exist_ok=True)
         stem = uuid.uuid4().hex[:10]
 
-        # Try to convert to WEBP for efficiency and stability
+        # Try to convert to WEBP for efficiency
         try:
             from PIL import Image
             img = Image.open(io.BytesIO(file_bytes))
 
-            # Handle transparency
+            # Handle orientation if present
+            try:
+                from PIL import ImageOps
+                img = ImageOps.exif_transpose(img)
+            except: pass
+
             if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
                 img = img.convert('RGBA')
             else:
@@ -95,11 +112,11 @@ async def process_photo(message: Message, bot: Bot) -> str:
             filename = f'{stem}.webp'
             filepath = uploads_dir / filename
             
-            # Save as WEBP
-            img.save(str(filepath), 'WEBP', quality=85, method=6, lossless=False)
+            img.save(str(filepath), 'WEBP', quality=85, method=6)
+            logger.info(f"Saved processed photo: {filename}")
             return f'/uploads/{filename}'
         except Exception as e:
-            # Pillow failed or not installed, save raw if it's a common image format
+            logger.warning(f"Pillow conversion failed, saving raw: {e}")
             renderable_exts = ('.jpg', '.jpeg', '.png', '.webp', '.gif')
             ext = original_ext if original_ext in renderable_exts else '.jpg'
             
@@ -109,5 +126,5 @@ async def process_photo(message: Message, bot: Bot) -> str:
             return f'/uploads/{filename}'
 
     except Exception as e:
-        print(f'[PhotoUtils] Error processing photo: {e}')
+        logger.error(f"Error processing photo: {e}")
         return ''

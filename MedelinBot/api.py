@@ -144,16 +144,32 @@ def build_cart_text(cart_menu: list) -> tuple[int, str]:
 @app.get('/api/nova-poshta/cities')
 async def get_np_cities(search: str):
     logger.info(f"NP: Searching cities for '{search}'")
-    payload = {'apiKey': NP_API_KEY, 'modelName': 'Address', 'calledMethod': 'searchSettlements', 'methodProperties': {'CityName': search, 'Limit': '50'}}
+    if not NP_API_KEY:
+        logger.error("NP_API_KEY is not set!")
+        return []
+    
+    payload = {
+        'apiKey': NP_API_KEY, 
+        'modelName': 'Address', 
+        'calledMethod': 'searchSettlements', 
+        'methodProperties': {
+            'CityName': search, 
+            'Limit': '50'
+        }
+    }
     async with aiohttp.ClientSession() as session:
         try:
             async with session.post('https://api.novaposhta.ua/v2.0/json/', json=payload) as resp:
+                if resp.status != 200:
+                    logger.error(f"NP API Status {resp.status}")
+                    return []
                 data = await resp.json()
                 if not data.get('success'):
                     logger.error(f"NP Error: {data.get('errors')}")
                     return []
                 res_data = data.get('data', [])
-                if res_data and isinstance(res_data, list) and (len(res_data) > 0):
+                if res_data and isinstance(res_data, list) and len(res_data) > 0:
+                    # searchSettlements повертає список об'єктів, де перший містить Addresses
                     return res_data[0].get('Addresses', [])
                 return []
         except Exception as e:
@@ -162,6 +178,10 @@ async def get_np_cities(search: str):
 
 @app.get('/api/nova-poshta/warehouses')
 async def get_np_warehouses(cityRef: str, cityName: str = None, search: str = None):
+    if not NP_API_KEY:
+        logger.error("NP_API_KEY is not set!")
+        return []
+
     async def fetch_wh(props):
         payload = {'apiKey': NP_API_KEY, 'modelName': 'Address', 'calledMethod': 'getWarehouses', 'methodProperties': props}
         async with aiohttp.ClientSession() as session:
@@ -176,18 +196,23 @@ async def get_np_warehouses(cityRef: str, cityName: str = None, search: str = No
                 logger.error(f"NP Exception (fetch_wh): {e}")
                 return []
 
+    # Спробуємо по SettlementRef (сучасний спосіб)
     props = {'SettlementRef': cityRef}
     if search:
         props['FindByString'] = search
     logger.info(f'Fetching warehouses for SettlementRef: {cityRef}, search: {search}')
     data = await fetch_wh(props)
+    
+    # Якщо не вдалося, спробуємо по CityRef (старий спосіб)
     if not data:
         props_city = {'CityRef': cityRef}
         if search:
             props_city['FindByString'] = search
         data = await fetch_wh(props_city)
+        
+    # Якщо все ще немає, спробуємо по назві міста
     if not data and cityName:
-        clean_name = cityName.split(',')[0].strip()
+        clean_name = cityName.split(',')[0].replace('м. ', '').replace('місто ', '').strip()
         props_name = {'CityName': clean_name}
         if search:
             props_name['FindByString'] = search

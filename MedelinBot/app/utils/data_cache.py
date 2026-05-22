@@ -6,6 +6,10 @@ from pathlib import Path
 
 from typing import Any
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 class PublicDataCache:
 
     def __init__(self) -> None:
@@ -30,7 +34,11 @@ class PublicDataCache:
         else:
             self._dir = dev_path
 
-        self._dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self._dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"PublicDataCache initialized at: {self._dir}")
+        except Exception as e:
+            logger.error(f"Failed to create cache dir {self._dir}: {e}")
 
     def get(self, key: str) -> Any | None:
 

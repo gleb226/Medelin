@@ -3,7 +3,7 @@ import asyncio
 
 import logging
 
-from aiogram import Bot, Dispatcher
+from aiogram import Dispatcher
 
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -13,7 +13,7 @@ import uvicorn
 
 from contextlib import asynccontextmanager
 
-from app.common.config import BOT_TOKEN
+from app.common.bot_instance import bot
 
 from app.handlers.user_handlers import user_router
 
@@ -25,13 +25,13 @@ from app.handlers.error_handler import error_router
 
 from app.utils.scheduler import start_scheduler
 
+from app.utils.data_cache import public_data_cache
+
 from api import app as fastapi_app
 
 logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
-
-bot = Bot(token=BOT_TOKEN)
 
 dp = Dispatcher(storage=MemoryStorage())
 
@@ -43,54 +43,35 @@ dp.include_router(order_router)
 
 dp.include_router(error_router)
 
-@asynccontextmanager
-
-async def lifespan(app: FastAPI):
-
-    logger.info("Starting Telegram Bot polling...")
-
-    polling_task = asyncio.create_task(dp.start_polling(bot))
-
-    start_scheduler()
-
-    yield
-
-    logger.info("Stopping Telegram Bot polling...")
-
-    polling_task.cancel()
-
-    try:
-
-        await polling_task
-
-    except asyncio.CancelledError:
-
-        pass
-
-    await bot.session.close()
-
 async def run():
-
-    from app.utils.data_cache import public_data_cache
 
     @asynccontextmanager
     async def merged_lifespan(app: FastAPI):
-        logger.info("Starting Bot and warming cache...")
+        logger.info("Starting Medelin system (Bot + API + Cache)...")
+        
+        # 1. Warm cache
         cache_task = asyncio.create_task(public_data_cache.warm_all(max_retries=3))
         
+        # 2. Start Bot Polling
         async def polling_with_retry():
             while True:
                 try:
                     logger.info("Starting Telegram Bot polling...")
+                    # We drop pending updates to avoid "flooding" if the bot was down
+                    await bot.delete_webhook(drop_pending_updates=True)
                     await dp.start_polling(bot)
                 except Exception as e:
                     logger.error(f"Polling error: {e}. Restarting in 10 seconds...")
                     await asyncio.sleep(10)
 
         polling_task = asyncio.create_task(polling_with_retry())
+        
+        # 3. Start Scheduler
         start_scheduler()
+        
         yield
-        logger.info("Shutting down...")
+        
+        logger.info("Shutting down Medelin system...")
         polling_task.cancel()
         cache_task.cancel()
         try:
@@ -99,6 +80,7 @@ async def run():
             pass
         await bot.session.close()
 
+    # Apply the merged lifespan to the FastAPI app
     fastapi_app.router.lifespan_context = merged_lifespan
 
     config = uvicorn.Config(fastapi_app, host="0.0.0.0", port=8000, log_level="info")

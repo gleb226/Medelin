@@ -298,7 +298,9 @@ async def order_phone_entered(message: Message, state: FSMContext, bot: Bot):
 
         await send_order_invoice(message.from_user, message.chat.id, state, bot)
 
-async def send_order_invoice(user, chat_id, state, bot):
+from app.common.bot_instance import bot
+
+async def send_order_invoice(user, chat_id, state, bot_unused=None):
 
     data = await state.get_data()
 
@@ -311,7 +313,7 @@ async def send_order_invoice(user, chat_id, state, bot):
         freq[i] = freq.get(i, 0) + 1
 
     for display_name, count in freq.items():
-        # Вилучаємо ціну якщо вона є в назві [ЦІНА]
+        # ... (rest of parsing logic) ...
         pure_name = display_name
         embedded_price = None
         if ' [' in display_name and display_name.endswith(']'):
@@ -354,7 +356,7 @@ async def send_order_invoice(user, chat_id, state, bot):
     # Створюємо замовлення в БД перед оплатою, щоб отримати ID
     loc_id = data['location_id']
     
-    # Формуємо рядок кошика з цінами, щоб API міг їх спарсити
+    # Формуємо рядок кошика з цінами
     cart_items_with_prices = []
     total_uah = 0
     for display_name in data['cart']:
@@ -401,7 +403,6 @@ async def send_order_invoice(user, chat_id, state, bot):
     )
 
     from app.common.config import WEB_APP_URL
-    from aiogram.types import WebAppInfo
     payment_url = f"{WEB_APP_URL}/index.html?order_id={rid}"
     
     title = '💳 ОПЛАТА БРОНІ + ЗАМОВЛЕННЯ' if data.get('booking_mode') else '💳 ОПЛАТА ЗАМОВЛЕННЯ'
@@ -413,7 +414,7 @@ async def send_order_invoice(user, chat_id, state, bot):
 
     await bot.send_message(
         chat_id, 
-        f"<b>{title}</b>\n\nСума до оплати буде вказана на сторінці оплати.\nБудь ласка, натисніть кнопку нижче, щоб обрати спосіб оплати та завершити замовлення:",
+        f"<b>{title}</b>\n\nСума до оплати: <b>{total_uah} грн</b>\n\nБудь ласка, натисніть кнопку нижче, щоб обрати спосіб оплати на нашому сайті та завершити замовлення:",
         reply_markup=kb_pay,
         parse_mode='HTML'
     )
