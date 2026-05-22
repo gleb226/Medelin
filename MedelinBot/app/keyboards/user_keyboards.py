@@ -226,6 +226,13 @@ def get_item_options_kb(item_id, item_name, options, current_options=None, curre
     keyboard.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data=f'item_{item_id}')])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
+def get_item_actions_kb(item_id):
+    keyboard = [
+        [InlineKeyboardButton(text='🛒 ДОДАТИ В КОШИК', callback_data=f'add_to_cart_{item_id}')],
+        [InlineKeyboardButton(text='⬅️ ДО КАТЕГОРІЙ', callback_data='back_cats')]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
 def get_categories_kb(categories, cart_count=0):
     keyboard = []
     row = []
