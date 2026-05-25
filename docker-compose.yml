@@ -1,7 +1,4 @@
-version: '3.8'
-
 services:
-  # Local MongoDB (optional, for development / when Atlas is blocked)
   mongo:
     image: mongo:7
     container_name: medelin_mongo
@@ -11,42 +8,26 @@ services:
     volumes:
       - mongo_data:/data/db
 
-  # Бот та API
-  bot:
-    build: ./MedelinBot
-    container_name: medelin_bot
+  # Unified app (Nginx + API + Bot) — matches Render container layout
+  app:
+    build: .
+    container_name: medelin_app
     restart: always
     env_file:
       - ./MedelinBot/.env
     environment:
-      # Docker Compose should use the local mongo service by default.
-      # This avoids relying on an optional `./MedelinBot/.env.docker` file.
       - MONGO_URI=mongodb://mongo:27017/medelin
       - MONGO_DB_NAME=medelin
-      # Useful default for local callbacks/redirects when testing the web UI.
       - WEB_APP_URL=http://localhost
     volumes:
       - ./MedelinBot/app/databases:/app/app/databases
-      - ./MedelinSite/cache:/app/cache
-      - ./MedelinSite/images/uploads:/app/uploads
-    ports:
-      - "8000:8000"
-    command: python bot.py
-    depends_on:
-      - mongo
-
-  # Веб-сайт через Nginx
-  web:
-    image: nginx:alpine
-    container_name: medelin_web
-    restart: always
-    volumes:
-      - ./MedelinSite:/usr/share/nginx/html
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./MedelinSite/cache:/usr/share/nginx/html/cache
+      - ./MedelinSite/images/uploads:/usr/share/nginx/html/images/uploads
     ports:
       - "80:80"
     depends_on:
-      - bot
+      - mongo
 
 volumes:
   mongo_data:
+
