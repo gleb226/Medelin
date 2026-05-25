@@ -18,7 +18,13 @@ services:
     restart: always
     env_file:
       - ./MedelinBot/.env
-      - ./MedelinBot/.env.docker
+    environment:
+      # Docker Compose should use the local mongo service by default.
+      # This avoids relying on an optional `./MedelinBot/.env.docker` file.
+      - MONGO_URI=mongodb://mongo:27017/medelin
+      - MONGO_DB_NAME=medelin
+      # Useful default for local callbacks/redirects when testing the web UI.
+      - WEB_APP_URL=http://localhost
     volumes:
       - ./MedelinBot/app/databases:/app/app/databases
       - ./MedelinSite/cache:/app/cache

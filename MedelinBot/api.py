@@ -3,6 +3,7 @@ import base64
 import hashlib
 import json
 import pathlib
+import os
 import logging
 import re
 import aiohttp
@@ -55,8 +56,31 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Medelin Menu API", default_response_class=CustomJSONResponse, lifespan=lifespan)
 
 # Монтуємо статичні файли
-_root_dir = pathlib.Path(__file__).parent.parent
-_site_dir = _root_dir / "MedelinSite"
+def _resolve_site_dir() -> pathlib.Path | None:
+    """
+    Resolve MedelinSite directory across environments.
+
+    Some deployments (e.g. Render) ship only the backend code, so the site
+    directory may be absent. In that case we must not crash on startup.
+    """
+    env_dir = (os.getenv("SITE_DIR") or "").strip()
+    if env_dir:
+        p = pathlib.Path(env_dir)
+        return p if p.exists() else None
+
+    base_dir = pathlib.Path(__file__).resolve().parent
+    candidates = [
+        base_dir.parent / "MedelinSite",
+        pathlib.Path("/usr/share/nginx/html"),
+        pathlib.Path("/app/MedelinSite"),
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
+
+
+_site_dir = _resolve_site_dir()
 
 # Пріоритет для Render/Unified: папка /usr/share/nginx/html/images/uploads
 # Потім папка /app/uploads (якщо використовується Persistent Disk)
@@ -65,7 +89,10 @@ _uploads_dir = pathlib.Path("/usr/share/nginx/html/images/uploads")
 if not _uploads_dir.exists():
     _uploads_dir = pathlib.Path("/app/uploads")
 if not _uploads_dir.exists():
-    _uploads_dir = _site_dir / "images" / "uploads"
+    if _site_dir:
+        _uploads_dir = _site_dir / "images" / "uploads"
+    else:
+        _uploads_dir = pathlib.Path("./uploads")
 
 _uploads_dir.mkdir(parents=True, exist_ok=True)
 
@@ -533,4 +560,7 @@ async def get_socials():
     data = await public_data_cache.refresh_socials()
     return data
 
-app.mount('/', StaticFiles(directory=str(_site_dir), html=True), name='site')
+if _site_dir:
+    app.mount('/', StaticFiles(directory=str(_site_dir), html=True), name='site')
+else:
+    logger.warning("MedelinSite directory not found; skipping static site mount. Set SITE_DIR to enable it.")
