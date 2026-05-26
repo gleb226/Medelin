@@ -755,7 +755,7 @@ async def beans_np_location_received(message: Message, state: FSMContext):
 
     city = cities[0]
 
-    city_ref = city.get('DeliveryCity', '') or city.get('Ref', '')
+    city_ref = city.get('Ref', '') or city.get('DeliveryCity', '')
 
     city_present = city.get('Present', city_name)
 
