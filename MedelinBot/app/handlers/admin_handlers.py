@@ -13,7 +13,7 @@ from app.keyboards import admin_keyboards as akb
 
 from app.keyboards import user_keyboards as kb
 
-from app.common.config import BOSS_IDS
+from app.common.config import DEVELOPER_IDS
 
 from app.databases.orders_database import orders_db
 
@@ -1112,7 +1112,7 @@ async def adm_remove_confirm_ask(callback: CallbackQuery):
 
     uid = int(callback.data.replace('adm_delete_', ''))
 
-    if str(uid) in BOSS_IDS:
+    if str(uid) in DEVELOPER_IDS:
 
         await callback.answer("❌ Неможливо видалити власника!", show_alert=True)
 

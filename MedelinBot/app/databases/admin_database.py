@@ -1,5 +1,5 @@
 
-from app.common.config import BOSS_IDS
+from app.common.config import DEVELOPER_IDS
 
 from datetime import datetime
 
@@ -31,7 +31,7 @@ class AdminDatabase:
 
     async def is_admin(self, user_id: int) -> bool:
 
-        if str(user_id) in BOSS_IDS:
+        if str(user_id) in DEVELOPER_IDS:
 
             return True
 
@@ -43,7 +43,7 @@ class AdminDatabase:
 
     async def is_super_admin(self, user_id: int) -> bool:
 
-        if str(user_id) in BOSS_IDS:
+        if str(user_id) in DEVELOPER_IDS:
 
             return True
 
@@ -55,7 +55,7 @@ class AdminDatabase:
 
     async def is_boss(self, user_id: int) -> bool:
 
-        if str(user_id) in BOSS_IDS:
+        if str(user_id) in DEVELOPER_IDS:
 
             return True
 
@@ -67,7 +67,7 @@ class AdminDatabase:
 
     async def is_developer(self, user_id: int) -> bool:
 
-        if str(user_id) in BOSS_IDS:
+        if str(user_id) in DEVELOPER_IDS:
 
             return True
 
@@ -79,7 +79,7 @@ class AdminDatabase:
 
     async def get_admin_role(self, user_id: int) -> str:
 
-        if str(user_id) in BOSS_IDS:
+        if str(user_id) in DEVELOPER_IDS:
 
             return 'developer'
 
@@ -99,7 +99,7 @@ class AdminDatabase:
 
         ids = {int(r['user_id']) for r in rows or []}
 
-        for bid in BOSS_IDS:
+        for bid in DEVELOPER_IDS:
 
             if bid.strip():
 
@@ -117,7 +117,7 @@ class AdminDatabase:
 
     async def remove_admin(self, user_id: int):
 
-        if str(user_id) in BOSS_IDS:
+        if str(user_id) in DEVELOPER_IDS:
 
             return
 

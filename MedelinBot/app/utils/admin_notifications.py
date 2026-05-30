@@ -26,12 +26,12 @@ async def send_admin_notification(text: str, reply_markup=None, location_id: str
 
 async def send_developer_error(error_text: str) -> None:
 
-    from app.common.config import BOSS_IDS
+    from app.common.config import DEVELOPER_IDS
     from app.databases.admin_database import admin_db
 
     targets = set()
 
-    for bid in BOSS_IDS:
+    for bid in DEVELOPER_IDS:
 
         bid = str(bid).strip()
 

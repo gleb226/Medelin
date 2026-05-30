@@ -281,8 +281,12 @@
         </div>
 
         <script>
-            const API_AUTH = '0707'; // Should be handled better in real apps
+            const API_AUTH = new URLSearchParams(window.location.search).get('auth') || '';
             let currentSection = 'orders';
+
+            if (!API_AUTH) {
+                window.location.href = '/admin-panel';
+            }
 
             function showLoader(show) {
                 document.getElementById('loader').style.display = show ? 'flex' : 'none';

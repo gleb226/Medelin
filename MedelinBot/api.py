@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from bson import ObjectId
 from fastapi.encoders import jsonable_encoder
 
-from app.common.config import BOSS_IDS, LIQPAY_PRIVATE_KEY, LIQPAY_PUBLIC_KEY, MONOBANK_TOKEN, WEB_APP_URL, NP_API_KEY
+from app.common.config import DEVELOPER_IDS, LIQPAY_PRIVATE_KEY, LIQPAY_PUBLIC_KEY, MONOBANK_TOKEN, WEB_APP_URL, NP_API_KEY
 from app.databases.guest_messages_database import guest_messages_db
 from app.databases.location_database import location_db
 from app.databases.orders_database import orders_db
@@ -356,8 +356,8 @@ async def notify_admins_about_order(order_id: str):
         await active_orders_db.add_active_order(oid, user_id, fullname, phone, loc_id, items_text, order_type, table_number)
 
     await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id)
-    if BOSS_IDS:
-        await orders_db.mark_admin_notified(oid, int(BOSS_IDS[0]))
+    if DEVELOPER_IDS:
+        await orders_db.mark_admin_notified(oid, int(DEVELOPER_IDS[0]))
 
 @app.post('/api/payments/liqpay-callback-raw')
 async def liqpay_callback_raw(request: Request):
