@@ -540,6 +540,161 @@ async def process_booking(req: BookingRequest):
     await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id)
     return {'status': 'ok', 'order_id': oid}
 
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi import Request
+
+@app.get('/admin-panel')
+async def get_admin_panel(request: Request):
+    auth = request.query_params.get('auth')
+    if auth == '0707':
+        admin_path = _site_dir / "admin-panel.html"
+        if admin_path.exists():
+            return FileResponse(admin_path)
+    
+    raise HTTPException(status_code=404, detail="Not Found")
+
+# Admin API endpoints
+def check_admin_auth(request: Request):
+    # Simple check for now based on query param or header
+    auth = request.query_params.get('auth') or request.headers.get('Authorization')
+    if auth != '0707':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+@app.get('/api/admin/active-orders')
+async def get_admin_active_orders(request: Request):
+    check_admin_auth(request)
+    from app.databases.active_orders_database import active_orders_db
+    return await active_orders_db.get_all_active_orders()
+
+@app.get('/api/admin/active-bookings')
+async def get_admin_active_bookings(request: Request):
+    check_admin_auth(request)
+    from app.databases.active_bookings_database import active_bookings_db
+    return await active_bookings_db.get_all_active_bookings()
+
+@app.post('/api/admin/orders/{order_id}/complete')
+async def complete_order(order_id: str, request: Request):
+    check_admin_auth(request)
+    from app.databases.active_orders_database import active_orders_db
+    from app.databases.sales_database import sales_db
+    
+    order = await active_orders_db.get_active_order_by_id(order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Move to sales
+    await sales_db.add_sale(
+        order_id=order_id,
+        user_id=order.get('user_id'),
+        fullname=order.get('fullname'),
+        items=order.get('items'),
+        total=order.get('total', 0),
+        location_id=order.get('location_id')
+    )
+    await active_orders_db.delete_active_order(order_id)
+    return {"status": "ok"}
+
+@app.post('/api/admin/orders/{order_id}/cancel')
+async def cancel_order(order_id: str, request: Request, reason: str = Form("Скасовано адміном")):
+    check_admin_auth(request)
+    from app.databases.active_orders_database import active_orders_db
+    await active_orders_db.delete_active_order(order_id)
+    return {"status": "ok"}
+
+@app.delete('/api/admin/bookings/{booking_id}')
+async def delete_booking(booking_id: str, request: Request):
+    check_admin_auth(request)
+    from app.databases.active_bookings_database import active_bookings_db
+    await active_bookings_db.remove_booking(booking_id)
+    return {"status": "ok"}
+
+@app.get('/api/admin/menu')
+async def admin_get_menu(request: Request):
+    check_admin_auth(request)
+    from app.databases.menu_database import menu_db
+    return await menu_db.get_all_items_detailed()
+
+@app.post('/api/admin/menu')
+async def admin_save_menu_item(request: Request):
+    check_admin_auth(request)
+    item = await request.json()
+    from app.databases.menu_database import menu_db
+    
+    item_id = item.get('id')
+    if item_id:
+        await menu_db.update_item(item_id, item)
+    else:
+        await menu_db.add_item(item)
+    
+    await public_data_cache.refresh_menu()
+    return {"status": "ok"}
+
+@app.delete('/api/admin/menu/{item_id}')
+async def admin_delete_menu_item(item_id: str, request: Request):
+    check_admin_auth(request)
+    from app.databases.menu_database import menu_db
+    await menu_db.delete_item(item_id)
+    await public_data_cache.refresh_menu()
+    return {"status": "ok"}
+
+@app.get('/api/admin/beans')
+async def admin_get_beans(request: Request):
+    check_admin_auth(request)
+    from app.databases.coffee_beans_database import coffee_beans_db
+    return await coffee_beans_db.get_all_beans()
+
+@app.post('/api/admin/beans')
+async def admin_save_bean(request: Request):
+    check_admin_auth(request)
+    bean = await request.json()
+    from app.databases.coffee_beans_database import coffee_beans_db
+    
+    bean_id = bean.get('_id')
+    if bean_id:
+        await coffee_beans_db.update_bean(bean_id, bean)
+    else:
+        await coffee_beans_db.add_bean(bean)
+    
+    await public_data_cache.refresh_coffee()
+    return {"status": "ok"}
+
+@app.delete('/api/admin/beans/{bean_id}')
+async def admin_delete_bean(bean_id: str, request: Request):
+    check_admin_auth(request)
+    from app.databases.coffee_beans_database import coffee_beans_db
+    await coffee_beans_db.delete_bean(bean_id)
+    await public_data_cache.refresh_coffee()
+    return {"status": "ok"}
+
+@app.get('/api/admin/support/chats')
+async def admin_get_chats(request: Request):
+    check_admin_auth(request)
+    from app.databases.guest_messages_database import guest_messages_db
+    return await guest_messages_db.get_unique_chats()
+
+@app.get('/api/admin/support/messages')
+async def admin_get_messages(request: Request, phone: str = None, order_id: str = None):
+    check_admin_auth(request)
+    from app.databases.guest_messages_database import guest_messages_db
+    return await guest_messages_db.get_messages(phone, order_id)
+
+@app.post('/api/admin/support/reply')
+async def admin_reply_support(request: Request):
+    check_admin_auth(request)
+    data = await request.json()
+    phone = data.get('phone')
+    order_id = data.get('order_id')
+    text = data.get('text')
+    
+    from app.databases.guest_messages_database import guest_messages_db
+    await guest_messages_db.add_message(order_id, phone, 'admin', text)
+    
+    # Also try to send to Telegram if user is a TG user
+    # This part requires finding the user's telegram ID, which might be linked to the phone
+    # For now, we at least record it in the DB.
+    
+    return {"status": "ok"}
+
 @app.get('/api/menu')
 async def get_menu():
     data = await public_data_cache.refresh_menu()

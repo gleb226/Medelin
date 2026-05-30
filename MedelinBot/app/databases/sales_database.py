@@ -49,4 +49,17 @@ class SalesDatabase:
 
         return await cur.to_list(length=None)
 
+    async def add_sale(self, order_id, user_id, fullname, items, total, location_id):
+        db = await get_db()
+        await db.sales.insert_one({
+            'record_type': 'sale',
+            'order_id': str(order_id),
+            'user_id': int(user_id) if user_id is not None else None,
+            'fullname': fullname,
+            'items': items,
+            'total': int(total),
+            'location_id': str(location_id),
+            'timestamp': datetime.utcnow()
+        })
+
 sales_db = SalesDatabase()

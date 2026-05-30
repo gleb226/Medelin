@@ -67,4 +67,17 @@ class ActiveOrdersDatabase:
 
         await db.active_orders.delete_one({'_id': ObjectId(str(active_id))})
 
+    async def delete_active_order(self, order_id):
+        db = await get_db()
+        await db.active_orders.delete_one({'order_id': str(order_id)})
+
+    async def get_all_active_orders(self):
+        db = await get_db()
+        cur = db.active_orders.find({}).sort('created_at', 1)
+        return await cur.to_list(length=None)
+
+    async def get_active_order_by_id(self, order_id):
+        db = await get_db()
+        return await db.active_orders.find_one({'order_id': str(order_id)})
+
 active_orders_db = ActiveOrdersDatabase()

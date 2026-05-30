@@ -279,4 +279,14 @@ class MenuDatabase:
 
             return False
 
+    async def get_all_items_detailed(self):
+        db = await get_db()
+        cursor = db.menu.find({})
+        items = await cursor.to_list(length=None)
+        for i in items:
+            if '_id' in i:
+                i['id'] = str(i['_id'])
+                # Do not delete _id, as FastAPI encoder will handle it or we convert to str later
+        return items
+
 menu_db = MenuDatabase()

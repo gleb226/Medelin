@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="uk">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Medelin Admin Panel</title>
+        <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ50BUE2d30GBASKRdrCoBgrFBfvjFTiAKCYA&s" type="image/png" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+        <style>
+            :root {
+                --color-coffee: #6f4e37;
+                --color-coffee-dark: #4e3629;
+                --color-bg: #f8f9fa;
+                --color-sidebar: #2c3e50;
+                --color-text: #2d3436;
+                --color-text-muted: #636e72;
+                --sidebar-width: 260px;
+                --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                --radius: 12px;
+            }
+
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family: 'Manrope', sans-serif;
+                background-color: var(--color-bg);
+                color: var(--color-text);
+                display: flex;
+                min-height: 100vh;
+            }
+
+            /* Sidebar Styles */
+            .sidebar {
+                width: var(--sidebar-width);
+                background-color: var(--color-sidebar);
+                color: white;
+                display: flex;
+                flex-direction: column;
+                position: fixed;
+                height: 100vh;
+                transition: transform 0.3s ease;
+                z-index: 1000;
+            }
+
+            .sidebar__header {
+                padding: 2rem;
+                text-align: center;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .sidebar__logo {
+                font-family: 'Marcellus', serif;
+                font-size: 1.8rem;
+                letter-spacing: 2px;
+                color: white;
+                text-decoration: none;
+            }
+
+            .sidebar__nav {
+                flex: 1;
+                padding: 1.5rem 0;
+                overflow-y: auto;
+            }
+
+            .nav-item {
+                padding: 1rem 2rem;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                cursor: pointer;
+                transition: background 0.2s, color 0.2s;
+                color: rgba(255, 255, 255, 0.7);
+                text-decoration: none;
+            }
+
+            .nav-item:hover, .nav-item--active {
+                background-color: rgba(255, 255, 255, 0.1);
+                color: white;
+            }
+
+            .nav-item i {
+                width: 20px;
+                text-align: center;
+            }
+
+            /* Main Content Styles */
+            .main-content {
+                flex: 1;
+                margin-left: var(--sidebar-width);
+                padding: 2rem;
+                width: calc(100% - var(--sidebar-width));
+            }
+
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 2rem;
+            }
+
+            .header__title {
+                font-size: 1.5rem;
+                font-weight: 700;
+            }
+
+            .card {
+                background: white;
+                border-radius: var(--radius);
+                padding: 1.5rem;
+                box-shadow: var(--shadow);
+                margin-bottom: 1.5rem;
+            }
+
+            .btn {
+                padding: 0.6rem 1.2rem;
+                border-radius: 8px;
+                border: none;
+                cursor: pointer;
+                font-weight: 600;
+                transition: opacity 0.2s;
+            }
+
+            .btn--primary {
+                background-color: var(--color-coffee);
+                color: white;
+            }
+
+            .btn--danger {
+                background-color: #e74c3c;
+                color: white;
+            }
+
+            .btn--success {
+                background-color: #2ecc71;
+                color: white;
+            }
+
+            /* Order List Styles */
+            .order-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                border-bottom: 1px solid #eee;
+                padding-bottom: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .order-item:last-child {
+                border-bottom: none;
+                margin-bottom: 0;
+                padding-bottom: 0;
+            }
+
+            .order-info {
+                display: flex;
+                flex-direction: column;
+                gap: 0.3rem;
+            }
+
+            .order-title {
+                font-weight: 700;
+                font-size: 1.1rem;
+            }
+
+            .order-meta {
+                color: var(--color-text-muted);
+                font-size: 0.9rem;
+            }
+
+            .order-items {
+                margin-top: 0.5rem;
+                font-size: 0.95rem;
+                white-space: pre-line;
+                color: #444;
+            }
+
+            .order-actions {
+                display: flex;
+                gap: 0.5rem;
+            }
+
+            /* Responsive */
+            @media (max-width: 768px) {
+                .sidebar {
+                    transform: translateX(-100%);
+                }
+                .main-content {
+                    margin-left: 0;
+                    width: 100%;
+                }
+                .sidebar--open {
+                    transform: translateX(0);
+                }
+            }
+
+            .loading-overlay {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(255,255,255,0.8);
+                display: none;
+                justify-content: center;
+                align-items: center;
+                z-index: 2000;
+            }
+
+            .spinner {
+                width: 50px;
+                height: 50px;
+                border: 5px solid #f3f3f3;
+                border-top: 5px solid var(--color-coffee);
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    </head>
+    <body>
+        <aside class="sidebar">
+            <div class="sidebar__header">
+                <a href="/" class="sidebar__logo">MEDELIN</a>
+                <p style="font-size: 0.8rem; opacity: 0.5; margin-top: 0.5rem;">ADMIN PANEL</p>
+            </div>
+            <nav class="sidebar__nav">
+                <a class="nav-item nav-item--active" data-section="orders">
+                    <i class="fas fa-shopping-bag"></i> Активні замовлення
+                </a>
+                <a class="nav-item" data-section="bookings">
+                    <i class="fas fa-calendar-check"></i> Бронювання
+                </a>
+                <a class="nav-item" data-section="menu">
+                    <i class="fas fa-utensils"></i> Меню
+                </a>
+                <a class="nav-item" data-section="beans">
+                    <i class="fas fa-coffee"></i> Кава в зернах
+                </a>
+                <a class="nav-item" data-section="locations">
+                    <i class="fas fa-map-marker-alt"></i> Локації
+                </a>
+                <a class="nav-item" data-section="support">
+                    <i class="fas fa-comments"></i> Підтримка
+                </a>
+            </nav>
+            <div style="padding: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <a href="/" style="color: rgba(255,255,255,0.5); text-decoration: none; font-size: 0.9rem;">
+                    <i class="fas fa-arrow-left"></i> На сайт
+                </a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <h2 class="header__title" id="section-title">Активні замовлення</h2>
+                <div class="header__actions">
+                    <button class="btn btn--primary" id="refresh-btn">
+                        <i class="fas fa-sync-alt"></i> Оновити
+                    </button>
+                </div>
+            </header>
+
+            <div id="content-area">
+                <!-- Content will be loaded here -->
+                <div class="card">
+                    <div id="items-list">Завантаження...</div>
+                </div>
+            </div>
+        </main>
+
+        <div class="loading-overlay" id="loader">
+            <div class="spinner"></div>
+        </div>
+
+        <script>
+            const API_AUTH = '0707'; // Should be handled better in real apps
+            let currentSection = 'orders';
+
+            function showLoader(show) {
+                document.getElementById('loader').style.display = show ? 'flex' : 'none';
+            }
+
+            async function apiFetch(endpoint, method = 'GET', body = null) {
+                const url = `/api/admin/${endpoint}?auth=${API_AUTH}`;
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+                if (body) options.body = JSON.stringify(body);
+
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) throw new Error('API Error');
+                    return await response.json();
+                } catch (e) {
+                    console.error(e);
+                    alert('Помилка API');
+                    return null;
+                }
+            }
+
+            async function loadSupport() {
+                showLoader(true);
+                const chats = await apiFetch('support/chats');
+                const list = document.getElementById('items-list');
+                list.innerHTML = '<h3>Підтримка (Чати)</h3>';
+
+                if (!chats || chats.length === 0) {
+                    list.innerHTML += '<p style="text-align: center; color: #999; padding: 2rem;">Чати відсутні</p>';
+                } else {
+                    const chatList = document.createElement('div');
+                    chatList.style.marginTop = '1rem';
+                    list.appendChild(chatList);
+
+                    chats.forEach(chat => {
+                        const div = document.createElement('div');
+                        div.className = 'card';
+                        div.style.cursor = 'pointer';
+                        const unread = chat.unread_count > 0 ? `<span style="background:red; color:white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; margin-left: 10px;">${chat.unread_count}</span>` : '';
+                        div.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>${chat._id.phone || 'Гість'}</strong> ${unread}
+                                    <div style="font-size: 0.85rem; color: #666; margin-top: 5px;">${chat.last_text}</div>
+                                </div>
+                                <div style="font-size: 0.8rem; color: #999;">${new Date(chat.last_time).toLocaleString('uk-UA')}</div>
+                            </div>
+                        `;
+                        div.onclick = () => openChat(chat._id.phone, chat._id.order_id);
+                        chatList.appendChild(div);
+                    });
+                }
+                showLoader(false);
+            }
+
+            async function openChat(phone, orderId) {
+                showLoader(true);
+                const messages = await apiFetch(`support/messages?phone=${phone}&order_id=${orderId || ''}`);
+                const list = document.getElementById('items-list');
+                list.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <button class="btn btn--outline" onclick="loadSupport()"><i class="fas fa-arrow-left"></i></button>
+                        <h3>Чат з ${phone || 'гостем'}</h3>
+                    </div>
+                    <div id="chat-window" style="height: 400px; overflow-y: auto; border: 1px solid #eee; padding: 1rem; border-radius: 8px; background: #fdfdfd; display: flex; flex-direction: column; gap: 0.5rem;">
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                        <input type="text" id="reply-input" placeholder="Ваша відповідь..." style="flex: 1; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px;">
+                        <button class="btn btn--primary" id="send-reply-btn">Надіслати</button>
+                    </div>
+                `;
+
+                const win = document.getElementById('chat-window');
+                messages.forEach(msg => {
+                    const mDiv = document.createElement('div');
+                    const isAdmin = msg.source === 'admin';
+                    mDiv.style.alignSelf = isAdmin ? 'flex-end' : 'flex-start';
+                    mDiv.style.background = isAdmin ? 'var(--color-coffee)' : '#eee';
+                    mDiv.style.color = isAdmin ? 'white' : 'black';
+                    mDiv.style.padding = '0.6rem 1rem';
+                    mDiv.style.borderRadius = '12px';
+                    mDiv.style.maxWidth = '80%';
+                    mDiv.innerHTML = `
+                        <div>${msg.text}</div>
+                        <div style="font-size: 0.7rem; opacity: 0.7; text-align: right; margin-top: 3px;">${new Date(msg.created_at).toLocaleTimeString('uk-UA')}</div>
+                    `;
+                    win.appendChild(mDiv);
+                });
+                win.scrollTop = win.scrollHeight;
+
+                document.getElementById('send-reply-btn').onclick = async () => {
+                    const text = document.getElementById('reply-input').value;
+                    if (!text) return;
+                    if (await apiFetch('support/reply', 'POST', { phone, order_id: orderId, text })) {
+                        openChat(phone, orderId);
+                    }
+                };
+                showLoader(false);
+            }
+
+            async function loadOrders() {
+                showLoader(true);
+                const orders = await apiFetch('active-orders');
+                const list = document.getElementById('items-list');
+                list.innerHTML = '';
+
+                if (!orders || orders.length === 0) {
+                    list.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">Немає активних замовлень</p>';
+                } else {
+                    orders.forEach(order => {
+                        const div = document.createElement('div');
+                        div.className = 'order-item';
+                        div.innerHTML = `
+                            <div class="order-info">
+                                <div class="order-title">${order.fullname}</div>
+                                <div class="order-meta">
+                                    <span><i class="fas fa-phone"></i> ${order.phone}</span> | 
+                                    <span><i class="fas fa-clock"></i> ${new Date(order.created_at).toLocaleTimeString('uk-UA')}</span>
+                                </div>
+                                <div class="order-items">${order.items}</div>
+                            </div>
+                            <div class="order-actions">
+                                <button class="btn btn--success" onclick="completeOrder('${order._id}')">Готово</button>
+                                <button class="btn btn--danger" onclick="cancelOrder('${order._id}')">Скасувати</button>
+                            </div>
+                        `;
+                        list.appendChild(div);
+                    });
+                }
+                showLoader(false);
+            }
+
+            async function loadBookings() {
+                showLoader(true);
+                const bookings = await apiFetch('active-bookings');
+                const list = document.getElementById('items-list');
+                list.innerHTML = '';
+
+                if (!bookings || bookings.length === 0) {
+                    list.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">Немає активних бронювань</p>';
+                } else {
+                    bookings.forEach(b => {
+                        const div = document.createElement('div');
+                        div.className = 'order-item';
+                        div.innerHTML = `
+                            <div class="order-info">
+                                <div class="order-title">${b.fullname}</div>
+                                <div class="order-meta">
+                                    <span><i class="fas fa-phone"></i> ${b.phone}</span> | 
+                                    <span><i class="fas fa-calendar"></i> ${b.date_time}</span> |
+                                    <span><i class="fas fa-users"></i> ${b.people_count} осіб</span>
+                                </div>
+                                <div style="margin-top:0.5rem;">${b.wishes || 'Без побажань'}</div>
+                            </div>
+                            <div class="order-actions">
+                                <button class="btn btn--danger" onclick="cancelBooking('${b._id}')">Видалити</button>
+                            </div>
+                        `;
+                        list.appendChild(div);
+                    });
+                }
+                showLoader(false);
+            }
+
+            async function cancelBooking(id) {
+                if (confirm('Видалити бронювання?') && await apiFetch(`bookings/${id}`, 'DELETE')) {
+                    loadBookings();
+                }
+            }
+
+            async function loadMenu() {
+                showLoader(true);
+                const items = await apiFetch('menu');
+                const list = document.getElementById('items-list');
+                list.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>Список страв та напоїв</h3>
+                        <button class="btn btn--success" onclick="openItemModal()"><i class="fas fa-plus"></i> Додати позицію</button>
+                    </div>
+                `;
+
+                if (!items || items.length === 0) {
+                    list.innerHTML += '<p style="text-align: center; color: #999; padding: 2rem;">Меню порожнє</p>';
+                } else {
+                    const table = document.createElement('table');
+                    table.style.width = '100%';
+                    table.style.borderCollapse = 'collapse';
+                    table.innerHTML = `
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 2px solid #eee;">
+                                <th style="padding: 10px;">Назва</th>
+                                <th style="padding: 10px;">Категорія</th>
+                                <th style="padding: 10px;">Ціна</th>
+                                <th style="padding: 10px;">Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody id="menu-table-body"></tbody>
+                    `;
+                    list.appendChild(table);
+                    const tbody = document.getElementById('menu-table-body');
+
+                    items.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.style.borderBottom = '1px solid #eee';
+                        tr.innerHTML = `
+                            <td style="padding: 10px;">${item.name}</td>
+                            <td style="padding: 10px;">${item.category}</td>
+                            <td style="padding: 10px;">${item.price} ₴</td>
+                            <td style="padding: 10px;">
+                                <button class="btn btn--primary" style="padding: 5px 10px;" onclick="openItemModal('${item.id}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn--danger" style="padding: 5px 10px;" onclick="deleteMenuItem('${item.id}')"><i class="fas fa-trash"></i></button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+                showLoader(false);
+            }
+
+            async function loadBeans() {
+                showLoader(true);
+                const beans = await apiFetch('beans');
+                const list = document.getElementById('items-list');
+                list.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>Кава в зернах</h3>
+                        <button class="btn btn--success" onclick="openBeanModal()"><i class="fas fa-plus"></i> Додати сорт</button>
+                    </div>
+                `;
+
+                if (!beans || beans.length === 0) {
+                    list.innerHTML += '<p style="text-align: center; color: #999; padding: 2rem;">Сортів кави не знайдено</p>';
+                } else {
+                    const grid = document.createElement('div');
+                    grid.style.display = 'grid';
+                    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(250px, 1fr))';
+                    grid.style.gap = '1.5rem';
+                    list.appendChild(grid);
+
+                    beans.forEach(bean => {
+                        const card = document.createElement('div');
+                        card.className = 'card';
+                        card.style.margin = '0';
+                        card.innerHTML = `
+                            <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem;">${bean.name}</div>
+                            <div style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">${bean.sort} | ${bean.roast}</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>${bean.price_250} ₴ (250г)</span>
+                                <div>
+                                    <button class="btn btn--primary" style="padding: 5px 10px;" onclick="openBeanModal('${bean._id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn btn--danger" style="padding: 5px 10px;" onclick="deleteBean('${bean._id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                }
+                showLoader(false);
+            }
+
+            async function deleteMenuItem(id) {
+                if (confirm('Видалити цей пункт меню?') && await apiFetch(`menu/${id}`, 'DELETE')) {
+                    loadMenu();
+                }
+            }
+
+            async function deleteBean(id) {
+                if (confirm('Видалити цей сорт кави?') && await apiFetch(`beans/${id}`, 'DELETE')) {
+                    loadBeans();
+                }
+            }
+
+            function openItemModal(id = null) {
+                // Simplified: just a prompt or a hidden form for now
+                // Ideally, a beautiful modal with multiple inputs
+                alert('Функція редагування в процесі реалізації UI');
+            }
+
+            function openBeanModal(id = null) {
+                alert('Функція редагування в процесі реалізації UI');
+            }
+
+            // Navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.onclick = () => {
+                    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('nav-item--active'));
+                    item.classList.add('nav-item--active');
+                    currentSection = item.dataset.section;
+                    document.getElementById('section-title').textContent = item.textContent.trim();
+                    refreshContent();
+                };
+            });
+
+            function refreshContent() {
+                if (currentSection === 'orders') loadOrders();
+                else if (currentSection === 'bookings') loadBookings();
+                else if (currentSection === 'menu') loadMenu();
+                else if (currentSection === 'beans') loadBeans();
+                else {
+                    document.getElementById('items-list').innerHTML = `<p style="text-align: center; padding: 2rem;">Розділ ${currentSection} ще в розробці...</p>`;
+                }
+            }
+
+            document.getElementById('refresh-btn').onclick = refreshContent;
+
+            // Initial load
+            window.onload = refreshContent;
+        </script>
+    </body>
+</html>

@@ -157,6 +157,40 @@ function closePopup(id) {
 window.openPopup = openPopup;
 window.closePopup = closePopup;
 
+(function setupLogoSecretTrigger() {
+    let logoClicks = 0;
+    let logoClickTimer = null;
+
+    document.addEventListener('click', (event) => {
+        const logo = event.target.closest('.header__logo');
+        if (!logo) return;
+
+        // We only want to intercept the secret clicks, 
+        // but not prevent the actual link from working normally if it's just a single click.
+        // However, the user wants 7 CLICKS. 
+        // To count clicks on a link without navigating immediately, 
+        // we might need to prevent default IF we are in the middle of counting.
+        
+        logoClicks++;
+        clearTimeout(logoClickTimer);
+
+        if (logoClicks === 7) {
+            event.preventDefault();
+            const pass = prompt('Введіть пароль для входу в адмін-панель:');
+            if (pass === '0707') {
+                window.location.href = '/admin-panel?auth=0707';
+            } else if (pass !== null) {
+                alert('Невірний пароль!');
+            }
+            logoClicks = 0;
+        } else {
+            logoClickTimer = setTimeout(() => {
+                logoClicks = 0;
+            }, 3000); // Reset after 3 seconds of inactivity
+        }
+    });
+})();
+
 (function setupMedelinActionDelegation() {
     if (window.__MEDELIN_ACTIONS_READY) return;
     window.__MEDELIN_ACTIONS_READY = true;
