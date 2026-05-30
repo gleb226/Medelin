@@ -310,16 +310,17 @@ async def sync_website_handler(message: Message, state: FSMContext):
         await public_data_cache.warm_all()
         
         # 2. Try to run git commands
-        import subprocess
         from pathlib import Path
+        import asyncio
         
         root_dir = Path(__file__).resolve().parent.parent.parent.parent
         
         # Перевіряємо чи є гіт
         try:
-            subprocess.run(['git', '--version'], check=True, capture_output=True)
-        except:
-            await message.answer('❌ <b>ПОМИЛКА:</b> Git не встановлений на сервері. Зверніться до розробника.', parse_mode='HTML')
+            proc_git = await asyncio.create_subprocess_exec('git', '--version', stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+            await proc_git.wait()
+        except Exception:
+            await message.answer('❌ <b>ПОМИЛКА:</b> Git не встановлений на сервері або недоступний. Зверніться до розробника.', parse_mode='HTML')
             return
 
         # Виконуємо синхронізацію
@@ -331,10 +332,16 @@ async def sync_website_handler(message: Message, state: FSMContext):
         
         results = []
         for cmd in commands:
-            process = subprocess.run(cmd, cwd=str(root_dir), capture_output=True, text=True)
+            process = await asyncio.create_subprocess_exec(
+                *cmd, 
+                cwd=str(root_dir), 
+                stdout=asyncio.subprocess.PIPE, 
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
             results.append(f"<code>{' '.join(cmd)}</code>: {'✅' if process.returncode == 0 else '⚠️'}")
             if process.returncode != 0 and 'push' in cmd:
-                 results.append(f"<i>Error: {process.stderr}</i>")
+                 results.append(f"<i>Error: {stderr.decode().strip()}</i>")
 
         await message.answer('✅ <b>СИНХРОНІЗАЦІЮ ЗАВЕРШЕНО!</b>\n\n' + '\n'.join(results), parse_mode='HTML')
         

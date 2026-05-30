@@ -52,17 +52,19 @@ async def run():
         # 1. Warm cache
         cache_task = asyncio.create_task(public_data_cache.warm_all(max_retries=3))
         
-        # 2. Start Bot Polling
         async def polling_with_retry():
             while True:
                 try:
                     logger.info("Starting Telegram Bot polling...")
-                    # We drop pending updates to avoid "flooding" if the bot was down
                     await bot.delete_webhook(drop_pending_updates=True)
-                    await dp.start_polling(bot)
+                    await dp.start_polling(bot, handle_signals=False, allowed_updates=dp.resolve_used_update_types())
+                    logger.warning("Polling finished normally. Restarting...")
                 except Exception as e:
                     logger.error(f"Polling error: {e}. Restarting in 10 seconds...")
                     await asyncio.sleep(10)
+                except asyncio.CancelledError:
+                    logger.info("Polling task cancelled.")
+                    break
 
         polling_task = asyncio.create_task(polling_with_retry())
         
