@@ -71,28 +71,29 @@ def _resolve_site_dir() -> pathlib.Path | None:
     base_dir = pathlib.Path(__file__).resolve().parent
     candidates = [
         base_dir.parent / "MedelinSite",
-        pathlib.Path("/usr/share/nginx/html"),
         pathlib.Path("/app/MedelinSite"),
+        pathlib.Path("/usr/share/nginx/html"),
     ]
     for p in candidates:
-        if p.exists():
+        if p.exists() and (p / "index.html").exists():
             return p
     return None
 
 
 _site_dir = _resolve_site_dir()
 
-# Пріоритет для Render/Unified: папка /usr/share/nginx/html/images/uploads
-# Потім папка /app/uploads (якщо використовується Persistent Disk)
+# Пріоритет для Render/Unified: папка /usr/share/nginx/html/assets/images/uploads
+# Потім папка /app/MedelinSite/assets/images/uploads
 # Інакше використовуємо локальну папку в MedelinSite
-_uploads_dir = pathlib.Path("/usr/share/nginx/html/images/uploads")
-if not _uploads_dir.exists():
-    _uploads_dir = pathlib.Path("/app/uploads")
+_uploads_dir = pathlib.Path("/usr/share/nginx/html/assets/images/uploads")
 if not _uploads_dir.exists():
     if _site_dir:
-        _uploads_dir = _site_dir / "images" / "uploads"
+        _uploads_dir = _site_dir / "assets" / "images" / "uploads"
     else:
-        _uploads_dir = pathlib.Path("./uploads")
+        _uploads_dir = pathlib.Path("/app/MedelinSite/assets/images/uploads")
+
+if not _uploads_dir.exists():
+    _uploads_dir = pathlib.Path("/app/uploads")
 
 _uploads_dir.mkdir(parents=True, exist_ok=True)
 
