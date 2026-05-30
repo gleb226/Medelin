@@ -554,7 +554,7 @@ async def get_admin_panel(request: Request):
             return FileResponse(admin_path)
     
     # If not authorized, show the "stealth" login page which looks like a 404
-    login_path = _site_dir / "admin-login.html"
+    login_path = _site_dir / "404.html"
     if login_path.exists():
         return FileResponse(login_path)
     

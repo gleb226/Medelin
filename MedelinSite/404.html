@@ -67,16 +67,17 @@
             let clicks = 0;
             let timer = null;
             const logo = document.getElementById('secret-logo');
+            const is_admin_route = window.location.pathname.includes('/admin-panel');
 
             logo.addEventListener('click', () => {
+                if (!is_admin_route) return;
+
                 clicks++;
                 clearTimeout(timer);
                 
                 if (clicks === 7) {
                     const pass = prompt('Вхід в систему:');
                     if (pass) {
-                        // We redirect to the same URL but with auth param
-                        // The server will then see the auth param and serve the real admin-panel.html
                         window.location.href = window.location.pathname + '?auth=' + encodeURIComponent(pass);
                     }
                     clicks = 0;
@@ -86,6 +87,12 @@
                     }, 3000);
                 }
             });
+
+            // If it's a regular 404 (not admin-panel), make the logo a link back home
+            if (!is_admin_route) {
+                logo.style.cursor = 'pointer';
+                logo.onclick = () => window.location.href = '/';
+            }
         </script>
     </body>
 </html>
