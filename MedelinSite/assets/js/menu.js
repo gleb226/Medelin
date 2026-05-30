@@ -94,7 +94,7 @@ window.openItemPopup = function (item, category) {
         const makeOptionChip = (o, type, active) => {
             const add = Number((o && o.add_price) || 0);
             const addText = add > 0 ? ` +${add}` : add < 0 ? ` ${add}` : '';
-            const cls = active ? 'choice-chip is-active' : 'choice-chip';
+            const cls = active ? 'choice-chip choice-chip--active' : 'choice-chip';
             const name = (o && o.name) || '';
             return `<button type="button" class="${cls}" data-opt-type="${type}" data-add="${Number.isFinite(add) ? add : 0}" data-name="${String(name).replace(/\"/g, '&quot;')}">${name}${addText ? `<span style="margin-left:8px; opacity:.8;">${addText}₴</span>` : ''}</button>`;
         };
@@ -153,7 +153,7 @@ window.openItemPopup = function (item, category) {
         const computeTotal = () => {
             if (!popupBody) return safeBasePrice;
             let total = safeBasePrice;
-            const active = popupBody.querySelectorAll('.choice-chip.is-active');
+            const active = popupBody.querySelectorAll('.choice-chip--active');
             active.forEach((el) => {
                 const add = Number(el.getAttribute('data-add') || 0);
                 if (Number.isFinite(add)) total += add;
@@ -172,10 +172,10 @@ window.openItemPopup = function (item, category) {
                 btn.addEventListener('click', () => {
                     const t = btn.getAttribute('data-opt-type');
                     if (t === 'caffeine' || t === 'milk') {
-                        popupBody.querySelectorAll(`.choice-chip[data-opt-type="${t}"]`).forEach((x) => x.classList.remove('is-active'));
-                        btn.classList.add('is-active');
+                        popupBody.querySelectorAll(`.choice-chip[data-opt-type="${t}"]`).forEach((x) => x.classList.remove('choice-chip--active'));
+                        btn.classList.add('choice-chip--active');
                     } else {
-                        btn.classList.toggle('is-active');
+                        btn.classList.toggle('choice-chip--active');
                     }
                     updatePrice();
                 });
@@ -192,7 +192,7 @@ window.openItemPopup = function (item, category) {
 
                 let selected = [];
                 if (popupBody) {
-                    popupBody.querySelectorAll('.choice-chip.is-active').forEach((el) => {
+                    popupBody.querySelectorAll('.choice-chip--active').forEach((el) => {
                         const name = el.getAttribute('data-name');
                         if (name) selected.push(name);
                     });
@@ -216,12 +216,10 @@ async function fetchMenu() {
     const subnav = document.getElementById('subnav-list');
     if (!root) return;
 
-    console.log('[Medelin] Запуск fetchMenu...');
     root.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Завантаження меню...</div>';
 
     const cached = typeof window.getCachedData === 'function' ? window.getCachedData('menu') : null;
     if (cached && Array.isArray(cached) && cached.length > 0) {
-        console.log('[Medelin] Використовуємо кеш браузера (localStorage)');
         renderMenuData(cached);
     }
 
@@ -237,9 +235,8 @@ async function fetchMenu() {
             });
             window.setCachedData('menu', data);
             renderMenuData(data);
-            console.log('[Medelin] Меню оновлено з сервера/файлу');
         } else if (!cached) {
-            root.innerHTML = `<div class="error-msg">Не вдалося знайти файл з меню. Перевірте папку MedelinSite/cache/</div>`;
+            root.innerHTML = `<div class="error-msg">Не вдалося знайти файл з меню. Перевірте папку assets/data/</div>`;
         }
     } catch (err) {
         console.error('[Medelin] Помилка у fetchMenu:', err);
@@ -252,7 +249,6 @@ function renderMenuData(menuData) {
     const subnav = document.getElementById('subnav-list');
     if (!root) return;
 
-    console.log('[Medelin] Рендеринг меню, кількість категорій:', menuData.length);
     root.innerHTML = '';
     if (subnav) subnav.innerHTML = '';
     

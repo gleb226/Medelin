@@ -48,10 +48,10 @@
             href="https://fonts.googleapis.com/css2?family=Marcellus&family=Manrope:wght@300;400;500;600;700;800&family=Oswald:wght@400;500;600;700&family=Jost:wght@300;400;500;600;700&display=swap"
             rel="stylesheet"
         />
-        <link rel="stylesheet" href="css/style.css?v=1.4" />
-        <link rel="stylesheet" href="css/responsive.css?v=1.4" />
-        <link rel="stylesheet" href="css/components/mobile-menu.css?v=1.0" />
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css?v=1.3" />
+        <link rel="stylesheet" href="assets/css/style.css" />
+        <link rel="stylesheet" href="assets/css/responsive.css" />
+        <link rel="stylesheet" href="assets/css/components/mobile-menu.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     </head>
     <body>
         <header class="header">
@@ -60,15 +60,15 @@
                 <nav class="nav">
                     <ul class="nav__list">
                         <li class="nav__item"><a href="index.html" class="nav__link nav__link--active">Головна</a></li>
-                        <li class="nav__item"><a href="pages/menu/menu.html" class="nav__link">Меню</a></li>
-                        <li class="nav__item"><a href="pages/coffee/beans.html" class="nav__link">Кава в зернах</a></li>
-                        <li class="nav__item"><a href="pages/contact/contact.html" class="nav__link">Контакти</a></li>
+                        <li class="nav__item"><a href="pages/menu.html" class="nav__link">Меню</a></li>
+                        <li class="nav__item"><a href="pages/beans.html" class="nav__link">Кава в зернах</a></li>
+                        <li class="nav__item"><a href="pages/contact.html" class="nav__link">Контакти</a></li>
                     </ul>
                 </nav>
                 <div class="mobile-menu" data-mobile-menu>
                     <button class="mobile-menu__toggle" type="button" aria-expanded="false" aria-controls="mobileMenuPanel" data-mobile-menu-toggle>
                         <span class="mobile-menu__icon" aria-hidden="true"></span>
-                        <span class="sr-only">Меню</span>
+                        <span class="accessibility-hidden">Меню</span>
                     </button>
                     <nav class="mobile-menu__panel" id="mobileMenuPanel" data-mobile-menu-panel aria-label="Навігація">
                         <div class="mobile-menu__inner">
@@ -78,10 +78,10 @@
                                 </button>
                             </div>
                             <div class="mobile-menu__links">
-                                <a href="index.html" class="mobile-menu__link is-active">Головна</a>
-                                <a href="pages/menu/menu.html" class="mobile-menu__link">Меню</a>
-                                <a href="pages/coffee/beans.html" class="mobile-menu__link">Кава в зернах</a>
-                                <a href="pages/contact/contact.html" class="mobile-menu__link">Контакти</a>
+                                <a href="index.html" class="mobile-menu__link mobile-menu__link--active">Головна</a>
+                                <a href="pages/menu.html" class="mobile-menu__link">Меню</a>
+                                <a href="pages/beans.html" class="mobile-menu__link">Кава в зернах</a>
+                                <a href="pages/contact.html" class="mobile-menu__link">Контакти</a>
                             </div>
                         </div>
                     </nav>
@@ -92,11 +92,11 @@
         <main class="main">
             <section class="hero">
                 <div class="hero__content">
-                    <h1 class="hero__title u-animate-slide-up">Меделін — Кава Ужгорода</h1>
-                    <p class="hero__subtitle u-animate-slide-up hero__subtitle--delay-1">
+                    <h1 class="hero__title hero__title--animated-slide-up">Меделін — Кава Ужгорода</h1>
+                    <p class="hero__subtitle hero__subtitle--animated-slide-up hero__subtitle--delayed-1">
                         Кав’ярня зі своєю історією та душею
                     </p>
-                    <div class="hero__decoration u-animate-slide-up hero__decoration--delay-2">
+                    <div class="hero__decoration hero__decoration--animated-slide-up hero__decoration--delayed-2">
                         <div class="hero__line"></div>
                         <i class="fas fa-coffee hero__icon"></i>
                         <div class="hero__line"></div>
@@ -116,8 +116,8 @@
                             Від вишуканої арабіки до ніжних авторських десертів. Кожна позиція в нашому меню створена,
                             щоб дарувати вам справжнє задоволення від смаку та аромату.
                         </p>
-                        <a href="pages/menu/menu.html" class="btn"
-                            >Переглянути меню <i class="fas fa-arrow-right u-ml-xs"></i
+                        <a href="pages/menu.html" class="btn"
+                            >Переглянути меню <i class="fas fa-arrow-right btn__icon"></i
                         ></a>
                     </div>
                 </div>
@@ -131,8 +131,8 @@
                             Ми завжди раді бачити вас у наших затишних кав'ярнях по всьому Ужгороду. Перегляньте графік
                             роботи та знайдіть найближчий до вас Medelin.
                         </p>
-                        <a href="pages/contact/contact.html" class="btn"
-                            >Наші контакти <i class="fas fa-arrow-right u-ml-xs"></i
+                        <a href="pages/contact.html" class="btn"
+                            >Наші контакти <i class="fas fa-arrow-right btn__icon"></i
                         ></a>
                     </div>
                     <div class="promo-card__image promo-bg-2" role="img" aria-label="Затишний інтер'єр кав'ярні"></div>
@@ -148,8 +148,8 @@
                             Ми не лише готуємо каву, а й професійно обсмажуємо її. Візьміть часточку Medelin із собою —
                             у нас можна придбати добірні зерна для ідеального ранку вдома.
                         </p>
-                        <a href="pages/coffee/beans.html" class="btn"
-                            >Купити в зернах <i class="fas fa-arrow-right u-ml-xs"></i
+                        <a href="pages/beans.html" class="btn"
+                            >Купити в зернах <i class="fas fa-arrow-right btn__icon"></i
                         ></a>
                     </div>
                 </div>
@@ -163,8 +163,8 @@
                             Кожна наша кав'ярня має свою унікальну атмосферу. Знайдіть найближчий Medelin на карті,
                             перегляньте контакти або просто завітайте на філіжанку улюбленого напою.
                         </p>
-                        <a href="pages/contact/contact.html" class="btn"
-                            >Знайти на карті <i class="fas fa-arrow-right u-ml-xs"></i
+                        <a href="pages/contact.html" class="btn"
+                            >Знайти на карті <i class="fas fa-arrow-right btn__icon"></i
                         ></a>
                     </div>
                     <div class="promo-card__image promo-bg-4" role="img" aria-label="Затишна атмосфера кав'ярні"></div>
@@ -196,18 +196,18 @@
                 <div class="footer__section">
                     <h3 class="footer__title">Контакти</h3>
                     <p class="footer__text">
-                        <i class="fas fa-phone-alt u-mr-xs"></i> +38 (050) 377-59-06
+                        <i class="fas fa-phone-alt footer__icon"></i> +38 (050) 377-59-06
                     </p>
                     <p class="footer__text">
-                        <i class="fas fa-envelope u-mr-xs"></i> medelin.social@gmail.com
+                        <i class="fas fa-envelope footer__icon"></i> medelin.social@gmail.com
                     </p>
                 </div>
                 <div class="footer__section">
                     <h3 class="footer__title">Навігація</h3>
                     <a href="index.html" class="footer__link">Головна</a>
-                    <a href="pages/menu/menu.html" class="footer__link">Меню</a>
-                    <a href="pages/coffee/beans.html" class="footer__link">Кава в зернах</a>
-                    <a href="pages/contact/contact.html" class="footer__link">Контакти</a>
+                    <a href="pages/menu.html" class="footer__link">Меню</a>
+                    <a href="pages/beans.html" class="footer__link">Кава в зернах</a>
+                    <a href="pages/contact.html" class="footer__link">Контакти</a>
                 </div>
                 <div class="footer__section">
                     <h3 class="footer__title">Соцмережі</h3>
@@ -240,7 +240,7 @@
             </div>
         </footer>
 
-    <script src="js/components/mobile-menu.js?v=1.0" defer></script>
-    <script src="js/main.js?v=1.6" defer></script>
+    <script src="assets/js/components/mobile-menu.js" defer></script>
+    <script src="assets/js/main.js" defer></script>
     </body>
 </html>

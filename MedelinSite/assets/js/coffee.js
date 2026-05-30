@@ -15,7 +15,7 @@ async function fetchCoffee() {
             window.setCachedData('coffee', data);
             renderCoffeeData(data);
         } else if (!cached) {
-            root.innerHTML = `<div class="error-msg">Помилка завантаження даних про каву. <br><button type="button" data-action="reload-page" class="btn btn--sm u-mt-md">Оновити сторінку</button></div>`;
+            root.innerHTML = `<div class="error-msg">Помилка завантаження даних про каву. <br><button type="button" data-action="reload-page" class="btn btn--sm btn--mt-md">Оновити сторінку</button></div>`;
         }
     } catch (err) {
         console.error('fetchCoffee error:', err);
@@ -46,7 +46,7 @@ function renderCoffeeData(coffeeData) {
             <div class="product-card__image" style="background-image: url('${item.image_url || defImg}');"></div>
             <div class="product-card__content">
                 <h3 class="product-card__title">${displayName}</h3>
-                <div class="u-flex-center-between u-mt-sm">
+                <div class="product-card__price-row">
                     <span class="product-card__price">${item.price_250} ₴</span>
                     <button class="btn-add-plus"><i class="fas fa-plus"></i></button>
                 </div>
@@ -100,7 +100,7 @@ function openCoffeePopup(item) {
             ${body ? `<div class="scale-row"><span>Тіло (Насиченість)</span> <span>${body}</span></div>` : ''}
         </div>
         <div class="popup__weights-selection">
-            <label class="weight-label is-active" data-action="select-weight">
+            <label class="weight-label weight-label--active" data-action="select-weight">
                 <input type="radio" name="bean_weight_${item.id}" value="250" data-price="${item.price_250}" checked style="display:none;">
                 <div class="weight-label__size">250г</div>
                 <div class="weight-label__price">${price250}₴</div>

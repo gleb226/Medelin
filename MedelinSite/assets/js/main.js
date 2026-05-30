@@ -4,7 +4,6 @@ const _proto = window.location.protocol;
 const isFileProto = _proto === 'file:';
 const isLocal = _host === 'localhost' || _host === '127.0.0.1' || _host === '';
 
-// Завжди використовуємо абсолютний URL для Render, щоб уникнути проблем з кешуванням статики
 window.API_BASE_URL = '';
 
 if (isLocal && _port === '8000') {
@@ -14,28 +13,24 @@ if (isLocal && _port === '8000') {
 window.fetchMedelinData = async function (key) {
     const fileName = `${key}.json`;
     const endpoints = [
-        `${window.API_BASE_URL}/api/${key}`, // Свіжі дані з БД через API
-        `${window.API_BASE_URL}/cache/${fileName}` // Кеш на сервері
+        `${window.API_BASE_URL}/api/${key}`,
+        `${window.API_BASE_URL}/assets/data/${fileName}`
     ];
     
     const isRoot = !window.location.pathname.includes('/pages/');
     if (isRoot) {
-        endpoints.push(`./cache/${fileName}`);
+        endpoints.push(`./assets/data/${fileName}`);
     } else {
-        endpoints.push(`../../cache/${fileName}`);
-        endpoints.push(`../cache/${fileName}`);
+        endpoints.push(`../assets/data/${fileName}`);
     }
     
-    endpoints.push(`/cache/${fileName}`);
-
-    console.log(`[Medelin] Пошук даних: ${key}`);
+    endpoints.push(`/assets/data/${fileName}`);
 
     for (const url of endpoints) {
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 2000);
             
-            // Додаємо cache-buster (timestamp)
             const finalUrl = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`;
             const response = await fetch(finalUrl, { signal: controller.signal });
             clearTimeout(timeoutId);
@@ -43,7 +38,6 @@ window.fetchMedelinData = async function (key) {
             if (response.ok) {
                 const data = await response.json();
                 if (Array.isArray(data) && data.length > 0) {
-                    console.log(`[Medelin] OK: ${key} завантажено з ${url}`);
                     return data;
                 }
             }
@@ -51,14 +45,12 @@ window.fetchMedelinData = async function (key) {
         }
     }
     
-    console.error(`[Medelin] Помилка: не знайдено даних для ${key}`);
     return null;
 };
 
 window.onerror = function(msg, url, lineNo, columnNo, error) {
-    console.error(`[Medelin Error] ${msg} at ${url}:${lineNo}:${columnNo}`, error);
     if (window.showToast) {
-        window.showToast('Сталася помилка в роботі сайту. Дивіться консоль (F12).', 'error');
+        window.showToast('Сталася помилка в роботі сайту.', 'error');
     }
     return false;
 };
@@ -154,13 +146,13 @@ window.loadMedelinData = async function (key) {
 
 function openPopup(id) {
     const p = document.getElementById(id);
-    if (p) p.classList.add('popup--active');
-    document.body.style.overflow = 'hidden';
+    if (p) p.classList.add('popup--open');
+    document.body.classList.add('body--scroll-locked');
 }
 function closePopup(id) {
     const p = document.getElementById(id);
-    if (p) p.classList.remove('popup--active');
-    document.body.style.overflow = '';
+    if (p) p.classList.remove('popup--open');
+    document.body.classList.remove('body--scroll-locked');
 }
 window.openPopup = openPopup;
 window.closePopup = closePopup;
@@ -333,7 +325,7 @@ function updateCartBadge() {
     const isMenu = path.includes('menu.html');
     let count = isBeans ? cart_beans.length : isMenu ? cart_menu.length : cart_menu.length + cart_beans.length;
     badge.textContent = count;
-    badge.classList.toggle('active', count > 0);
+    badge.classList.toggle('cart-badge--active', count > 0);
     const fab = document.getElementById('cart-fab');
     if (fab) fab.style.display = count > 0 && (isBeans || isMenu) ? 'flex' : 'none';
 }
@@ -380,8 +372,8 @@ window.openCartModal = function () {
         html += `<li class="cart-modal__empty">Кошик порожній</li>`;
     } else {
         activeCart.forEach((item, index) => {
-            html += `<li><div><strong>${item.name}</strong><div class="item-price">${item.price} ₴</div></div>
-            <div class="cart-item-end"><button class="btn-remove-item" type="button" data-action="remove-from-cart" data-cart-type="${typeLabel}" data-cart-index="${index}"><i class="fas fa-trash"></i></button></div></li>`;
+            html += `<li><div><strong>${item.name}</strong><div class="cart-modal__item-price">${item.price} ₴</div></div>
+            <div class="cart-item-end"><button class="cart-modal__remove-btn" type="button" data-action="remove-from-cart" data-cart-type="${typeLabel}" data-cart-index="${index}"><i class="fas fa-trash"></i></button></div></li>`;
         });
     }
 
@@ -394,12 +386,12 @@ window.openCartModal = function () {
 
         pastOrders.slice(0, 3).forEach((order, idx) => {
             const date = new Date(order.timestamp).toLocaleDateString('uk-UA');
-            pastOrdersHtml += `<div class="past-order">
-                <div class="past-order__meta">
+            pastOrdersHtml += `<div class="cart-modal__past-order">
+                <div class="cart-modal__past-order-meta">
                     <strong>${order.items.length} тов. — ${order.total} ₴</strong>
-                    <div class="past-order__date">${date}</div>
+                    <div class="cart-modal__past-order-date">${date}</div>
                 </div>
-                <button class="btn past-order__btn" type="button" data-action="repeat-order" data-order-index="${idx}">Повторити</button>
+                <button class="btn cart-modal__past-order-btn" type="button" data-action="repeat-order" data-order-index="${idx}">Повторити</button>
             </div>`;
         });
 
@@ -411,11 +403,11 @@ window.openCartModal = function () {
     ${pastOrdersHtml}
     <div class="cart-modal__footer-fixed">
         <div class="cart-modal__total"><span>Разом:</span><span>${total} ₴</span></div>
-        <div class="btn-container">
+        <div class="cart-modal__btn-container">
             ${
                 total > 0
                     ? `
-                <button class="btn btn-checkout-primary" id="btn-open-checkout"><i class="fas fa-check cart-modal__checkout-btn-icon"></i> Замовити</button>
+                <button class="btn btn--checkout" id="btn-open-checkout"><i class="fas fa-check cart-modal__checkout-btn-icon"></i> Замовити</button>
             `
                     : ''
             }
@@ -425,8 +417,8 @@ window.openCartModal = function () {
     html += `</div></div>`;
 
     container.innerHTML = html;
-    container.classList.add('cart-modal--active');
-    document.body.style.overflow = 'hidden';
+    container.classList.add('cart-modal--open');
+    document.body.classList.add('body--scroll-locked');
 
     const btn = document.getElementById('btn-open-checkout');
     if (btn) btn.setAttribute('data-action', 'open-checkout-modal');
@@ -450,8 +442,8 @@ window.repeatOrder = function (idx) {
 
 window.closeCartModal = function () {
     const c = document.getElementById('cart-modal-container');
-    if (c) c.classList.remove('cart-modal--active');
-    document.body.style.overflow = '';
+    if (c) c.classList.remove('cart-modal--open');
+    document.body.classList.remove('body--scroll-locked');
 };
 
 window.removeFromCart = function (t, i) {
@@ -464,8 +456,8 @@ window.removeFromCart = function (t, i) {
 
 window.closeCheckoutModal = function () {
     const c = document.getElementById('checkout-modal-container');
-    if (c) c.classList.remove('cart-modal--active');
-    document.body.style.overflow = '';
+    if (c) c.classList.remove('cart-modal--open');
+    document.body.classList.remove('body--scroll-locked');
 };
 
 window.getURLParameter = function (name) {
@@ -483,14 +475,14 @@ window.openCheckoutModal = function () {
 
     container.innerHTML = `
         <div class="cart-modal__overlay"></div>
-        <div class="cart-modal__content checkout-modal-modern checkout-modal-container--large">
-            <div class="loading">
-                <h3 class="checkout-title">Оформлення замовлення</h3>
-                <p class="checkout-loading__text">Завантажуємо дані…</p>
+        <div class="cart-modal__content checkout-modal checkout-modal-container--large">
+            <div class="checkout-modal__loading">
+                <h3 class="checkout-modal__title">Оформлення замовлення</h3>
+                <p class="checkout-modal__loading-text">Завантажуємо дані…</p>
             </div>
         </div>
     `;
-    container.classList.add('cart-modal--active');
+    container.classList.add('cart-modal--open');
 
     const qrZaklad = window.getURLParameter('zaklad');
     const qrStolyk = window.getURLParameter('stolyk');
@@ -508,13 +500,13 @@ window.openCheckoutModal = function () {
 
         container.innerHTML = `
             <div class="cart-modal__overlay" data-action="close-checkout-modal"></div>
-            <div class="cart-modal__content checkout-modal-modern checkout-modal-container--large">
+            <div class="cart-modal__content checkout-modal checkout-modal-container--large">
                 <button class="cart-modal__close" type="button" data-action="close-checkout-modal"><i class="fas fa-times"></i></button>
 
-                <h3 class="checkout-title">Оформлення замовлення</h3>
+                <h3 class="checkout-modal__title">Оформлення замовлення</h3>
 
                 <div id="checkout-details-step">
-                    <form id="checkout-details-form" class="checkout-form">
+                    <form id="checkout-details-form" class="checkout-modal__form">
                         <div class="form-group">
                             <label class="form-label">Ваше ім'я</label>
                             <input type="text" name="name" placeholder="Ваше ім'я" value="${userData.name || ''}" required>
@@ -544,12 +536,12 @@ window.openCheckoutModal = function () {
                                 </select>
                             </div>
 
-                            <div id="pickup_location_wrap" class="u-mt-md" style="display:none;">
+                            <div id="pickup_location_wrap" class="delivery-section--pickup" style="display:none; margin-top: 1.5rem;">
                                 <p class="form-label">Оберіть кав'ярню:</p>
                                 <select name="location">${locOpts}</select>
                             </div>
 
-                            <div id="np_details_wrap" class="np-container u-mt-md" style="display:none;">
+                            <div id="np_details_wrap" class="np-container" style="display:none; margin-top: 1.5rem;">
                                 <p class="form-label">Місто:</p>
                                 <div class="search-wrapper">
                                     <input type="text" id="np_city_search" placeholder="Введіть назву міста...">
@@ -558,7 +550,7 @@ window.openCheckoutModal = function () {
                                 <input type="hidden" name="np_city_ref" id="np_city_ref">
                                 <input type="hidden" name="np_city_name" id="np_city_name">
 
-                                <div id="np_warehouse_search_wrap" class="u-mt-sm u-pt-sm" style="display:none; border-top: 1px solid rgba(0,0,0,0.05);">
+                                <div id="np_warehouse_search_wrap" class="np-warehouse-search" style="display:none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0,0,0,0.05);">
                                     <p class="form-label">Відділення або поштомат (№ або вул):</p>
                                     <div class="search-wrapper">
                                         <input type="text" id="np_wh_input" placeholder="Наприклад: 1 або Головна">
@@ -595,35 +587,35 @@ window.openCheckoutModal = function () {
                         `
                         }
                     </form>
-                    <div class="checkout-footer">
-                        <div class="total-row">
+                    <div class="checkout-modal__footer">
+                        <div class="checkout-modal__total">
                             <span>Всього:</span><span>${total} ₴</span>
                         </div>
-                        <button type="button" class="btn-checkout-primary" data-action="go-to-payment-step">Продовжити</button>
+                        <button type="button" class="btn--checkout" data-action="go-to-payment-step">Продовжити</button>
                     </div>
                 </div>
 
                 <div id="checkout-payment-step" style="display:none;">
-                    <p class="payment-title">Оберіть метод оплати:</p>
-                    <div class="payment-methods-grid">
-                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="card">
+                    <p class="payment-methods__title">Оберіть метод оплати:</p>
+                    <div class="payment-methods">
+                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="card">
                             <i class="fas fa-credit-card"></i> <span>Оплата картою</span>
                         </button>
-                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="applepay">
+                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="applepay">
                             <i class="fab fa-apple-pay"></i> <span>Apple Pay</span>
                         </button>
-                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="googlepay">
+                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="googlepay">
                             <i class="fab fa-google-pay"></i> <span>Google Pay</span>
                         </button>
-                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="privatpay">
+                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="privatpay">
                             <i class="fas fa-university"></i> <span>PrivatPay</span>
                         </button>
-                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="monobank">
+                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="monobank">
                             <i class="fas fa-wallet"></i> <span>MonoPay</span>
                         </button>
                     </div>
                     <div style="padding: 0 1.5rem 1.5rem;">
-                        <button class="btn-back" type="button" data-action="back-to-details"><i class="fas fa-arrow-left u-mr-xs"></i> Назад до деталей</button>
+                        <button class="btn--back" type="button" data-action="back-to-details"><i class="fas fa-arrow-left btn__icon--left"></i> Назад до деталей</button>
                     </div>
                 </div>
             </div>`;
@@ -631,9 +623,9 @@ window.openCheckoutModal = function () {
 
         if (locations.length === 0) {
             container.querySelectorAll('select[name="location"]').forEach((select) => (select.disabled = true));
-            const btn = container.querySelector('.btn-checkout-primary');
+            const btn = container.querySelector('.btn--checkout');
             if (btn) btn.disabled = true;
-            if (window.showToast) window.showToast('Не вдалося завантажити список кавʼярень. Спробуйте оновити сторінку.', 'error');
+            if (window.showToast) window.showToast('Не вдалося завантажити список кавʼярень.', 'error');
         }
     })();
 };
@@ -807,7 +799,6 @@ window.submitCheckout = function (method) {
         .then(r => r.json())
         .then(res => {
             if (res.status === 'ok') {
-                // Очищаємо кошик при успішному репеї (якщо він був ініційований з поточного сеансу)
                 cart_menu.length = 0;
                 cart_beans.length = 0;
                 localStorage.removeItem('cart_menu');
@@ -900,7 +891,7 @@ window.submitCheckout = function (method) {
                     document.body.appendChild(form);
                     form.submit();
                 } else {
-                    window.showToast('Замовлення прийнято! Дякуємо!', 'success');
+                    window.showToast('Замовлення прийнято!', 'success');
                     cart_menu.length = 0;
                     cart_beans.length = 0;
                     localStorage.removeItem('cart_menu');
@@ -921,7 +912,7 @@ window.submitCheckout = function (method) {
             }
         })
         .catch((err) => {
-            window.showToast("Помилка відправки. Перевірте з'єднання.", 'error');
+            window.showToast("Помилка відправки.", 'error');
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = 'Спробувати ще раз';
@@ -940,10 +931,10 @@ window.openBookingWizard = function (e) {
     const userData = window.getUserData();
     container.innerHTML = `
     <div class="booking-modal__overlay" data-action="close-booking-modal"></div>
-    <div class="booking-modal__content checkout-modal-modern">
+    <div class="booking-modal__content checkout-modal">
         <button class="booking-modal__close" type="button" data-action="close-booking-modal"><i class="fas fa-times"></i></button>
-        <h3 class="checkout-title">Бронювання столика</h3>
-        <form id="booking-form" class="booking-form" style="padding: 0 2rem 2rem;">
+        <h3 class="checkout-modal__title">Бронювання столика</h3>
+        <form id="booking-form" class="booking-modal__form" style="padding: 0 2rem 2rem;">
             <div class="form-group">
                 <label class="form-label">Ваше ім'я</label>
                 <input type="text" name="name" placeholder="Як до вас звертатися?" value="${userData.name || ''}" required>
@@ -978,11 +969,11 @@ window.openBookingWizard = function (e) {
                 <label class="form-label">Побажання (опційно)</label>
                 <textarea name="wishes" placeholder="Наприклад: біля вікна" rows="2"></textarea>
             </div>
-            <button type="submit" class="btn-checkout-primary" style="margin-top: 1rem;">Забронювати</button>
+            <button type="submit" class="btn--checkout" style="margin-top: 1rem;">Забронювати</button>
         </form>
     </div>`;
-    container.classList.add('booking-modal--active');
-    document.body.style.overflow = 'hidden';
+    container.classList.add('booking-modal--open');
+    document.body.classList.add('body--scroll-locked');
     (async () => {
         const locs = await window.loadMedelinData('locations');
         const sel = document.getElementById('book_loc');
@@ -999,7 +990,6 @@ window.openBookingWizard = function (e) {
             sel.innerHTML = '<option value="" disabled selected>Локації недоступні</option>';
             sel.disabled = true;
             if (submitBtn) submitBtn.disabled = true;
-            if (window.showToast) window.showToast('Не вдалося завантажити список кавʼярень. Спробуйте оновити сторінку.', 'error');
         }
     })();
     document.getElementById('booking-form').onsubmit = function (ev) {
@@ -1027,7 +1017,7 @@ window.openBookingWizard = function (e) {
             .then((r) => r.json())
             .then((res) => {
                 if (res.status === 'ok') {
-                    window.showToast('Бронювання прийнято! Ми зателефонуємо для підтвердження.', 'success');
+                    window.showToast('Бронювання прийнято!', 'success');
                     window.closeBookingModal();
                 } else {
                     let errorMsg = res.detail;
@@ -1050,35 +1040,25 @@ window.openBookingWizard = function (e) {
 window.closeBookingModal = function () {
     const c = document.getElementById('booking-modal-container');
     if (c) {
-        c.classList.remove('booking-modal--active');
-        document.body.style.overflow = '';
+        c.classList.remove('booking-modal--open');
+        document.body.classList.remove('body--scroll-locked');
     }
 };
-
-function showNotification(t) {
-    const d = document.createElement('div');
-    d.style =
-        'position:fixed; bottom:20px; right:20px; background:var(--color-coffee); color:white; padding:12px 24px; border-radius:30px; z-index:10000; box-shadow:0 10px 20px rgba(0,0,0,0.2);';
-    d.textContent = t;
-    document.body.appendChild(d);
-    setTimeout(() => d.remove(), 3000);
-}
 
 document.addEventListener('DOMContentLoaded', () => {
     updateCartBadge();
     if (window.setupMobileMenu) window.setupMobileMenu();
     
-    // Intersection Observer для анімацій появи
     const revealObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                entry.target.classList.add('u-reveal--active');
+                entry.target.classList.add('revealable--active');
             }
         });
     }, { threshold: 0.1 });
 
-    document.querySelectorAll('.u-reveal, .product-card, .promo-card, .category').forEach(el => {
-        if (!el.classList.contains('u-reveal')) el.classList.add('u-reveal');
+    document.querySelectorAll('.revealable, .product-card, .promo-card, .category').forEach(el => {
+        if (!el.classList.contains('revealable')) el.classList.add('revealable');
         revealObserver.observe(el);
     });
 
@@ -1089,13 +1069,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (container) {
             container.innerHTML = `
                 <div class="cart-modal__overlay"></div>
-                <div class="cart-modal__content checkout-modal-modern">
-                    <div class="loading" style="padding: 3rem; text-align: center;">
+                <div class="cart-modal__content checkout-modal">
+                    <div class="checkout-modal__loading" style="padding: 3rem; text-align: center;">
                         <i class="fas fa-spinner fa-spin fa-3x" style="color: var(--color-coffee); margin-bottom: 1rem;"></i>
                         <p>Завантажуємо деталі замовлення...</p>
                     </div>
                 </div>`;
-            container.classList.add('cart-modal--active');
+            container.classList.add('cart-modal--open');
             
             fetch(`${window.API_BASE_URL}/api/orders/${orderId}`)
                 .then(r => {
@@ -1108,29 +1088,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (order && order.order_id) {
                         container.innerHTML = `
                         <div class="cart-modal__overlay" data-action="close-checkout-modal"></div>
-                        <div class="cart-modal__content checkout-modal-modern">
+                        <div class="cart-modal__content checkout-modal">
                             <button class="cart-modal__close" type="button" data-action="close-checkout-modal"><i class="fas fa-times"></i></button>
-                            <h3 class="checkout-title">Оплата замовлення</h3>
+                            <h3 class="checkout-modal__title">Оплата замовлення</h3>
                             <div id="checkout-payment-step">
                                 <div style="padding: 0 1.5rem 1rem; text-align: center;">
                                     <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">Сума до оплати:</p>
                                     <p style="font-size: 2.2rem; font-weight: 900; color: var(--color-coffee);">${order.total} ₴</p>
                                 </div>
-                                <p class="payment-title">Оберіть метод оплати:</p>
-                                <div class="payment-methods-grid">
-                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="card">
+                                <p class="payment-methods__title">Оберіть метод оплати:</p>
+                                <div class="payment-methods">
+                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="card">
                                         <i class="fas fa-credit-card"></i> <span>Оплата картою</span>
                                     </button>
-                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="applepay">
+                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="applepay">
                                         <i class="fab fa-apple-pay"></i> <span>Apple Pay</span>
                                     </button>
-                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="googlepay">
+                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="googlepay">
                                         <i class="fab fa-google-pay"></i> <span>Google Pay</span>
                                     </button>
-                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="privatpay">
+                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="privatpay">
                                         <i class="fas fa-university"></i> <span>PrivatPay</span>
                                     </button>
-                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="monobank">
+                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="monobank">
                                         <i class="fas fa-wallet"></i> <span>MonoPay</span>
                                     </button>
                                 </div>
@@ -1152,8 +1132,8 @@ document.addEventListener('DOMContentLoaded', () => {
 window.selectWeight = function (el) {
     const parent = el.closest('.popup__weights-selection');
     if (!parent) return;
-    parent.querySelectorAll('.weight-label').forEach((l) => l.classList.remove('is-active'));
-    el.classList.add('is-active');
+    parent.querySelectorAll('.weight-label').forEach((l) => l.classList.remove('weight-label--active'));
+    el.classList.add('weight-label--active');
     const radio = el.querySelector('input');
     if (radio) radio.checked = true;
 };
@@ -1162,20 +1142,13 @@ window.toggleChoice = function (el, baseP, type) {
     if (type !== 'addon') {
         const parent = el.parentElement;
         if (parent) {
-            parent.querySelectorAll('.choice-chip').forEach((c) => c.classList.remove('is-active'));
+            parent.querySelectorAll('.choice-chip').forEach((c) => c.classList.remove('choice-chip--active'));
         }
-        el.classList.add('is-active');
+        el.classList.add('choice-chip--active');
     } else {
-        el.classList.toggle('is-active');
+        el.classList.toggle('choice-chip--active');
     }
     if (window.updatePopupPrice) window.updatePopupPrice(baseP);
-};
-
-window.toggleDeliveryMode = function (v) {
-    const np = document.getElementById('np_wrap');
-    const pick = document.getElementById('pickup_wrap');
-    if (np) np.style.display = v === 'nova_poshta' ? 'block' : 'none';
-    if (pick) pick.style.display = v === 'pickup' ? 'block' : 'none';
 };
 
 window.toggleTableInput = function (v) {

@@ -6,14 +6,14 @@ window.setupMobileMenu = function () {
 
     const close = () => {
         toggle.setAttribute('aria-expanded', 'false');
-        panel.classList.remove('is-open');
-        document.body.classList.remove('is-scroll-locked');
+        panel.classList.remove('mobile-menu__panel--open');
+        document.body.classList.remove('body--scroll-locked');
     };
 
     const open = () => {
         toggle.setAttribute('aria-expanded', 'true');
-        panel.classList.add('is-open');
-        document.body.classList.add('is-scroll-locked');
+        panel.classList.add('mobile-menu__panel--open');
+        document.body.classList.add('body--scroll-locked');
     };
 
     const isOpen = () => toggle.getAttribute('aria-expanded') === 'true';

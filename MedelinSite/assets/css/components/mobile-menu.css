@@ -2,7 +2,7 @@
     --mobile-menu-panel-max-width: 420px;
 }
 
-.sr-only {
+.accessibility-hidden {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -111,7 +111,7 @@
         overflow: auto;
     }
 
-    .mobile-menu__panel.is-open {
+    .mobile-menu__panel--open {
         opacity: 1;
         visibility: visible;
         pointer-events: auto;
@@ -203,7 +203,7 @@
         border: 1px solid rgba(247, 243, 233, 0.14);
     }
 
-    .mobile-menu__link.is-active {
+    .mobile-menu__link--active {
         background: rgba(201, 169, 110, 0.22);
         border-color: rgba(201, 169, 110, 0.42);
     }
@@ -229,4 +229,3 @@
         letter-spacing: 1.2px;
     }
 }
-
