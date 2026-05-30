@@ -867,7 +867,7 @@ async def admin_msg_send(message: Message, state: FSMContext, bot: Bot):
 
         res = await deliver_guest_message(bot, order, text_html, message.text, reply_callback_data=f'guest_reply_to_admin_{message.from_user.id}_{oid}')
 
-        if res == 'telegram': await message.answer('✅ Надіслано в Telegram.')
+        if res in ('telegram', 'both'): await message.answer('✅ Надіслано в Telegram.')
 
         elif res == 'site': await message.answer('✅ Надіслано на сайт.')
 
@@ -882,7 +882,10 @@ async def admin_msg_send(message: Message, state: FSMContext, bot: Bot):
 
             await message.answer('✅ Надіслано в Telegram.')
 
-        except: await message.answer('❌ Не вдалося.')
+        except Exception as e:
+            from app.utils.admin_notifications import send_developer_error
+            await send_developer_error(f"Error sending message to guest {uid}: {str(e)}")
+            await message.answer('❌ Не вдалося.')
 
     await state.clear()
 

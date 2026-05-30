@@ -1145,5 +1145,7 @@ async def guest_reply_send(message: Message, state: FSMContext, bot: Bot):
     try:
         await bot.send_message(int(admin_id), admin_msg, parse_mode='HTML', reply_markup=markup)
         await message.answer('✅ Відповідь надіслано.')
-    except:
+    except Exception as e:
+        from app.utils.admin_notifications import send_developer_error
+        await send_developer_error(f"Error sending guest reply to admin {admin_id}: {str(e)}")
         await message.answer('❌ Не вдалося надіслати відповідь.')
