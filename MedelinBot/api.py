@@ -542,14 +542,20 @@ async def process_booking(req: BookingRequest):
 
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi import Request
+from app.common.config import ADMIN_PANEL_PASSWORD
 
 @app.get('/admin-panel')
 async def get_admin_panel(request: Request):
     auth = request.query_params.get('auth')
-    if auth == '0707':
+    if auth == ADMIN_PANEL_PASSWORD:
         admin_path = _site_dir / "admin-panel.html"
         if admin_path.exists():
             return FileResponse(admin_path)
+    
+    # If not authorized, show the "stealth" login page which looks like a 404
+    login_path = _site_dir / "admin-login.html"
+    if login_path.exists():
+        return FileResponse(login_path)
     
     raise HTTPException(status_code=404, detail="Not Found")
 
@@ -557,7 +563,7 @@ async def get_admin_panel(request: Request):
 def check_admin_auth(request: Request):
     # Simple check for now based on query param or header
     auth = request.query_params.get('auth') or request.headers.get('Authorization')
-    if auth != '0707':
+    if auth != ADMIN_PANEL_PASSWORD:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 @app.get('/api/admin/active-orders')

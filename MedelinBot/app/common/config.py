@@ -32,3 +32,4 @@ WORK_START_HOUR = int(os.getenv('WORK_START_HOUR', '8'))
 WORK_END_HOUR = int(os.getenv('WORK_END_HOUR', '22'))
 BOSS_IDS = [x.strip() for x in os.getenv('BOSS_IDS', '').split(',') if x.strip()]
 WEB_APP_URL = os.getenv('WEB_APP_URL', 'https://medelin.onrender.com').strip()
+ADMIN_PANEL_PASSWORD = os.getenv('ADMIN_PANEL_PASSWORD', '0707').strip()
