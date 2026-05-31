@@ -146,12 +146,12 @@ window.loadMedelinData = async function (key) {
 
 function openPopup(id) {
     const p = document.getElementById(id);
-    if (p) p.classList.add('popup--open');
+    if (p) p.classList.add('popup--active');
     document.body.classList.add('body--scroll-locked');
 }
 function closePopup(id) {
     const p = document.getElementById(id);
-    if (p) p.classList.remove('popup--open');
+    if (p) p.classList.remove('popup--active');
     document.body.classList.remove('body--scroll-locked');
 }
 window.openPopup = openPopup;
@@ -419,7 +419,7 @@ window.openCartModal = function () {
     html += `</div></div>`;
 
     container.innerHTML = html;
-    container.classList.add('cart-modal--open');
+    container.classList.add('cart-modal--active');
     document.body.classList.add('body--scroll-locked');
 
     const btn = document.getElementById('btn-open-checkout');
@@ -444,7 +444,7 @@ window.repeatOrder = function (idx) {
 
 window.closeCartModal = function () {
     const c = document.getElementById('cart-modal-container');
-    if (c) c.classList.remove('cart-modal--open');
+    if (c) c.classList.remove('cart-modal--active');
     document.body.classList.remove('body--scroll-locked');
 };
 
@@ -458,7 +458,7 @@ window.removeFromCart = function (t, i) {
 
 window.closeCheckoutModal = function () {
     const c = document.getElementById('checkout-modal-container');
-    if (c) c.classList.remove('cart-modal--open');
+    if (c) c.classList.remove('cart-modal--active');
     document.body.classList.remove('body--scroll-locked');
 };
 
@@ -484,7 +484,7 @@ window.openCheckoutModal = function () {
             </div>
         </div>
     `;
-    container.classList.add('cart-modal--open');
+    container.classList.add('cart-modal--active');
 
     const qrZaklad = window.getURLParameter('zaklad');
     const qrStolyk = window.getURLParameter('stolyk');
@@ -974,7 +974,7 @@ window.openBookingWizard = function (e) {
             <button type="submit" class="btn--checkout" style="margin-top: 1rem;">Забронювати</button>
         </form>
     </div>`;
-    container.classList.add('booking-modal--open');
+    container.classList.add('booking-modal--active');
     document.body.classList.add('body--scroll-locked');
     (async () => {
         const locs = await window.loadMedelinData('locations');
@@ -1042,7 +1042,7 @@ window.openBookingWizard = function (e) {
 window.closeBookingModal = function () {
     const c = document.getElementById('booking-modal-container');
     if (c) {
-        c.classList.remove('booking-modal--open');
+        c.classList.remove('booking-modal--active');
         document.body.classList.remove('body--scroll-locked');
     }
 };
@@ -1077,7 +1077,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p>Завантажуємо деталі замовлення...</p>
                     </div>
                 </div>`;
-            container.classList.add('cart-modal--open');
+            container.classList.add('cart-modal--active');
             
             fetch(`${window.API_BASE_URL}/api/orders/${orderId}`)
                 .then(r => {
