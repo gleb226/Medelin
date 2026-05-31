@@ -1,3 +1,50 @@
+/* --- Global Scrollbar Styling --- */
+html, body {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+html::-webkit-scrollbar, 
+body::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+/* Allow scrollbars in specific areas where needed */
+.cart-modal__body,
+.checkout-modal,
+.popup__content,
+.np-search-results,
+.cart-modal__list {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-coffee) transparent;
+}
+
+.cart-modal__body::-webkit-scrollbar,
+.checkout-modal::-webkit-scrollbar,
+.popup__content::-webkit-scrollbar,
+.np-search-results::-webkit-scrollbar,
+.cart-modal__list::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+}
+
+.cart-modal__body::-webkit-scrollbar-thumb,
+.checkout-modal::-webkit-scrollbar-thumb,
+.popup__content::-webkit-scrollbar-thumb,
+.np-search-results::-webkit-scrollbar-thumb,
+.cart-modal__list::-webkit-scrollbar-thumb {
+    background-color: var(--color-coffee);
+    border-radius: 10px;
+}
+
+.cart-modal__body::-webkit-scrollbar-track,
+.checkout-modal::-webkit-scrollbar-track,
+.popup__content::-webkit-scrollbar-track,
+.np-search-results::-webkit-scrollbar-track,
+.cart-modal__list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
 :root {
     --color-cream: #f7f3e9;
     --color-dark-brown: #3c2f2f;
