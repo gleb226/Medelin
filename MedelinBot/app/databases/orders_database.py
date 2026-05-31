@@ -130,6 +130,20 @@ class OrdersDatabase:
 
         return await cur.to_list(length=None)
 
+    async def get_user_past_orders(self, phone: str, limit: int = 20):
+        t = normalize_phone(phone)
+        if not t:
+            return []
+        db = await get_db()
+        cursor = db.orders.find({'phone_digits': t}).sort('created_at', -1).limit(limit)
+        orders = await cursor.to_list(length=limit)
+        for o in orders:
+            if '_id' in o:
+                o['_id'] = str(o['_id'])
+            if 'created_at' in o:
+                o['created_at'] = o['created_at'].isoformat()
+        return orders
+
     async def get_user_by_phone(self, phone: str) -> Any:
 
         t = normalize_phone(phone)

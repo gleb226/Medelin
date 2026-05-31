@@ -259,9 +259,9 @@ async def deliver_guest_message(bot: Bot, order: dict | None, text_html: str, si
     phone = order.get('phone')
     order_id = order.get('order_id') or order.get('_id')
 
-    # Не створюємо чат автоматично "з повітря": запис у support тільки якщо гість вже почав чат
-    if await guest_messages_db.has_guest_chat_started(phone, order_id=None):
-        await guest_messages_db.add_message(order_id=order_id, phone=phone, source='admin', text=site_text)
+    # Статусні повідомлення (Прийнято/Відхилено) не додаємо в базу чатів,
+    # щоб вони не створювали "пустих" діалогів в адмін-панелі.
+    # Залишаємо лише відправку в Telegram клієнту.
     return 'both' if telegram_target and telegram_ok else 'site'
 
 @admin_router.message(F.text == '📝 ПРИЙНЯТИ ЗАМОВЛЕННЯ')

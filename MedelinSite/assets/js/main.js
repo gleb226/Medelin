@@ -89,6 +89,40 @@ window.getPastOrders = function () {
     return JSON.parse(localStorage.getItem('medelin_past_orders') || '[]');
 };
 
+window.syncPastOrders = async function() {
+    const userData = window.getUserData();
+    if (!userData || !userData.phone) return;
+    
+    try {
+        const resp = await fetch(`${window.API_BASE_URL}/api/past-orders?phone=${encodeURIComponent(userData.phone)}`);
+        if (resp.ok) {
+            const serverOrders = await resp.json();
+            if (Array.isArray(serverOrders) && serverOrders.length > 0) {
+                // Мапимо серверний формат на локальний
+                const localOrders = serverOrders.map(o => ({
+                    items: [], 
+                    items_text: o.items_text,
+                    total: o.total,
+                    timestamp: new Date(o.timestamp).getTime(),
+                    type: o.type,
+                    id: o.order_id
+                }));
+                localStorage.setItem('medelin_past_orders', JSON.stringify(localOrders.slice(0, 10)));
+                
+                // Якщо кошик відкритий — оновлюємо його
+                const modal = document.getElementById('cart-modal-container');
+                if (modal && modal.classList.contains('cart-modal--active')) {
+                    window.openCartModal();
+                }
+                return localOrders;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to sync orders:', e);
+    }
+    return window.getPastOrders();
+};
+
 window.addPastOrder = function (order) {
     const orders = window.getPastOrders();
     orders.unshift({ ...order, timestamp: Date.now() });
@@ -404,12 +438,13 @@ window.openCartModal = function () {
 
         pastOrders.slice(0, 3).forEach((order, idx) => {
             const date = new Date(order.timestamp).toLocaleDateString('uk-UA');
+            const itemCount = order.items && order.items.length ? `${order.items.length} тов.` : 'Замовлення';
             pastOrdersHtml += `<div class="past-order">
                 <div class="past-order__meta">
-                    <strong>${order.items.length} тов. — ${order.total} ₴</strong>
+                    <strong>${itemCount} — ${order.total} ₴</strong>
                     <div class="past-order__date">${date}</div>
                 </div>
-                <button class="btn past-order__btn" type="button" data-action="repeat-order" data-order-index="${idx}">Повторити</button>
+                ${order.items && order.items.length > 0 ? `<button class="btn past-order__btn" type="button" data-action="repeat-order" data-order-index="${idx}">Повторити</button>` : ''}
             </div>`;
         });
 
@@ -1066,6 +1101,7 @@ window.closeBookingModal = function () {
 document.addEventListener('DOMContentLoaded', () => {
     updateCartBadge();
     if (window.setupMobileMenu) window.setupMobileMenu();
+    if (typeof window.syncPastOrders === 'function') window.syncPastOrders();
     
     const revealObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => {

@@ -308,7 +308,8 @@ async def notify_admins_about_order(order_id: str):
 
     location_name = 'Замовлення з сайту'
     for loc in await location_db.get_all_locations():
-        if str(loc.get('_id')) == loc_id:
+        loc_actual_id = str(loc.get('_id'))
+        if loc_actual_id == loc_id:
             location_name = loc.get('name', 'Замовлення з сайту')
             break
 
@@ -325,13 +326,15 @@ async def notify_admins_about_order(order_id: str):
     elif order_type == 'beans_booking':
         msg += f'🏛 Заклад: {location_name}\n'
         msg += f'📦 Тип: Самовивіз зерен\n'
-    elif order_type == 'order_with_booking':
+    elif order_type == 'order_with_booking' or (date_time and date_time != '—' and date_time != 'Сьогодні' and people_count and people_count != '1'):
         msg += f'🏛 Заклад: {location_name}\n'
         msg += f'🕒 Час: {date_time}\n'
         msg += f'👥 Гостей: {people_count}\n'
         msg += f'📝 Тип: Бронювання + Замовлення\n'
     else:
-        msg += f'🏛 Заклад: {location_name}\n'
+        if location_name and location_name != 'Замовлення з сайту':
+            msg += f'🏛 Заклад: {location_name}\n'
+        
         if order_type == 'in_house':
             msg += f"🪑 Тип: В закладі (Столик: {table_number or '—'})\n"
         else:
@@ -474,7 +477,7 @@ async def process_checkout(req: CheckoutRequest):
 
     oid = await orders_db.add_order(
         user_id=None, username=tg_nick, fullname=user.get('name', '—'), phone=phone,
-        location_id=loc_id, date_time='Сьогодні', people_count='1', wishes=wishes_str,
+        location_id=loc_id, date_time=None, people_count=None, wishes=wishes_str,
         cart=items_text, order_type=order_type, payment_mode=payment_mode,
         table_number=user.get('table_number', ''), total_amount=total
     )
@@ -701,6 +704,22 @@ async def admin_reply_support(request: Request):
     # For now, we at least record it in the DB.
     
     return {"status": "ok"}
+
+@app.get('/api/past-orders')
+async def get_past_orders(phone: str):
+    if not phone:
+        return []
+    orders = await orders_db.get_user_past_orders(phone)
+    formatted = []
+    for o in orders:
+        formatted.append({
+            'order_id': o.get('order_id'),
+            'items_text': o.get('cart', ''),
+            'total': o.get('total_amount', 0),
+            'timestamp': o.get('created_at'),
+            'type': o.get('order_type', 'menu')
+        })
+    return formatted
 
 @app.get('/api/menu')
 async def get_menu():
