@@ -368,6 +368,18 @@ async def admin_panel_enter(message: Message, state: FSMContext):
 
     await message.answer(f'🔐 <b>ВХІД В АДМІНІСТРАТИВНУ ПАНЕЛЬ</b>\nВаша роль: <b>{role_name}</b>{shift_info}', reply_markup=akb.get_main_admin_menu(bool(is_on_shift), role), parse_mode='HTML')
 
+@admin_router.callback_query(F.data.startswith('admin_auth_confirm_'))
+async def admin_auth_confirm(callback: CallbackQuery):
+    user_id = int(callback.data.split('_')[-1])
+    await admin_db.confirm_auth_request(user_id)
+    await callback.message.edit_text("✅ Вхід в адмін-панель підтверджено.")
+    await callback.answer("Підтверджено")
+
+@admin_router.callback_query(F.data.startswith('admin_auth_reject_'))
+async def admin_auth_reject(callback: CallbackQuery):
+    await callback.message.edit_text("❌ Вхід відхилено.")
+    await callback.answer("Відхилено")
+
 @admin_router.message(F.text == '🟢 ПОЧАТИ ЗМІНУ')
 async def start_shift(message: Message, state: FSMContext):
     if not await admin_db.is_admin(message.from_user.id): return

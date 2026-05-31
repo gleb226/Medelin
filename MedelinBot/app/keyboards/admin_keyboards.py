@@ -297,6 +297,12 @@ def get_support_chats_kb(chats):
     buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
+def get_admin_login_confirm_kb(user_id: int):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='✅ ПІДТВЕРДИТИ ВХІД', callback_data=f'admin_auth_confirm_{user_id}')],
+        [InlineKeyboardButton(text='❌ ВІДХИЛИТИ', callback_data=f'admin_auth_reject_{user_id}')]
+    ])
+
 def get_socials_list_kb(socs, prefix='soc_delete'):
 
     buttons = []

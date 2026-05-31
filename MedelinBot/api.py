@@ -19,18 +19,96 @@ from pydantic import BaseModel
 from bson import ObjectId
 from fastapi.encoders import jsonable_encoder
 
-from app.common.config import DEVELOPER_IDS, LIQPAY_PRIVATE_KEY, LIQPAY_PUBLIC_KEY, MONOBANK_TOKEN, WEB_APP_URL, NP_API_KEY
+from app.common.config import DEVELOPER_IDS, LIQPAY_PRIVATE_KEY, LIQPAY_PUBLIC_KEY, MONOBANK_TOKEN, WEB_APP_URL, NP_API_KEY, ADMIN_PANEL_PASSWORD
 from app.databases.guest_messages_database import guest_messages_db
 from app.databases.location_database import location_db
 from app.databases.orders_database import orders_db
+from app.databases.admin_database import admin_db
 from app.keyboards import admin_keyboards as akb
 from app.utils.admin_notifications import send_admin_notification
 from app.utils.data_cache import public_data_cache
 from app.utils.phone_utils import format_phone
+import secrets
+import fastapi
 
 # Налаштування логування
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Admin API Auth
+async def get_current_admin(request: Request):
+    auth_header = request.headers.get('Authorization')
+    token = None
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+    else:
+        token = request.query_params.get('token')
+        
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    admin = await admin_db.verify_session(token)
+    if not admin:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    return admin
+
+@app.post('/api/admin/login')
+async def admin_login(data: dict):
+    identifier = data.get('identifier')
+    password = data.get('password')
+    
+    if password != ADMIN_PANEL_PASSWORD:
+        raise HTTPException(status_code=401, detail="Invalid password")
+        
+    admin = await admin_db.find_admin_by_identifier(identifier)
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin not found")
+        
+    # Generate 2FA request
+    code = secrets.token_hex(3).upper() 
+    await admin_db.create_auth_request(admin['user_id'], code)
+    
+    # Send confirmation to bot
+    msg = f"🔐 <b>СПРОБА ВХОДУ В АДМІН-ПАНЕЛЬ</b>\n\n"
+    msg += f"Ви намагаєтесь увійти в адмін-панель Medelin.\n"
+    msg += f"Якщо це не ви, проігноруйте або заблокуйте доступ."
+    
+    from bot import bot
+    try:
+        await bot.send_message(
+            admin['user_id'], 
+            msg, 
+            parse_mode='HTML',
+            reply_markup=akb.get_admin_login_confirm_kb(admin['user_id'])
+        )
+    except Exception as e:
+        logger.error(f"Failed to send 2FA message: {e}")
+        raise HTTPException(status_code=500, detail="Could not send notification to Telegram")
+        
+    return {"status": "ok", "user_id": admin['user_id']}
+
+@app.get('/api/admin/verify')
+async def admin_verify(user_id: int):
+    req = await admin_db.get_auth_request(user_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+        
+    if not req.get('confirmed'):
+        return {"status": "pending"}
+        
+    # Validated! Create session
+    token = secrets.token_urlsafe(32)
+    await admin_db.create_session(user_id, token)
+    
+    admin = await admin_db.get_admin_by_id(user_id)
+    return {
+        "status": "ok", 
+        "token": token,
+        "admin": {
+            "name": admin.get('display_name'),
+            "role": admin.get('role')
+        }
+    }
 
 def custom_jsonable_encoder(obj, **kwargs):
     if isinstance(obj, ObjectId):
@@ -571,20 +649,17 @@ def check_admin_auth(request: Request):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 @app.get('/api/admin/active-orders')
-async def get_admin_active_orders(request: Request):
-    check_admin_auth(request)
+async def get_admin_active_orders(admin: dict = fastapi.Depends(get_current_admin)):
     from app.databases.active_orders_database import active_orders_db
     return await active_orders_db.get_all_active_orders()
 
 @app.get('/api/admin/active-bookings')
-async def get_admin_active_bookings(request: Request):
-    check_admin_auth(request)
+async def get_admin_active_bookings(admin: dict = fastapi.Depends(get_current_admin)):
     from app.databases.active_bookings_database import active_bookings_db
     return await active_bookings_db.get_all_active_bookings()
 
 @app.post('/api/admin/orders/{order_id}/complete')
-async def complete_order(order_id: str, request: Request):
-    check_admin_auth(request)
+async def complete_order(order_id: str, admin: dict = fastapi.Depends(get_current_admin)):
     from app.databases.active_orders_database import active_orders_db
     from app.databases.sales_database import sales_db
     
@@ -605,28 +680,29 @@ async def complete_order(order_id: str, request: Request):
     return {"status": "ok"}
 
 @app.post('/api/admin/orders/{order_id}/cancel')
-async def cancel_order(order_id: str, request: Request, reason: str = Form("Скасовано адміном")):
-    check_admin_auth(request)
+async def cancel_order(order_id: str, admin: dict = fastapi.Depends(get_current_admin), reason: str = Form("Скасовано адміном")):
     from app.databases.active_orders_database import active_orders_db
     await active_orders_db.delete_active_order(order_id)
     return {"status": "ok"}
 
 @app.delete('/api/admin/bookings/{booking_id}')
-async def delete_booking(booking_id: str, request: Request):
-    check_admin_auth(request)
+async def delete_booking(booking_id: str, admin: dict = fastapi.Depends(get_current_admin)):
     from app.databases.active_bookings_database import active_bookings_db
     await active_bookings_db.remove_booking(booking_id)
     return {"status": "ok"}
 
 @app.get('/api/admin/menu')
-async def admin_get_menu(request: Request):
-    check_admin_auth(request)
+async def admin_get_menu(admin: dict = fastapi.Depends(get_current_admin)):
+    # Role check
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.menu_database import menu_db
     return await menu_db.get_all_items_detailed()
 
 @app.post('/api/admin/menu')
-async def admin_save_menu_item(request: Request):
-    check_admin_auth(request)
+async def admin_save_menu_item(admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
     item = await request.json()
     from app.databases.menu_database import menu_db
     
@@ -640,22 +716,25 @@ async def admin_save_menu_item(request: Request):
     return {"status": "ok"}
 
 @app.delete('/api/admin/menu/{item_id}')
-async def admin_delete_menu_item(item_id: str, request: Request):
-    check_admin_auth(request)
+async def admin_delete_menu_item(item_id: str, admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.menu_database import menu_db
     await menu_db.delete_item(item_id)
     await public_data_cache.refresh_menu()
     return {"status": "ok"}
 
 @app.get('/api/admin/beans')
-async def admin_get_beans(request: Request):
-    check_admin_auth(request)
+async def admin_get_beans(admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.coffee_beans_database import coffee_beans_db
     return await coffee_beans_db.get_all_beans()
 
 @app.post('/api/admin/beans')
-async def admin_save_bean(request: Request):
-    check_admin_auth(request)
+async def admin_save_bean(admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
     bean = await request.json()
     from app.databases.coffee_beans_database import coffee_beans_db
     
@@ -669,28 +748,32 @@ async def admin_save_bean(request: Request):
     return {"status": "ok"}
 
 @app.delete('/api/admin/beans/{bean_id}')
-async def admin_delete_bean(bean_id: str, request: Request):
-    check_admin_auth(request)
+async def admin_delete_bean(bean_id: str, admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.coffee_beans_database import coffee_beans_db
     await coffee_beans_db.delete_bean(bean_id)
     await public_data_cache.refresh_coffee()
     return {"status": "ok"}
 
 @app.get('/api/admin/support/chats')
-async def admin_get_chats(request: Request):
-    check_admin_auth(request)
+async def admin_get_chats(admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('super', 'boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.guest_messages_database import guest_messages_db
     return await guest_messages_db.get_unique_chats()
 
 @app.get('/api/admin/support/messages')
-async def admin_get_messages(request: Request, phone: str = None, order_id: str = None):
-    check_admin_auth(request)
+async def admin_get_messages(request: Request, phone: str = None, order_id: str = None, admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('super', 'boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.guest_messages_database import guest_messages_db
     return await guest_messages_db.get_messages(phone, order_id)
 
 @app.post('/api/admin/support/reply')
-async def admin_reply_support(request: Request):
-    check_admin_auth(request)
+async def admin_reply_support(request: Request, admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('super', 'boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
     data = await request.json()
     phone = data.get('phone')
     order_id = data.get('order_id')
@@ -698,11 +781,6 @@ async def admin_reply_support(request: Request):
     
     from app.databases.guest_messages_database import guest_messages_db
     await guest_messages_db.add_message(order_id, phone, 'admin', text)
-    
-    # Also try to send to Telegram if user is a TG user
-    # This part requires finding the user's telegram ID, which might be linked to the phone
-    # For now, we at least record it in the DB.
-    
     return {"status": "ok"}
 
 @app.get('/api/past-orders')

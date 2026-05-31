@@ -1,7 +1,8 @@
 
 from app.common.config import DEVELOPER_IDS
 
-from datetime import datetime
+from datetime import datetime, timedelta
+import re
 
 from app.databases.mongo_client import get_db, projection_without_mongo_id
 
@@ -216,10 +217,66 @@ class AdminDatabase:
         return result
 
     async def get_admin_by_id(self, user_id: int):
-
         db = await get_db()
-
         return await db.admins.find_one({'user_id': int(user_id)}, projection_without_mongo_id())
+
+    async def find_admin_by_identifier(self, identifier: str):
+        db = await get_db()
+        # Search by username (case insensitive)
+        clean_id = identifier.strip().replace('@', '').lower()
+        res = await db.admins.find_one({'username': {'$regex': f'^{re.escape(clean_id)}$', '$options': 'i'}}, projection_without_mongo_id())
+        if res: return res
+        
+        # Search by phone
+        from app.utils.phone_utils import normalize_phone
+        norm = normalize_phone(identifier)
+        if norm:
+            res = await db.admins.find_one({'phone_digits': norm}, projection_without_mongo_id())
+            if res: return res
+            
+        # Search by user_id
+        if identifier.isdigit():
+            res = await db.admins.find_one({'user_id': int(identifier)}, projection_without_mongo_id())
+            if res: return res
+            
+        return None
+
+    async def create_auth_request(self, user_id: int, code: str):
+        db = await get_db()
+        await db.admin_auth_requests.update_one(
+            {'user_id': int(user_id)},
+            {'$set': {'code': code, 'confirmed': False, 'created_at': datetime.utcnow()}},
+            upsert=True
+        )
+
+    async def confirm_auth_request(self, user_id: int):
+        db = await get_db()
+        await db.admin_auth_requests.update_one(
+            {'user_id': int(user_id)},
+            {'$set': {'confirmed': True}}
+        )
+
+    async def get_auth_request(self, user_id: int):
+        db = await get_db()
+        return await db.admin_auth_requests.find_one({'user_id': int(user_id)})
+
+    async def create_session(self, user_id: int, token: str):
+        db = await get_db()
+        await db.admin_sessions.insert_one({
+            'user_id': int(user_id),
+            'token': token,
+            'created_at': datetime.utcnow(),
+            'expires_at': datetime.utcnow() + timedelta(days=7)
+        })
+
+    async def verify_session(self, token: str):
+        db = await get_db()
+        sess = await db.admin_sessions.find_one({
+            'token': token,
+            'expires_at': {'$gt': datetime.utcnow()}
+        })
+        if not sess: return None
+        return await self.get_admin_by_id(sess['user_id'])
 
     async def get_locations_for_admin(self, user_id: int) -> list:
 
