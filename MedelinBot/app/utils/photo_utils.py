@@ -29,9 +29,9 @@ def _get_uploads_dir() -> pathlib.Path:
     # 2. Docker / Unified environment (Nginx + Bot)
     # Common path for shared volume between Nginx and Bot
     paths_to_try = [
-        pathlib.Path('/usr/share/nginx/html/images/uploads'),
+        pathlib.Path('/usr/share/nginx/html/assets/images/uploads'),
+        pathlib.Path('/app/MedelinSite/assets/images/uploads'),
         pathlib.Path('/app/uploads'),
-        pathlib.Path('/app/MedelinSite/images/uploads'),
     ]
     
     for p in paths_to_try:
@@ -45,7 +45,7 @@ def _get_uploads_dir() -> pathlib.Path:
     # 3. Local development (fallback)
     try:
         repo_root = pathlib.Path(__file__).resolve().parents[3]
-        dev_path = repo_root / 'MedelinSite' / 'images' / 'uploads'
+        dev_path = repo_root / 'MedelinSite' / 'assets' / 'images' / 'uploads'
         dev_path.mkdir(parents=True, exist_ok=True)
         return dev_path
     except Exception:
