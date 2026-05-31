@@ -127,9 +127,25 @@ window.setCachedData = function (key, data) {
     } catch (e) {}
 };
 
-window.loadMedelinData = async function (key) {
+window.loadMedelinData = async function (key, onUpdate = null) {
     const cached = typeof window.getCachedData === 'function' ? window.getCachedData(key) : null;
+    
+    // Якщо є кеш, повертаємо його відразу для швидкої ініціалізації
     if (cached && Array.isArray(cached) && cached.length > 0) {
+        // Запускаємо фонове оновлення
+        setTimeout(async () => {
+            try {
+                const fresh = await window.fetchMedelinData(key);
+                if (fresh && Array.isArray(fresh) && fresh.length > 0) {
+                    const isDifferent = JSON.stringify(fresh) !== JSON.stringify(cached);
+                    if (isDifferent) {
+                        window.setCachedData(key, fresh);
+                        if (typeof onUpdate === 'function') onUpdate(fresh);
+                    }
+                }
+            } catch (e) {}
+        }, 100);
+        
         return cached;
     }
 
@@ -388,12 +404,12 @@ window.openCartModal = function () {
 
         pastOrders.slice(0, 3).forEach((order, idx) => {
             const date = new Date(order.timestamp).toLocaleDateString('uk-UA');
-            pastOrdersHtml += `<div class="cart-modal__past-order">
-                <div class="cart-modal__past-order-meta">
+            pastOrdersHtml += `<div class="past-order">
+                <div class="past-order__meta">
                     <strong>${order.items.length} тов. — ${order.total} ₴</strong>
-                    <div class="cart-modal__past-order-date">${date}</div>
+                    <div class="past-order__date">${date}</div>
                 </div>
-                <button class="btn cart-modal__past-order-btn" type="button" data-action="repeat-order" data-order-index="${idx}">Повторити</button>
+                <button class="btn past-order__btn" type="button" data-action="repeat-order" data-order-index="${idx}">Повторити</button>
             </div>`;
         });
 

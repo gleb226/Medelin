@@ -17,22 +17,18 @@ async function initLocations() {
         } catch (e) {}
     }
 
-    const cached = typeof window.getCachedData === 'function' ? window.getCachedData('locations') : null;
-    if (cached) {
-        renderLocations(cached);
-    }
-
     try {
-        const data = await window.fetchMedelinData('locations');
+        const data = await window.loadMedelinData('locations', (fresh) => {
+            renderLocations(fresh);
+        });
         if (data) {
-            window.setCachedData('locations', data);
             renderLocations(data);
-        } else if (!cached) {
+        } else {
             gridRoot.innerHTML = '<div class="error-msg">Не вдалося завантажити список локацій. <br><button type="button" data-action="reload-page" class="btn btn--sm btn--mt-md">Оновити сторінку</button></div>';
         }
     } catch (err) {
         console.error('initLocations error:', err);
-        if (!cached) gridRoot.innerHTML = '<div class="error-msg">Критична помилка завантаження локацій.</div>';
+        gridRoot.innerHTML = '<div class="error-msg">Критична помилка завантаження локацій.</div>';
     }
 }
 
@@ -129,43 +125,52 @@ async function initSocials() {
     if (!socialsRoot && !footerSocials) return;
 
     try {
-        const socials = await window.fetchMedelinData('socials');
-        if (!socials) return;
-
-        if (socialsRoot) {
-            socialsRoot.innerHTML = '<div class="contact-social-icons"></div>';
-            const container = socialsRoot.querySelector('.contact-social-icons');
-            socials.forEach((soc) => {
-                const nameKey = soc.name.toLowerCase().trim();
-                const byUrl = guessSocialKeyFromUrl(soc.url);
-                let iconClass = SOCIAL_ICONS[nameKey] || (byUrl ? SOCIAL_ICONS[byUrl] : null) || 'fas fa-link';
-                const a = document.createElement('a');
-                a.href = soc.url;
-                a.className = 'social-icon';
-                a.target = '_blank';
-                a.title = soc.name;
-                a.innerHTML = `<i class="${iconClass}"></i><span style="font-size:0.7rem; font-weight:700; text-transform:uppercase;">${soc.name}</span>`;
-                container.appendChild(a);
-            });
-        }
-
-        if (footerSocials) {
-            footerSocials.innerHTML = '';
-            socials.forEach((soc) => {
-                const a = document.createElement('a');
-                a.href = soc.url;
-                a.target = '_blank';
-                a.className = 'footer__link';
-                const nameKey = soc.name.toLowerCase().trim();
-                const byUrl = guessSocialKeyFromUrl(soc.url);
-                const iconClass = SOCIAL_ICONS[nameKey] || (byUrl ? SOCIAL_ICONS[byUrl] : null) || 'fas fa-link';
-                a.innerHTML = `<i class="${iconClass}" style="margin-right:5px;"></i>${soc.name}`;
-                a.style.marginRight = '15px';
-                footerSocials.appendChild(a);
-            });
+        const socials = await window.loadMedelinData('socials', (fresh) => {
+            renderSocials(fresh);
+        });
+        if (socials) {
+            renderSocials(socials);
         }
     } catch (err) {
         console.error('initSocials error:', err);
+    }
+}
+
+function renderSocials(socials) {
+    const socialsRoot = document.getElementById('socials-list');
+    const footerSocials = document.getElementById('footer-socials');
+
+    if (socialsRoot) {
+        socialsRoot.innerHTML = '<div class="contact-social-icons"></div>';
+        const container = socialsRoot.querySelector('.contact-social-icons');
+        socials.forEach((soc) => {
+            const nameKey = soc.name.toLowerCase().trim();
+            const byUrl = guessSocialKeyFromUrl(soc.url);
+            let iconClass = SOCIAL_ICONS[nameKey] || (byUrl ? SOCIAL_ICONS[byUrl] : null) || 'fas fa-link';
+            const a = document.createElement('a');
+            a.href = soc.url;
+            a.className = 'social-icon';
+            a.target = '_blank';
+            a.title = soc.name;
+            a.innerHTML = `<i class="${iconClass}"></i><span style="font-size:0.7rem; font-weight:700; text-transform:uppercase;">${soc.name}</span>`;
+            container.appendChild(a);
+        });
+    }
+
+    if (footerSocials) {
+        footerSocials.innerHTML = '';
+        socials.forEach((soc) => {
+            const a = document.createElement('a');
+            a.href = soc.url;
+            a.target = '_blank';
+            a.className = 'footer__link';
+            const nameKey = soc.name.toLowerCase().trim();
+            const byUrl = guessSocialKeyFromUrl(soc.url);
+            const iconClass = SOCIAL_ICONS[nameKey] || (byUrl ? SOCIAL_ICONS[byUrl] : null) || 'fas fa-link';
+            a.innerHTML = `<i class="${iconClass}" style="margin-right:5px;"></i>${soc.name}`;
+            a.style.marginRight = '15px';
+            footerSocials.appendChild(a);
+        });
     }
 }
 

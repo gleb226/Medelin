@@ -902,6 +902,125 @@ h4 {
     color: var(--color-dark-brown);
 }
 
+/* --- Past Orders Styles (in Cart) --- */
+.cart-modal__past-orders {
+    padding: 1.5rem;
+    background: rgba(139, 94, 60, 0.05);
+    border-radius: 20px;
+    margin: 1rem 0;
+    border: 1px solid rgba(139, 94, 60, 0.1);
+}
+
+.cart-modal__past-orders-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--color-dark-brown);
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.cart-modal__past-orders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.past-order {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    padding: 12px 16px;
+    border-radius: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.past-order__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.past-order__meta strong {
+    font-size: 0.95rem;
+    color: var(--color-dark-brown);
+}
+
+.past-order__date {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+}
+
+.past-order__btn {
+    padding: 8px 16px !important;
+    font-size: 0.85rem !important;
+    height: auto !important;
+    min-height: auto !important;
+    border-radius: 12px !important;
+    background: var(--color-coffee-soft) !important;
+}
+
+/* --- Payment Methods Styles (Checkout) --- */
+.payment-methods-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    padding: 1rem 0;
+}
+
+.payment-btn {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 1.25rem 1.5rem !important;
+    border-radius: 20px !important;
+    border: 2px solid rgba(139, 94, 60, 0.1) !important;
+    background: #fff !important;
+    font-weight: 700 !important;
+    font-family: var(--font-main) !important;
+    font-size: 1.05rem !important;
+    color: var(--color-dark-brown) !important;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    text-align: left !important;
+}
+
+.payment-btn i {
+    font-size: 1.5rem;
+    color: var(--color-coffee);
+    width: 24px;
+    text-align: center;
+}
+
+.payment-btn:hover {
+    border-color: var(--color-coffee-soft) !important;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(139, 94, 60, 0.1);
+}
+
+.payment-btn--active {
+    background: var(--color-coffee) !important;
+    border-color: var(--color-coffee) !important;
+    color: #fff !important;
+    box-shadow: 0 10px 25px rgba(139, 94, 60, 0.25);
+}
+
+.payment-btn--active i {
+    color: #fff !important;
+}
+
+@media (max-width: 600px) {
+    .payment-methods-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .past-order {
+        flex-direction: row;
+        gap: 10px;
+    }
+}
+
 #locations-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
