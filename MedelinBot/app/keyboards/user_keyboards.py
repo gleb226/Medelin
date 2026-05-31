@@ -311,11 +311,17 @@ def get_beans_kb(items):
     keyboard.append([InlineKeyboardButton(text='🏠 НА ГОЛОВНУ', callback_data='back_main_menu_only')])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-def get_beans_weight_kb():
+def get_beans_weight_kb(prices=None):
+    prices = prices or {}
+
+    def price_text(weight):
+        value = int(prices.get(str(weight)) or 0)
+        return f" — {value}₴" if value else ""
+
     keyboard = [
-        [InlineKeyboardButton(text='⚖️ 250г', callback_data='bean_w_250'),
-         InlineKeyboardButton(text='⚖️ 500г', callback_data='bean_w_500')],
-        [InlineKeyboardButton(text='⚖️ 1000г (1кг)', callback_data='bean_w_1000')],
+        [InlineKeyboardButton(text=f'⚖️ 250г{price_text(250)}', callback_data='bean_w_250'),
+         InlineKeyboardButton(text=f'⚖️ 500г{price_text(500)}', callback_data='bean_w_500')],
+        [InlineKeyboardButton(text=f'⚖️ 1000г / 1кг{price_text(1000)}', callback_data='bean_w_1000')],
         [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='bean_back')]
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
