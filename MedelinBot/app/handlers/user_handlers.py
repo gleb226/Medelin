@@ -569,37 +569,13 @@ async def beans_chosen(callback: CallbackQuery, state: FSMContext):
 
     bean_name = clean_coffee_name(bean['name'])
 
-    await state.update_data(bean_name=bean_name, base_price=bean['price_250'], bean_prices={'250': bean.get('price_250', 0), '500': bean.get('price_500', 0), '1000': bean.get('price_1000', 0)})
+    await state.update_data(bean_name=bean_name, base_price=bean['price_250'])
 
     parts = [f'<i class="fas fa-coffee"></i> <b>{bean_name}</b>\n']
-
-    if bean.get('short_description'):
-
-        parts.append(f"<i class=\"fas fa-align-left\"></i> <b>Коротко:</b> {bean['short_description']}")
 
     if bean.get('description'):
 
         parts.append(f"""<i class="fas fa-info-circle"></i> <b>Опис:</b> {bean['description']}""")
-
-    if bean.get('article'):
-
-        parts.append(f"""<b>Артикул:</b> {bean['article']}""")
-
-    if bean.get('country'):
-
-        parts.append(f"""<i class="fas fa-globe"></i> <b>Країна:</b> {bean['country']}""")
-
-    if bean.get('sort'):
-
-        parts.append(f"""<i class="fas fa-seedling"></i> <b>Сорт:</b> {bean['sort']}""")
-
-    if bean.get('roast'):
-
-        parts.append(f"""<i class="fas fa-fire"></i> <b>Обсмаження:</b> {bean['roast']}""")
-
-    if bean.get('taste'):
-
-        parts.append(f"""<i class="fas fa-mug-hot"></i> <b>Смакові ноти:</b> {bean['taste']}""")
 
     if bean.get('cup_score'):
 
@@ -621,10 +597,6 @@ async def beans_chosen(callback: CallbackQuery, state: FSMContext):
 
         parts.append(f"""<i class="fas fa-mountain"></i> <b>Висота:</b> {bean['altitude']}""")
 
-    if bean.get('recommendation'):
-
-        parts.append(f"""<i class="fas fa-check-circle"></i> <b>Рекомендація:</b> {bean['recommendation']}""")
-
     def render_stars(val):
 
         n = min(max(int(float(val or 0)), 0), 5)
@@ -643,32 +615,11 @@ async def beans_chosen(callback: CallbackQuery, state: FSMContext):
 
             parts.append(f"☕️ Гірчинка: {render_stars(bean['bitterness'])}")
 
-        if bean.get('body'):
-
-            parts.append(f"⚖️ Тіло: {render_stars(bean['body'])}")
-
-    price_250 = int(bean.get('price_250') or 0)
-    price_500 = int(bean.get('price_500') or 0)
-    price_1000 = int(bean.get('price_1000') or 0)
-
-    if price_250 or price_500 or price_1000:
-        parts.append('\n<b>ЦІНИ:</b>')
-        if price_250:
-            parts.append(f"⚖️ 250г — {price_250} грн")
-        if price_500:
-            parts.append(f"⚖️ 500г — {price_500} грн")
-        if price_1000:
-            parts.append(f"⚖️ 1кг — {price_1000} грн")
-
     parts.append('\n⚖️ <b>Оберіть вагу:</b>')
 
     text = '\n'.join(parts)
 
-    reply_markup = kb.get_beans_weight_kb({
-        '250': bean.get('price_250', 0),
-        '500': bean.get('price_500', 0),
-        '1000': bean.get('price_1000', 0),
-    })
+    reply_markup = kb.get_beans_weight_kb()
 
     if bean.get('image_url'):
 
