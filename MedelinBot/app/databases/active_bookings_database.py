@@ -48,36 +48,39 @@ class ActiveBookingsDatabase:
         return
 
     async def add_booking(self, order_id, fullname, location_id, date_time, people_count):
-
         db = await get_db()
-
         booking_dt = self._parse_booking_datetime(date_time)
-
-        await db.active_bookings.insert_one({
-
-            'order_id': str(order_id),
-
-            'fullname': fullname,
-
-            'location_id': str(location_id),
-
-            'date_time_str': date_time,
-
-            'booking_at': booking_dt,
-
-            'people_count': people_count,
-
-            'created_at': datetime.utcnow()
-
-        })
+        await db.active_bookings.update_one(
+            {'order_id': str(order_id)},
+            {'$set': {
+                'fullname': fullname,
+                'location_id': str(location_id),
+                'date_time_str': date_time,
+                'booking_at': booking_dt,
+                'people_count': people_count,
+                'created_at': datetime.utcnow()
+            }},
+            upsert=True
+        )
 
     async def add_active_booking(self, order_id, user_id, fullname, phone, location_id, date_time, people_count, wishes):
-
         db = await get_db()
-
         booking_dt = self._parse_booking_datetime(date_time)
-
-        await db.active_bookings.insert_one({'order_id': str(order_id), 'user_id': int(user_id) if user_id is not None else None, 'fullname': fullname, 'phone': phone, 'location_id': str(location_id), 'date_time_str': date_time, 'booking_at': booking_dt, 'people_count': people_count, 'wishes': wishes, 'created_at': datetime.utcnow()})
+        await db.active_bookings.update_one(
+            {'order_id': str(order_id)},
+            {'$set': {
+                'user_id': int(user_id) if user_id is not None else None,
+                'fullname': fullname,
+                'phone': phone,
+                'location_id': str(location_id),
+                'date_time_str': date_time,
+                'booking_at': booking_dt,
+                'people_count': people_count,
+                'wishes': wishes,
+                'created_at': datetime.utcnow()
+            }},
+            upsert=True
+        )
 
     async def get_active_bookings(self, location_ids=None):
 
