@@ -1114,6 +1114,47 @@ window.closeBookingModal = function () {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Secret Admin Entry Logic
+    const logo = document.querySelector('.header__logo');
+    if (logo) {
+        let logoClicks = 0;
+        let logoTimer = null;
+        let adminTimer = null;
+
+        logo.addEventListener('click', (e) => {
+            logoClicks++;
+            
+            // Завжди перериваємо стандартний перехід, бо ми самі вирішуємо куди йти
+            e.preventDefault();
+            
+            if (logoTimer) clearTimeout(logoTimer);
+            if (adminTimer) clearTimeout(adminTimer);
+
+            if (logoClicks === 1) {
+                // Якщо за 500мс більше не було кліків - йдемо на головну
+                logoTimer = setTimeout(() => {
+                    if (logoClicks === 1) window.location.href = 'index.html';
+                    logoClicks = 0;
+                }, 500);
+            } else if (logoClicks === 7) {
+                // Чітко 7 кліків - чекаємо 1 сек і в адмінку
+                adminTimer = setTimeout(() => {
+                    if (logoClicks === 7) {
+                        // Для зручності додаємо auth якщо він є в пам'яті, 
+                        // або просто перекидаємо на сторінку
+                        const auth = localStorage.getItem('medelin_admin_auth') || 'medelin2026';
+                        window.location.href = `admin-panel.html?auth=${auth}`;
+                    }
+                    logoClicks = 0;
+                }, 1000);
+            } else if (logoClicks >= 8) {
+                // 8 і більше - скидаємо і на головну
+                logoClicks = 0;
+                window.location.href = 'index.html';
+            }
+        });
+    }
+
     updateCartBadge();
     if (window.setupMobileMenu) window.setupMobileMenu();
     if (typeof window.syncPastOrders === 'function') window.syncPastOrders();
