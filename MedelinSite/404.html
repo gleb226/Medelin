@@ -13,6 +13,7 @@
                 --color-coffee: #6f4e37;
                 --color-bg: #f8f9fa;
                 --color-text: #2d3436;
+                --color-cream: #f4ece1;
             }
 
             * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,7 +29,10 @@
                 align-items: center;
                 text-align: center;
                 padding: 2rem;
+                transition: background-color 0.5s ease;
             }
+
+            .container { max-width: 400px; width: 100%; }
 
             .logo {
                 font-family: 'Marcellus', serif;
@@ -37,8 +41,9 @@
                 color: var(--color-coffee);
                 text-decoration: none;
                 margin-bottom: 2rem;
-                cursor: default;
+                cursor: pointer;
                 user-select: none;
+                display: inline-block;
             }
 
             h1 { font-size: 6rem; font-weight: 800; opacity: 0.1; line-height: 1; }
@@ -51,47 +56,176 @@
                 text-decoration: none;
                 border-radius: 30px;
                 font-weight: 600;
-                transition: opacity 0.2s;
+                transition: all 0.3s;
+                border: none;
+                cursor: pointer;
+                width: 100%;
+                font-family: 'Manrope', sans-serif;
             }
 
-            .btn:hover { opacity: 0.9; }
+            .btn:hover { opacity: 0.9; transform: translateY(-2px); }
+
+            #login-form {
+                display: none;
+                background: white;
+                padding: 2.5rem;
+                border-radius: 20px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+                text-align: left;
+            }
+
+            .form-group { margin-bottom: 1.5rem; }
+            .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: var(--color-coffee); }
+            .form-group input {
+                width: 100%;
+                padding: 0.8rem 1rem;
+                border-radius: 12px;
+                border: 2px solid #eee;
+                outline: none;
+                font-family: inherit;
+                transition: border-color 0.3s;
+            }
+            .form-group input:focus { border-color: var(--color-coffee); }
+
+            #two-fa-section { display: none; }
+            .status-msg { margin-top: 1rem; font-size: 0.85rem; color: #e74c3c; min-height: 1.2rem; }
+            .loading { opacity: 0.5; pointer-events: none; }
         </style>
     </head>
     <body>
-        <div class="logo" id="secret-logo">MEDELIN</div>
-        <h1>404</h1>
-        <p>На жаль, таку сторінку не знайдено.</p>
-        <a href="/" class="btn">Повернутися на головну</a>
+        <div class="container" id="main-container">
+            <div class="logo" id="secret-logo">MEDELIN</div>
+            
+            <div id="not-found-content">
+                <h1>404</h1>
+                <p>На жаль, таку сторінку не знайдено.</p>
+                <a href="/" class="btn">Повернутися на головну</a>
+            </div>
+
+            <div id="login-form">
+                <h2 style="font-family: 'Marcellus', serif; margin-bottom: 1.5rem; color: var(--color-coffee);">Вхід</h2>
+                
+                <div id="auth-section">
+                    <div class="form-group">
+                        <label>Ідентифікатор (Username/Phone/ID)</label>
+                        <input type="text" id="identifier" placeholder="@username або 380...">
+                    </div>
+                    <div class="form-group">
+                        <label>Пароль</label>
+                        <input type="password" id="password" placeholder="••••">
+                    </div>
+                    <button class="btn" id="login-btn">Увійти</button>
+                </div>
+
+                <div id="two-fa-section">
+                    <p style="font-size: 0.9rem; margin-bottom: 1.5rem;">Підтвердіть вхід у Telegram-боті</p>
+                    <div style="display: flex; justify-content: center; margin-bottom: 1.5rem;">
+                        <div class="spinner" style="width: 30px; height: 30px; border: 3px solid var(--color-cream); border-top-color: var(--color-coffee); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    </div>
+                    <p id="timer-text" style="font-size: 0.8rem; opacity: 0.5;">Очікування підтвердження...</p>
+                </div>
+
+                <div class="status-msg" id="status-msg"></div>
+            </div>
+        </div>
+
+        <style>
+            @keyframes spin { to { transform: rotate(360deg); } }
+        </style>
 
         <script>
             let clicks = 0;
             let timer = null;
             const logo = document.getElementById('secret-logo');
-            const is_admin_route = window.location.pathname.includes('/admin-panel');
+            const nfContent = document.getElementById('not-found-content');
+            const loginForm = document.getElementById('login-form');
 
             logo.addEventListener('click', () => {
-                if (!is_admin_route) return;
-
                 clicks++;
-                clearTimeout(timer);
-                
-                if (clicks === 7) {
-                    const pass = prompt('Вхід в систему:');
-                    if (pass) {
-                        window.location.href = window.location.pathname + '?auth=' + encodeURIComponent(pass);
+                if (timer) clearTimeout(timer);
+
+                if (clicks >= 8) {
+                    window.location.href = '/';
+                    return;
+                }
+
+                timer = setTimeout(() => {
+                    if (clicks === 7) {
+                        // Success: Show login
+                        nfContent.style.display = 'none';
+                        loginForm.style.display = 'block';
+                        document.body.style.backgroundColor = 'var(--color-cream)';
+                    } else if (clicks > 0 && clicks < 7) {
+                        // Fail: Go home
+                        window.location.href = '/';
                     }
                     clicks = 0;
-                } else {
-                    timer = setTimeout(() => {
-                        clicks = 0;
-                    }, 3000);
-                }
+                }, 1000);
             });
 
-            // If it's a regular 404 (not admin-panel), make the logo a link back home
-            if (!is_admin_route) {
-                logo.style.cursor = 'pointer';
-                logo.onclick = () => window.location.href = '/';
+            // Login Logic
+            const loginBtn = document.getElementById('login-btn');
+            const statusMsg = document.getElementById('status-msg');
+            let checkInterval = null;
+
+            loginBtn.onclick = async () => {
+                const identifier = document.getElementById('identifier').value;
+                const password = document.getElementById('password').value;
+
+                if (!identifier || !password) {
+                    statusMsg.textContent = 'Заповніть усі поля';
+                    return;
+                }
+
+                statusMsg.textContent = '';
+                loginBtn.classList.add('loading');
+
+                try {
+                    const resp = await fetch('/api/admin/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ identifier, password })
+                    });
+                    const data = await resp.json();
+
+                    if (resp.ok) {
+                        document.getElementById('auth-section').style.display = 'none';
+                        document.getElementById('two-fa-section').style.display = 'block';
+                        startPolling(data.user_id);
+                    } else {
+                        statusMsg.textContent = data.detail || 'Помилка входу';
+                        loginBtn.classList.remove('loading');
+                    }
+                } catch (e) {
+                    statusMsg.textContent = 'Помилка мережі';
+                    loginBtn.classList.remove('loading');
+                }
+            };
+
+            function startPolling(userId) {
+                checkInterval = setInterval(async () => {
+                    try {
+                        const resp = await fetch(`/api/admin/verify?user_id=${userId}`);
+                        const data = await resp.json();
+                        if (data.status === 'ok') {
+                            clearInterval(checkInterval);
+                            localStorage.setItem('medelin_admin_auth', data.token);
+                            window.location.href = `/admin-panel?auth=${data.token}`;
+                        } else if (data.status === 'error') {
+                            clearInterval(checkInterval);
+                            statusMsg.textContent = data.detail || 'Помилка верифікації';
+                            resetForm();
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }, 2000);
+            }
+
+            function resetForm() {
+                document.getElementById('auth-section').style.display = 'block';
+                document.getElementById('two-fa-section').style.display = 'none';
+                loginBtn.classList.remove('loading');
             }
         </script>
     </body>

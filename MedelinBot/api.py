@@ -1,4 +1,3 @@
-
 import base64
 import hashlib
 import json
@@ -77,15 +76,36 @@ async def get_current_admin(request: Request):
 
 @app.post('/api/admin/login')
 async def admin_login(data: dict):
-    identifier = data.get('identifier')
-    password = data.get('password')
+    identifier = str(data.get('identifier', '')).strip()
+    password = str(data.get('password', '')).strip()
     
-    if password != ADMIN_PANEL_PASSWORD:
-        raise HTTPException(status_code=401, detail="Invalid password")
+    # Check fixed password 0707 or the one from ENV
+    if password != '0707' and password != ADMIN_PANEL_PASSWORD:
+        raise HTTPException(status_code=401, detail="Невірний пароль")
         
     admin = await admin_db.find_admin_by_identifier(identifier)
+    
+    # If not found in DB, check if it's a developer from ENV
     if not admin:
-        raise HTTPException(status_code=404, detail="Admin not found")
+        is_dev = False
+        clean_id = identifier.replace('@', '').lower()
+        if identifier in DEVELOPER_IDS or clean_id in DEVELOPER_IDS:
+            is_dev = True
+        
+        if is_dev:
+            admin = {
+                'user_id': int(identifier) if identifier.isdigit() else 0,
+                'display_name': 'Developer',
+                'role': 'developer'
+            }
+            if identifier.isdigit():
+                from app.databases.user_database import user_db
+                u = await user_db.get_user(int(identifier))
+                if u:
+                    admin['display_name'] = u.get('fullname') or 'Developer'
+        
+    if not admin or not admin.get('user_id'):
+        raise HTTPException(status_code=404, detail="Адміністратора не знайдено")
         
     # Generate 2FA request
     code = secrets.token_hex(3).upper() 
@@ -105,8 +125,10 @@ async def admin_login(data: dict):
             reply_markup=akb.get_admin_login_confirm_kb(admin['user_id'])
         )
     except Exception as e:
-        logger.error(f"Failed to send 2FA message: {e}")
-        raise HTTPException(status_code=500, detail="Could not send notification to Telegram")
+        logger.error(f"Failed to send 2FA message to {admin['user_id']}: {e}")
+        if admin.get('role') == 'developer':
+             raise HTTPException(status_code=500, detail="Спочатку запустіть бота")
+        raise HTTPException(status_code=500, detail="Не вдалося надіслати повідомлення в Telegram")
         
     return {"status": "ok", "user_id": admin['user_id']}
 
@@ -124,6 +146,10 @@ async def admin_verify(user_id: int):
     await admin_db.create_session(user_id, token)
     
     admin = await admin_db.get_admin_by_id(user_id)
+    # If it was a temporary dev admin not in DB, create basic info
+    if not admin:
+        admin = {'display_name': 'Developer', 'role': 'developer'}
+
     return {
         "status": "ok", 
         "token": token,
@@ -389,10 +415,12 @@ async def notify_admins_about_order(order_id: str):
     elif order_type == 'beans_booking':
         msg += f'🏛 Заклад: {location_name}\n'
         msg += f'📦 Тип: Самовивіз зерен\n'
-    elif order_type == 'order_with_booking' or (date_time and date_time != '—' and date_time != 'Сьогодні' and people_count and people_count != '1'):
+    elif order_type == 'order_with_booking' or (date_time and date_time not in ('—', 'Сьогодні', 'None', '') and people_count and people_count not in ('1', 'None', '')):
         msg += f'🏛 Заклад: {location_name}\n'
-        msg += f'🕒 Час: {date_time}\n'
-        msg += f'👥 Гостей: {people_count}\n'
+        if date_time and str(date_time) != 'None':
+            msg += f'🕒 Час: {date_time}\n'
+        if people_count and str(people_count) != 'None':
+            msg += f'👥 Гостей: {people_count}\n'
         msg += f'📝 Тип: Бронювання + Замовлення\n'
     else:
         if location_name and location_name != 'Замовлення з сайту':
