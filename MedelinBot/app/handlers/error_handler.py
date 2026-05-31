@@ -9,7 +9,7 @@ from aiogram.types import ErrorEvent
 
 from aiogram.exceptions import TelegramBadRequest
 
-from app.common.config import BOSS_IDS
+from app.common.config import DEVELOPER_IDS
 
 from app.databases.mongo_client import get_db
 

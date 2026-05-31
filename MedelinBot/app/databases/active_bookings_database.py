@@ -109,4 +109,10 @@ class ActiveBookingsDatabase:
 
         await db.active_bookings.delete_one({'order_id': str(order_id)})
 
+    async def get_all_active_bookings(self):
+        db = await get_db()
+        # Clean up old ones first (optional here as it's done in get_active_bookings)
+        cur = db.active_bookings.find({}).sort('booking_at', 1)
+        return await cur.to_list(length=None)
+
 active_bookings_db = ActiveBookingsDatabase()

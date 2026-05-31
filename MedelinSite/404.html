@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="uk">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>404 - Сторінку не знайдено</title>
+        <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ50BUE2d30GBASKRdrCoBgrFBfvjFTiAKCYA&s" type="image/png" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+        <style>
+            :root {
+                --color-coffee: #6f4e37;
+                --color-bg: #f8f9fa;
+                --color-text: #2d3436;
+            }
+
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+
+            body {
+                font-family: 'Manrope', sans-serif;
+                background-color: var(--color-bg);
+                color: var(--color-text);
+                display: flex;
+                flex-direction: column;
+                min-height: 100vh;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                padding: 2rem;
+            }
+
+            .logo {
+                font-family: 'Marcellus', serif;
+                font-size: 2.5rem;
+                letter-spacing: 4px;
+                color: var(--color-coffee);
+                text-decoration: none;
+                margin-bottom: 2rem;
+                cursor: default;
+                user-select: none;
+            }
+
+            h1 { font-size: 6rem; font-weight: 800; opacity: 0.1; line-height: 1; }
+            p { font-size: 1.2rem; margin-bottom: 2rem; opacity: 0.6; }
+
+            .btn {
+                padding: 0.8rem 2rem;
+                background-color: var(--color-coffee);
+                color: white;
+                text-decoration: none;
+                border-radius: 30px;
+                font-weight: 600;
+                transition: opacity 0.2s;
+            }
+
+            .btn:hover { opacity: 0.9; }
+        </style>
+    </head>
+    <body>
+        <div class="logo" id="secret-logo">MEDELIN</div>
+        <h1>404</h1>
+        <p>На жаль, таку сторінку не знайдено.</p>
+        <a href="/" class="btn">Повернутися на головну</a>
+
+        <script>
+            let clicks = 0;
+            let timer = null;
+            const logo = document.getElementById('secret-logo');
+            const is_admin_route = window.location.pathname.includes('/admin-panel');
+
+            logo.addEventListener('click', () => {
+                if (!is_admin_route) return;
+
+                clicks++;
+                clearTimeout(timer);
+                
+                if (clicks === 7) {
+                    const pass = prompt('Вхід в систему:');
+                    if (pass) {
+                        window.location.href = window.location.pathname + '?auth=' + encodeURIComponent(pass);
+                    }
+                    clicks = 0;
+                } else {
+                    timer = setTimeout(() => {
+                        clicks = 0;
+                    }, 3000);
+                }
+            });
+
+            // If it's a regular 404 (not admin-panel), make the logo a link back home
+            if (!is_admin_route) {
+                logo.style.cursor = 'pointer';
+                logo.onclick = () => window.location.href = '/';
+            }
+        </script>
+    </body>
+</html>

@@ -22,7 +22,7 @@ services:
     volumes:
       - ./MedelinBot/app/databases:/app/app/databases
       - ./MedelinSite/cache:/usr/share/nginx/html/cache
-      - ./MedelinSite/images/uploads:/usr/share/nginx/html/images/uploads
+      - ./MedelinSite/assets/images/uploads:/usr/share/nginx/html/assets/images/uploads
     ports:
       - "80:80"
     depends_on:

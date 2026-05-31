@@ -146,16 +146,18 @@ window.loadMedelinData = async function (key) {
 
 function openPopup(id) {
     const p = document.getElementById(id);
-    if (p) p.classList.add('popup--open');
+    if (p) p.classList.add('popup--active');
     document.body.classList.add('body--scroll-locked');
 }
 function closePopup(id) {
     const p = document.getElementById(id);
-    if (p) p.classList.remove('popup--open');
+    if (p) p.classList.remove('popup--active');
     document.body.classList.remove('body--scroll-locked');
 }
 window.openPopup = openPopup;
 window.closePopup = closePopup;
+
+
 
 (function setupMedelinActionDelegation() {
     if (window.__MEDELIN_ACTIONS_READY) return;
@@ -417,7 +419,7 @@ window.openCartModal = function () {
     html += `</div></div>`;
 
     container.innerHTML = html;
-    container.classList.add('cart-modal--open');
+    container.classList.add('cart-modal--active');
     document.body.classList.add('body--scroll-locked');
 
     const btn = document.getElementById('btn-open-checkout');
@@ -442,7 +444,7 @@ window.repeatOrder = function (idx) {
 
 window.closeCartModal = function () {
     const c = document.getElementById('cart-modal-container');
-    if (c) c.classList.remove('cart-modal--open');
+    if (c) c.classList.remove('cart-modal--active');
     document.body.classList.remove('body--scroll-locked');
 };
 
@@ -456,7 +458,7 @@ window.removeFromCart = function (t, i) {
 
 window.closeCheckoutModal = function () {
     const c = document.getElementById('checkout-modal-container');
-    if (c) c.classList.remove('cart-modal--open');
+    if (c) c.classList.remove('cart-modal--active');
     document.body.classList.remove('body--scroll-locked');
 };
 
@@ -482,7 +484,7 @@ window.openCheckoutModal = function () {
             </div>
         </div>
     `;
-    container.classList.add('cart-modal--open');
+    container.classList.add('cart-modal--active');
 
     const qrZaklad = window.getURLParameter('zaklad');
     const qrStolyk = window.getURLParameter('stolyk');
@@ -521,7 +523,7 @@ window.openCheckoutModal = function () {
                         </div>
                         <div class="form-group">
                             <label class="form-label">Побажання чи уточнення — опційно</label>
-                            <textarea name="comment" placeholder="Ваші побажання до замовлення..." rows="2" style="width: 100%; border: 1px solid var(--gray-border, #e2e8f0); border-radius: var(--radius-sm, 0.375rem); padding: 0.75rem; font-family: inherit; font-size: 1rem; resize: vertical;"></textarea>
+                            <textarea name="comment" placeholder="Ваші побажання до замовлення..." rows="2"></textarea>
                         </div>
 
                         ${
@@ -596,26 +598,26 @@ window.openCheckoutModal = function () {
                 </div>
 
                 <div id="checkout-payment-step" style="display:none;">
-                    <p class="payment-methods__title">Оберіть метод оплати:</p>
-                    <div class="payment-methods">
-                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="card">
+                    <p class="payment-title">Оберіть метод оплати:</p>
+                    <div class="payment-methods-grid">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="card">
                             <i class="fas fa-credit-card"></i> <span>Оплата картою</span>
                         </button>
-                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="applepay">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="applepay">
                             <i class="fab fa-apple-pay"></i> <span>Apple Pay</span>
                         </button>
-                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="googlepay">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="googlepay">
                             <i class="fab fa-google-pay"></i> <span>Google Pay</span>
                         </button>
-                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="privatpay">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="privatpay">
                             <i class="fas fa-university"></i> <span>PrivatPay</span>
                         </button>
-                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="monobank">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="monobank">
                             <i class="fas fa-wallet"></i> <span>MonoPay</span>
                         </button>
                     </div>
                     <div style="padding: 0 1.5rem 1.5rem;">
-                        <button class="btn--back" type="button" data-action="back-to-details"><i class="fas fa-arrow-left btn__icon--left"></i> Назад до деталей</button>
+                        <button class="btn-back" type="button" data-action="back-to-details"><i class="fas fa-arrow-left btn__icon--left"></i> Назад до деталей</button>
                     </div>
                 </div>
             </div>`;
@@ -934,7 +936,7 @@ window.openBookingWizard = function (e) {
     <div class="booking-modal__content checkout-modal">
         <button class="booking-modal__close" type="button" data-action="close-booking-modal"><i class="fas fa-times"></i></button>
         <h3 class="checkout-modal__title">Бронювання столика</h3>
-        <form id="booking-form" class="booking-modal__form" style="padding: 0 2rem 2rem;">
+        <form id="booking-form" class="booking-modal__form">
             <div class="form-group">
                 <label class="form-label">Ваше ім'я</label>
                 <input type="text" name="name" placeholder="Як до вас звертатися?" value="${userData.name || ''}" required>
@@ -972,7 +974,7 @@ window.openBookingWizard = function (e) {
             <button type="submit" class="btn--checkout" style="margin-top: 1rem;">Забронювати</button>
         </form>
     </div>`;
-    container.classList.add('booking-modal--open');
+    container.classList.add('booking-modal--active');
     document.body.classList.add('body--scroll-locked');
     (async () => {
         const locs = await window.loadMedelinData('locations');
@@ -1040,7 +1042,7 @@ window.openBookingWizard = function (e) {
 window.closeBookingModal = function () {
     const c = document.getElementById('booking-modal-container');
     if (c) {
-        c.classList.remove('booking-modal--open');
+        c.classList.remove('booking-modal--active');
         document.body.classList.remove('body--scroll-locked');
     }
 };
@@ -1075,7 +1077,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p>Завантажуємо деталі замовлення...</p>
                     </div>
                 </div>`;
-            container.classList.add('cart-modal--open');
+            container.classList.add('cart-modal--active');
             
             fetch(`${window.API_BASE_URL}/api/orders/${orderId}`)
                 .then(r => {
@@ -1096,21 +1098,21 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">Сума до оплати:</p>
                                     <p style="font-size: 2.2rem; font-weight: 900; color: var(--color-coffee);">${order.total} ₴</p>
                                 </div>
-                                <p class="payment-methods__title">Оберіть метод оплати:</p>
-                                <div class="payment-methods">
-                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="card">
+                                <p class="payment-title">Оберіть метод оплати:</p>
+                                <div class="payment-methods-grid">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="card">
                                         <i class="fas fa-credit-card"></i> <span>Оплата картою</span>
                                     </button>
-                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="applepay">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="applepay">
                                         <i class="fab fa-apple-pay"></i> <span>Apple Pay</span>
                                     </button>
-                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="googlepay">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="googlepay">
                                         <i class="fab fa-google-pay"></i> <span>Google Pay</span>
                                     </button>
-                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="privatpay">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="privatpay">
                                         <i class="fas fa-university"></i> <span>PrivatPay</span>
                                     </button>
-                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="monobank">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="monobank">
                                         <i class="fas fa-wallet"></i> <span>MonoPay</span>
                                     </button>
                                 </div>
