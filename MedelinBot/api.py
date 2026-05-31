@@ -12,12 +12,14 @@ import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Response, Request, Form
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from bson import ObjectId
 from fastapi.encoders import jsonable_encoder
+import secrets
+import fastapi
 
 from app.common.config import DEVELOPER_IDS, LIQPAY_PRIVATE_KEY, LIQPAY_PUBLIC_KEY, MONOBANK_TOKEN, WEB_APP_URL, NP_API_KEY, ADMIN_PANEL_PASSWORD
 from app.databases.guest_messages_database import guest_messages_db
@@ -28,12 +30,33 @@ from app.keyboards import admin_keyboards as akb
 from app.utils.admin_notifications import send_admin_notification
 from app.utils.data_cache import public_data_cache
 from app.utils.phone_utils import format_phone
-import secrets
-import fastapi
 
 # Налаштування логування
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def custom_jsonable_encoder(obj, **kwargs):
+    if isinstance(obj, ObjectId):
+        return str(obj)
+    if isinstance(obj, list):
+        return [custom_jsonable_encoder(item, **kwargs) for item in obj]
+    if isinstance(obj, dict):
+        return {k: custom_jsonable_encoder(v, **kwargs) for k, v in obj.items()}
+    return jsonable_encoder(obj, **kwargs)
+
+class CustomJSONResponse(JSONResponse):
+    def render(self, content: Any) -> bytes:
+        return json.dumps(custom_jsonable_encoder(content), ensure_ascii=False, allow_nan=False, indent=None, separators=(',', ':')).encode('utf-8')
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async def _warm():
+        await public_data_cache.warm_all(max_retries=3)
+    task = asyncio.create_task(_warm())
+    yield
+    task.cancel()
+
+app = FastAPI(title="Medelin Menu API", default_response_class=CustomJSONResponse, lifespan=lifespan)
 
 # Admin API Auth
 async def get_current_admin(request: Request):
@@ -73,7 +96,7 @@ async def admin_login(data: dict):
     msg += f"Ви намагаєтесь увійти в адмін-панель Medelin.\n"
     msg += f"Якщо це не ви, проігноруйте або заблокуйте доступ."
     
-    from bot import bot
+    from app.common.bot_instance import bot
     try:
         await bot.send_message(
             admin['user_id'], 
@@ -110,36 +133,10 @@ async def admin_verify(user_id: int):
         }
     }
 
-def custom_jsonable_encoder(obj, **kwargs):
-    if isinstance(obj, ObjectId):
-        return str(obj)
-    if isinstance(obj, list):
-        return [custom_jsonable_encoder(item, **kwargs) for item in obj]
-    if isinstance(obj, dict):
-        return {k: custom_jsonable_encoder(v, **kwargs) for k, v in obj.items()}
-    return jsonable_encoder(obj, **kwargs)
-
-class CustomJSONResponse(JSONResponse):
-    def render(self, content: Any) -> bytes:
-        return json.dumps(custom_jsonable_encoder(content), ensure_ascii=False, allow_nan=False, indent=None, separators=(',', ':')).encode('utf-8')
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    async def _warm():
-        await public_data_cache.warm_all(max_retries=3)
-    task = asyncio.create_task(_warm())
-    yield
-    task.cancel()
-
-app = FastAPI(title="Medelin Menu API", default_response_class=CustomJSONResponse, lifespan=lifespan)
-
 # Монтуємо статичні файли
 def _resolve_site_dir() -> pathlib.Path | None:
     """
     Resolve MedelinSite directory across environments.
-
-    Some deployments (e.g. Render) ship only the backend code, so the site
-    directory may be absent. In that case we must not crash on startup.
     """
     env_dir = (os.getenv("SITE_DIR") or "").strip()
     if env_dir:
@@ -157,12 +154,9 @@ def _resolve_site_dir() -> pathlib.Path | None:
             return p
     return None
 
-
 _site_dir = _resolve_site_dir()
 
 # Пріоритет для Render/Unified: папка /usr/share/nginx/html/assets/images/uploads
-# Потім папка /app/MedelinSite/assets/images/uploads
-# Інакше використовуємо локальну папку в MedelinSite
 _uploads_dir = pathlib.Path("/usr/share/nginx/html/assets/images/uploads")
 if not _uploads_dir.exists():
     if _site_dir:
@@ -218,7 +212,6 @@ async def resolve_location(value: str | None):
     normalized = target.casefold()
     all_locs = await location_db.get_all_locations()
     
-    # Спроба знайти за індексом (1, 2, 3...)
     if target.isdigit():
         idx = int(target) - 1
         if 0 <= idx < len(all_locs):
@@ -275,7 +268,6 @@ async def get_np_cities(search: str):
                     return []
                 res_data = data.get('data', [])
                 if res_data and isinstance(res_data, list) and len(res_data) > 0:
-                    # searchSettlements повертає список об'єктів, де перший містить Addresses
                     return res_data[0].get('Addresses', [])
                 return []
         except Exception as e:
@@ -302,21 +294,17 @@ async def get_np_warehouses(cityRef: str, cityName: str = None, search: str = No
                 logger.error(f"NP Exception (fetch_wh): {e}")
                 return []
 
-    # Спробуємо по SettlementRef (сучасний спосіб)
     props = {'SettlementRef': cityRef}
     if search:
         props['FindByString'] = search
-    logger.info(f'Fetching warehouses for SettlementRef: {cityRef}, search: {search}')
     data = await fetch_wh(props)
     
-    # Якщо не вдалося, спробуємо по CityRef (старий спосіб)
     if not data:
         props_city = {'CityRef': cityRef}
         if search:
             props_city['FindByString'] = search
         data = await fetch_wh(props_city)
         
-    # Якщо все ще немає, спробуємо по назві міста
     if not data and cityName:
         clean_name = cityName.split(',')[0].replace('м. ', '').replace('місто ', '').strip()
         props_name = {'CityName': clean_name}
@@ -328,11 +316,9 @@ async def get_np_warehouses(cityRef: str, cityName: str = None, search: str = No
 @app.get('/api/orders/{order_id}')
 async def get_order_details(order_id: str):
     oid_str = order_id.strip()
-    logger.info(f"Fetching order details for ID: {oid_str}")
     try:
         order = await orders_db.get_order_by_id(oid_str)
         if not order:
-            logger.warning(f"Order {oid_str} not found.")
             raise HTTPException(status_code=404, detail="Замовлення не знайдено.")
         
         total = order.get('total_amount', 0)
@@ -351,7 +337,7 @@ async def get_order_details(order_id: str):
                         total += int(p)
                     except: pass
         
-        res = {
+        return {
             "order_id": str(order['_id']),
             "total": total,
             "fullname": order.get('fullname'),
@@ -359,9 +345,8 @@ async def get_order_details(order_id: str):
             "order_type": order.get('order_type'),
             "items_text": cart if isinstance(cart, str) else build_cart_text(cart)[1]
         }
-        return res
     except Exception as e:
-        logger.error(f"Error fetching order {oid_str}: {str(e)}", exc_info=True)
+        logger.error(f"Error fetching order {oid_str}: {str(e)}")
         if isinstance(e, HTTPException): raise e
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -514,8 +499,7 @@ async def process_repay(req: RepayRequest):
                     d = await resp.json()
                     return {'status': 'ok', 'url': d['pageUrl'], 'provider': 'monobank'}
 
-    # Мапимо методи на типи оплати LiqPay
-    liqpay_paytypes = 'card,privat24' # default
+    liqpay_paytypes = 'card,privat24'
     if req.payment_method == 'googlepay': liqpay_paytypes = 'gpay'
     elif req.payment_method == 'applepay': liqpay_paytypes = 'apay'
     elif req.payment_method == 'privatpay': liqpay_paytypes = 'privat24'
@@ -562,7 +546,6 @@ async def process_checkout(req: CheckoutRequest):
 
     if payment_mode == 'pay_at_checkout':
         msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 {user.get("name")}\n📞 {phone}\n💰 {total} грн\n💳 Оплата на касі'
-        
         if order_type == 'nova_poshta':
             msg += f'\n🚚 Доставка: <b>Нова Пошта</b>'
         else:
@@ -593,7 +576,6 @@ async def process_checkout(req: CheckoutRequest):
                     d = await resp.json()
                     return {'status': 'ok', 'url': d['pageUrl'], 'order_id': oid, 'provider': 'monobank'}
 
-    # Мапимо методи на типи оплати LiqPay
     liqpay_paytypes = 'card,privat24'
     method = data.get('payment_method')
     if method == 'googlepay': liqpay_paytypes = 'gpay'
@@ -622,10 +604,6 @@ async def process_booking(req: BookingRequest):
     await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id)
     return {'status': 'ok', 'order_id': oid}
 
-from fastapi.responses import HTMLResponse, FileResponse
-from fastapi import Request
-from app.common.config import ADMIN_PANEL_PASSWORD
-
 @app.get('/admin-panel')
 async def get_admin_panel(request: Request):
     auth = request.query_params.get('auth')
@@ -634,7 +612,6 @@ async def get_admin_panel(request: Request):
         if admin_path.exists():
             return FileResponse(admin_path)
     
-    # If not authorized, show the "stealth" login page which looks like a 404
     login_path = _site_dir / "404.html"
     if login_path.exists():
         return FileResponse(login_path)
@@ -642,12 +619,6 @@ async def get_admin_panel(request: Request):
     raise HTTPException(status_code=404, detail="Not Found")
 
 # Admin API endpoints
-def check_admin_auth(request: Request):
-    # Simple check for now based on query param or header
-    auth = request.query_params.get('auth') or request.headers.get('Authorization')
-    if auth != ADMIN_PANEL_PASSWORD:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
 @app.get('/api/admin/active-orders')
 async def get_admin_active_orders(admin: dict = fastapi.Depends(get_current_admin)):
     from app.databases.active_orders_database import active_orders_db
@@ -667,7 +638,6 @@ async def complete_order(order_id: str, admin: dict = fastapi.Depends(get_curren
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    # Move to sales
     await sales_db.add_sale(
         order_id=order_id,
         user_id=order.get('user_id'),
@@ -693,14 +663,13 @@ async def delete_booking(booking_id: str, admin: dict = fastapi.Depends(get_curr
 
 @app.get('/api/admin/menu')
 async def admin_get_menu(admin: dict = fastapi.Depends(get_current_admin)):
-    # Role check
     if admin.get('role') not in ('boss', 'owner', 'developer'):
         raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.menu_database import menu_db
     return await menu_db.get_all_items_detailed()
 
 @app.post('/api/admin/menu')
-async def admin_save_menu_item(admin: dict = fastapi.Depends(get_current_admin)):
+async def admin_save_menu_item(request: Request, admin: dict = fastapi.Depends(get_current_admin)):
     if admin.get('role') not in ('boss', 'owner', 'developer'):
         raise HTTPException(status_code=403, detail="Forbidden")
     item = await request.json()
@@ -732,7 +701,7 @@ async def admin_get_beans(admin: dict = fastapi.Depends(get_current_admin)):
     return await coffee_beans_db.get_all_beans()
 
 @app.post('/api/admin/beans')
-async def admin_save_bean(admin: dict = fastapi.Depends(get_current_admin)):
+async def admin_save_bean(request: Request, admin: dict = fastapi.Depends(get_current_admin)):
     if admin.get('role') not in ('boss', 'owner', 'developer'):
         raise HTTPException(status_code=403, detail="Forbidden")
     bean = await request.json()
@@ -785,8 +754,7 @@ async def admin_reply_support(request: Request, admin: dict = fastapi.Depends(ge
 
 @app.get('/api/past-orders')
 async def get_past_orders(phone: str):
-    if not phone:
-        return []
+    if not phone: return []
     orders = await orders_db.get_user_past_orders(phone)
     formatted = []
     for o in orders:
@@ -801,25 +769,21 @@ async def get_past_orders(phone: str):
 
 @app.get('/api/menu')
 async def get_menu():
-    data = await public_data_cache.refresh_menu()
-    return data
+    return await public_data_cache.refresh_menu()
 
 @app.get('/api/coffee')
 async def get_coffee():
-    data = await public_data_cache.refresh_coffee()
-    return data
+    return await public_data_cache.refresh_coffee()
 
 @app.get('/api/locations')
 async def get_locations():
-    data = await public_data_cache.refresh_locations()
-    return data
+    return await public_data_cache.refresh_locations()
 
 @app.get('/api/socials')
 async def get_socials():
-    data = await public_data_cache.refresh_socials()
-    return data
+    return await public_data_cache.refresh_socials()
 
 if _site_dir:
     app.mount('/', StaticFiles(directory=str(_site_dir), html=True), name='site')
 else:
-    logger.warning("MedelinSite directory not found; skipping static site mount. Set SITE_DIR to enable it.")
+    logger.warning("MedelinSite directory not found; skipping static site mount.")
