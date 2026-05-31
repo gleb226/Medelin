@@ -89,15 +89,21 @@ window.getPastOrders = function () {
     return JSON.parse(localStorage.getItem('medelin_past_orders') || '[]');
 };
 
-window.syncPastOrders = async function() {
+window.syncPastOrders = async function(force = false) {
     const userData = window.getUserData();
     if (!userData || !userData.phone) return;
+    
+    // Якщо вже синхронізували нещодавно і не force, пропускаємо
+    const lastSync = localStorage.getItem('last_sync_time');
+    if (!force && lastSync && (Date.now() - parseInt(lastSync) < 300000)) { // 5 хв
+        return window.getPastOrders();
+    }
     
     try {
         const resp = await fetch(`${window.API_BASE_URL}/api/past-orders?phone=${encodeURIComponent(userData.phone)}`);
         if (resp.ok) {
             const serverOrders = await resp.json();
-            if (Array.isArray(serverOrders) && serverOrders.length > 0) {
+            if (Array.isArray(serverOrders)) {
                 // Мапимо серверний формат на локальний
                 const localOrders = serverOrders.map(o => ({
                     items: [], 
@@ -108,6 +114,7 @@ window.syncPastOrders = async function() {
                     id: o.order_id
                 }));
                 localStorage.setItem('medelin_past_orders', JSON.stringify(localOrders.slice(0, 10)));
+                localStorage.setItem('last_sync_time', Date.now().toString());
                 
                 // Якщо кошик відкритий — оновлюємо його
                 const modal = document.getElementById('cart-modal-container');
@@ -430,23 +437,31 @@ window.openCartModal = function () {
     }
 
     const pastOrders = window.getPastOrders();
+    const userData = window.getUserData();
     let pastOrdersHtml = '';
-    if (pastOrders.length > 0) {
+    if (pastOrders.length > 0 || (userData && userData.phone)) {
         pastOrdersHtml += `<div class="cart-modal__past-orders">
-            <h4 class="cart-modal__past-orders-title">Минулі замовлення</h4>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h4 class="cart-modal__past-orders-title" style="margin: 0;">Минулі замовлення</h4>
+                ${userData.phone ? `<button type="button" class="btn btn--sm btn--outline" onclick="window.syncPastOrders(true)" style="padding: 4px 10px; font-size: 0.7rem; border-radius: 8px;"><i class="fas fa-sync-alt"></i></button>` : ''}
+            </div>
             <div class="cart-modal__past-orders-list">`;
 
-        pastOrders.slice(0, 3).forEach((order, idx) => {
-            const date = new Date(order.timestamp).toLocaleDateString('uk-UA');
-            const itemCount = order.items && order.items.length ? `${order.items.length} тов.` : 'Замовлення';
-            pastOrdersHtml += `<div class="past-order">
-                <div class="past-order__meta">
-                    <strong>${itemCount} — ${order.total} ₴</strong>
-                    <div class="past-order__date">${date}</div>
-                </div>
-                ${order.items && order.items.length > 0 ? `<button class="btn past-order__btn" type="button" data-action="repeat-order" data-order-index="${idx}">Повторити</button>` : ''}
-            </div>`;
-        });
+        if (pastOrders.length > 0) {
+            pastOrders.slice(0, 3).forEach((order, idx) => {
+                const date = new Date(order.timestamp).toLocaleDateString('uk-UA');
+                const itemCount = order.items && order.items.length ? `${order.items.length} тов.` : 'Замовлення';
+                pastOrdersHtml += `<div class="past-order">
+                    <div class="past-order__meta">
+                        <strong>${itemCount} — ${order.total} ₴</strong>
+                        <div class="past-order__date">${date}</div>
+                    </div>
+                    ${order.items && order.items.length > 0 ? `<button class="btn past-order__btn" type="button" data-action="repeat-order" data-order-index="${idx}">Повторити</button>` : ''}
+                </div>`;
+            });
+        } else {
+            pastOrdersHtml += `<div class="cart-modal__empty" style="padding: 10px 0;">Натисніть 🔄 щоб оновити історію</div>`;
+        }
 
         pastOrdersHtml += `</div></div>`;
     }
