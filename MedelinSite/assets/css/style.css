@@ -1013,31 +1013,32 @@ h4 {
 .payment-methods-grid {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 1.5rem 0;
+    gap: 18px;
+    padding: 1rem 1rem 2rem;
 }
 
 .payment-btn {
     display: flex;
     align-items: center;
-    gap: 18px;
-    padding: 1.5rem 2rem !important;
-    border-radius: 22px !important;
-    border: 2px solid rgba(139, 94, 60, 0.1) !important;
+    gap: 28px;
+    padding: 2rem 3rem !important;
+    border-radius: 28px !important;
+    border: 3px solid rgba(139, 94, 60, 0.15) !important;
     background: #fff !important;
     font-weight: 800 !important;
     font-family: var(--font-main) !important;
-    font-size: 1.15rem !important;
+    font-size: 1.4rem !important;
     color: var(--color-dark-brown) !important;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     text-align: left !important;
     width: 100%;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.04) !important;
 }
 
 .payment-btn i {
-    font-size: 1.8rem;
+    font-size: 2.5rem;
     color: var(--color-coffee);
-    width: 32px;
+    width: 45px;
     text-align: center;
 }
 
@@ -1565,60 +1566,6 @@ h4 {
     font-weight: 700;
     margin-bottom: 1.2rem;
     color: var(--color-dark-brown);
-}
-
-.payment-methods-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px;
-    margin-bottom: 1.5rem;
-}
-
-.payment-btn {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 1.1rem 1.5rem;
-    border-radius: 18px;
-    border: 2.5px solid rgba(139, 94, 60, 0.15);
-    background: var(--color-white);
-    font-family: var(--font-main);
-    font-size: 1rem;
-    font-weight: 700;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    cursor: pointer;
-    color: var(--color-dark-brown);
-    position: relative;
-    overflow: hidden;
-}
-
-.payment-btn i {
-    font-size: 1.4rem;
-    color: var(--color-coffee);
-    width: 25px;
-    transition: transform 0.3s ease;
-}
-
-.payment-btn:hover {
-    border-color: var(--color-coffee-soft);
-    background: rgba(139, 94, 60, 0.03);
-    transform: translateY(-2px);
-}
-
-.payment-btn--active {
-    background: var(--color-coffee) !important;
-    border-color: var(--color-coffee) !important;
-    color: var(--color-white) !important;
-    box-shadow: 0 8px 20px rgba(139, 94, 60, 0.3);
-}
-
-.payment-btn--active i {
-    color: var(--color-white) !important;
-    transform: scale(1.2);
-}
-
-.payment-btn--active span {
-    color: var(--color-white) !important;
 }
 
 .btn-back {
