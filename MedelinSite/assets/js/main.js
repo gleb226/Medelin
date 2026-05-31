@@ -523,7 +523,7 @@ window.openCheckoutModal = function () {
                         </div>
                         <div class="form-group">
                             <label class="form-label">Побажання чи уточнення — опційно</label>
-                            <textarea name="comment" placeholder="Ваші побажання до замовлення..." rows="2" style="width: 100%; border: 1px solid var(--gray-border, #e2e8f0); border-radius: var(--radius-sm, 0.375rem); padding: 0.75rem; font-family: inherit; font-size: 1rem; resize: vertical;"></textarea>
+                            <textarea name="comment" placeholder="Ваші побажання до замовлення..." rows="2"></textarea>
                         </div>
 
                         ${
@@ -598,26 +598,26 @@ window.openCheckoutModal = function () {
                 </div>
 
                 <div id="checkout-payment-step" style="display:none;">
-                    <p class="payment-methods__title">Оберіть метод оплати:</p>
-                    <div class="payment-methods">
-                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="card">
+                    <p class="payment-title">Оберіть метод оплати:</p>
+                    <div class="payment-methods-grid">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="card">
                             <i class="fas fa-credit-card"></i> <span>Оплата картою</span>
                         </button>
-                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="applepay">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="applepay">
                             <i class="fab fa-apple-pay"></i> <span>Apple Pay</span>
                         </button>
-                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="googlepay">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="googlepay">
                             <i class="fab fa-google-pay"></i> <span>Google Pay</span>
                         </button>
-                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="privatpay">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="privatpay">
                             <i class="fas fa-university"></i> <span>PrivatPay</span>
                         </button>
-                        <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="monobank">
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="monobank">
                             <i class="fas fa-wallet"></i> <span>MonoPay</span>
                         </button>
                     </div>
                     <div style="padding: 0 1.5rem 1.5rem;">
-                        <button class="btn--back" type="button" data-action="back-to-details"><i class="fas fa-arrow-left btn__icon--left"></i> Назад до деталей</button>
+                        <button class="btn-back" type="button" data-action="back-to-details"><i class="fas fa-arrow-left btn__icon--left"></i> Назад до деталей</button>
                     </div>
                 </div>
             </div>`;
@@ -936,7 +936,7 @@ window.openBookingWizard = function (e) {
     <div class="booking-modal__content checkout-modal">
         <button class="booking-modal__close" type="button" data-action="close-booking-modal"><i class="fas fa-times"></i></button>
         <h3 class="checkout-modal__title">Бронювання столика</h3>
-        <form id="booking-form" class="booking-modal__form" style="padding: 0 2rem 2rem;">
+        <form id="booking-form" class="booking-modal__form">
             <div class="form-group">
                 <label class="form-label">Ваше ім'я</label>
                 <input type="text" name="name" placeholder="Як до вас звертатися?" value="${userData.name || ''}" required>
@@ -1098,21 +1098,21 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">Сума до оплати:</p>
                                     <p style="font-size: 2.2rem; font-weight: 900; color: var(--color-coffee);">${order.total} ₴</p>
                                 </div>
-                                <p class="payment-methods__title">Оберіть метод оплати:</p>
-                                <div class="payment-methods">
-                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="card">
+                                <p class="payment-title">Оберіть метод оплати:</p>
+                                <div class="payment-methods-grid">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="card">
                                         <i class="fas fa-credit-card"></i> <span>Оплата картою</span>
                                     </button>
-                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="applepay">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="applepay">
                                         <i class="fab fa-apple-pay"></i> <span>Apple Pay</span>
                                     </button>
-                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="googlepay">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="googlepay">
                                         <i class="fab fa-google-pay"></i> <span>Google Pay</span>
                                     </button>
-                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="privatpay">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="privatpay">
                                         <i class="fas fa-university"></i> <span>PrivatPay</span>
                                     </button>
-                                    <button class="payment-methods__btn" type="button" data-action="submit-checkout" data-method="monobank">
+                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="monobank">
                                         <i class="fas fa-wallet"></i> <span>MonoPay</span>
                                     </button>
                                 </div>

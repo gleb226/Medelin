@@ -1178,15 +1178,16 @@ h4 {
 
 .checkout-modal {
     max-width: 800px !important;
-    width: 95% !important;
+    width: min(95vw, 800px) !important;
     padding: 0 !important;
     background: var(--color-cream) !important;
-    border-radius: 28px !important;
+    border-radius: 32px !important;
     overflow: hidden !important;
     display: flex;
     flex-direction: column;
-    max-height: 90vh !important;
-    border: 3px solid #5d4037;
+    max-height: 92vh !important;
+    border: 1px solid rgba(139, 94, 60, 0.2) !important;
+    box-shadow: var(--shadow-lg) !important;
 }
 
 #checkout-details-step,
@@ -1199,7 +1200,7 @@ h4 {
 }
 
 .checkout-modal__form,
-.booking-form {
+.booking-modal__form {
     padding: 2rem !important;
     display: flex;
     flex-direction: column;
@@ -1207,6 +1208,7 @@ h4 {
     overflow-y: auto !important;
     flex: 1;
     -webkit-overflow-scrolling: touch;
+    margin: 0 !important;
 }
 
 .checkout-modal__form::-webkit-scrollbar {
@@ -1235,8 +1237,51 @@ h4 {
     letter-spacing: 0.5px;
 }
 
-.checkout-form input,
-.checkout-form select {
+.checkout-modal__form input,
+.checkout-modal__form select,
+.checkout-modal__form textarea {
+    width: 100%;
+    padding: 1.1rem 1.4rem;
+    border-radius: 16px;
+    border: 1.5px solid rgba(139, 94, 60, 0.15);
+    background: var(--color-white);
+    font-family: var(--font-main);
+    font-size: 1.05rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    color: var(--color-dark-brown);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.checkout-modal__form select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238b5e3c' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1.25rem center;
+    background-size: 1.1rem;
+    padding-right: 3rem;
+    cursor: pointer;
+}
+
+.checkout-modal__form textarea {
+    min-height: 100px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.checkout-modal__form input:focus,
+.checkout-modal__form select:focus,
+.checkout-modal__form textarea:focus {
+    border-color: var(--color-coffee);
+    background-color: #fff;
+    box-shadow: 0 0 0 4px rgba(139, 94, 60, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.01);
+    transform: translateY(-1px);
+}
+
+.booking-modal__form input,
+.booking-modal__form select,
+.booking-modal__form textarea {
     width: 100%;
     padding: 1rem 1.2rem;
     border-radius: 12px;
@@ -1249,8 +1294,9 @@ h4 {
     color: var(--color-dark-brown);
 }
 
-.checkout-form input:focus,
-.checkout-form select:focus {
+.booking-modal__form input:focus,
+.booking-modal__form select:focus,
+.booking-modal__form textarea:focus {
     border-color: var(--color-coffee);
     box-shadow: 0 0 0 4px rgba(139, 94, 60, 0.1);
 }
@@ -1339,8 +1385,8 @@ h4 {
 
 .payment-methods-grid {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
     margin-bottom: 1.5rem;
 }
 
@@ -1348,28 +1394,47 @@ h4 {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 1rem 1.5rem;
-    border-radius: 14px;
-    border: 2px solid rgba(139, 94, 60, 0.2);
+    padding: 1.1rem 1.5rem;
+    border-radius: 18px;
+    border: 2.5px solid rgba(139, 94, 60, 0.15);
     background: var(--color-white);
     font-family: var(--font-main);
     font-size: 1rem;
-    font-weight: 600;
-    transition: all 0.3s ease;
+    font-weight: 700;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     cursor: pointer;
     color: var(--color-dark-brown);
+    position: relative;
+    overflow: hidden;
 }
 
 .payment-btn i {
     font-size: 1.4rem;
     color: var(--color-coffee);
     width: 25px;
+    transition: transform 0.3s ease;
 }
 
 .payment-btn:hover {
-    border-color: var(--color-coffee);
-    background: rgba(139, 94, 60, 0.05);
-    transform: translateX(5px);
+    border-color: var(--color-coffee-soft);
+    background: rgba(139, 94, 60, 0.03);
+    transform: translateY(-2px);
+}
+
+.payment-btn--active {
+    background: var(--color-coffee) !important;
+    border-color: var(--color-coffee) !important;
+    color: var(--color-white) !important;
+    box-shadow: 0 8px 20px rgba(139, 94, 60, 0.3);
+}
+
+.payment-btn--active i {
+    color: var(--color-white) !important;
+    transform: scale(1.2);
+}
+
+.payment-btn--active span {
+    color: var(--color-white) !important;
 }
 
 .btn-back {
@@ -2606,51 +2671,6 @@ h4 {
     flex-shrink: 0;
 }
 
-.checkout-form,
-.booking-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.2rem;
-    margin: 1.5rem 0;
-}
-
-.checkout-form input,
-.checkout-form select,
-.booking-form input,
-.booking-form select,
-.booking-form textarea {
-    padding: 1.1rem 1.2rem;
-    border-radius: 16px;
-    border: 1.5px solid rgba(139, 94, 60, 0.1);
-    background: #fff;
-    font-family: inherit;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    width: 100%;
-    color: var(--color-dark-brown);
-    appearance: none;
-    -webkit-appearance: none;
-}
-
-.checkout-form select,
-.booking-form select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238b5e3c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 1rem center;
-    background-size: 1.2em;
-    padding-right: 3rem;
-}
-
-.checkout-form input:focus,
-.checkout-form select:focus,
-.booking-form input:focus,
-.booking-form select:focus,
-.booking-form textarea:focus {
-    border-color: var(--color-coffee);
-    box-shadow: 0 0 0 4px rgba(139, 94, 60, 0.1);
-    outline: none;
-}
-
 #chk_table_wrap {
     position: relative;
     animation: fadeIn 0.3s ease;
@@ -3174,64 +3194,6 @@ h4 {
 .popup__info-chip span {
     font-weight: 700;
     color: var(--color-dark-brown);
-}
-
-.checkout-form,
-.booking-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    margin: 1.5rem 0;
-}
-
-.checkout-form input,
-.checkout-form select,
-.booking-form input,
-.booking-form select,
-.booking-form textarea {
-    padding: 1.2rem 1.4rem;
-    border-radius: 16px;
-    border: 1.5px solid rgba(139, 94, 60, 0.15);
-    background: #fff;
-    font-family: inherit;
-    font-size: 1.05rem;
-    transition: all 0.3s ease;
-    width: 100%;
-    color: var(--color-dark-brown);
-    appearance: none;
-    -webkit-appearance: none;
-    margin-bottom: 0.2rem;
-}
-
-.checkout-title,
-.cart-modal__title {
-    padding: 40px 40px 20px !important;
-    font-size: 2.2rem !important;
-    text-align: center !important;
-    color: var(--color-dark-brown);
-    font-family: var(--font-accent);
-    position: relative;
-    width: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-sizing: border-box;
-    line-height: 1.2;
-    letter-spacing: 1px;
-    margin: 0 !important;
-    background: transparent;
-}
-
-.checkout-title::after,
-.cart-modal__title::after {
-    content: '';
-    display: block;
-    width: 80px;
-    height: 4px;
-    background: var(--color-coffee);
-    margin: 20px auto 0 !important;
-    border-radius: 10px;
 }
 
 .toast-container {
