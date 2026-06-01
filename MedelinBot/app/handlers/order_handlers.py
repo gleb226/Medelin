@@ -404,7 +404,7 @@ async def send_order_invoice(user, chat_id, state, bot_unused=None):
     order_type = 'order_with_booking' if data.get('booking_mode') else data.get('order_type', 'order')
     
     rid = await orders_db.add_order(
-        user.id, user.username, user.full_name, data['phone'], 
+        user.id, user.username, user.full_name, data.get('phone', '—'), 
         loc_id, time_info, data.get('people_count', '1'), 
         data.get('wishes', ''), cart_s, order_type, 
         table_number=data.get('table_number', ''),
@@ -454,7 +454,7 @@ async def send_beans_invoice(user, chat_id, state, bot):
         wishes_str += f"\nПОБАЖАННЯ: {wishes}"
 
     rid = await orders_db.add_order(
-        user.id, user.username, user.full_name, data['phone'], 
+        user.id, user.username, user.full_name, data.get('phone', '—'), 
         loc_id or "NP", time_info, '0', wishes_str, 
         f"ЗЕРНА: {name}", order_type,
         payment_mode='pay_now',
@@ -512,17 +512,17 @@ async def process_booking_order_final(user, chat_id, state, bot):
 
     is_admin = await admin_db.is_admin(user.id)
 
-    rid = await orders_db.add_order(user.id, user.username, user.full_name, data['phone'], loc_id, data.get('date_time'), data.get('people_count'), data.get('wishes'), ', '.join(data['cart']).upper(), 'order_with_booking')
+    rid = await orders_db.add_order(user.id, user.username, user.full_name, data.get('phone', '—'), loc_id, data.get('date_time'), data.get('people_count'), data.get('wishes'), ', '.join(data['cart']).upper(), 'order_with_booking')
 
     await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
 
-    await active_bookings_db.add_active_booking(rid, user.id, user.full_name, data['phone'], loc_id, data.get('date_time'), data.get('people_count'), data.get('wishes'))
+    await active_bookings_db.add_active_booking(rid, user.id, user.full_name, data.get('phone', '—'), loc_id, data.get('date_time'), data.get('people_count'), data.get('wishes'))
 
     loc = await location_db.get_location_by_id(loc_id)
 
     loc_name = loc['name'] if loc else '—'
 
-    msg = f"🌟 <b>БРОНЮВАННЯ ТА ЗАМОВЛЕННЯ</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data['phone']}</code>\n🏛 <b>ЗАКЛАД:</b> {loc_name}\n🕒 <b>ЧАС:</b> {data.get('date_time')}\n👥 <b>ГОСТЕЙ:</b> {data.get('people_count')}\n🥘 <b>МЕНЮ:</b> {', '.join(data['cart']).upper()}\n💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
+    msg = f"🌟 <b>БРОНЮВАННЯ ТА ЗАМОВЛЕННЯ</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data.get('phone', '—')}</code>\n🏛 <b>ЗАКЛАД:</b> {loc_name}\n🕒 <b>ЧАС:</b> {data.get('date_time')}\n👥 <b>ГОСТЕЙ:</b> {data.get('people_count')}\n🥘 <b>МЕНЮ:</b> {', '.join(data['cart']).upper()}\n💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
 
     targets = await admin_db.get_notification_targets(loc_id)
 
@@ -552,7 +552,7 @@ async def process_beans_final(user, chat_id, state, bot):
 
     is_np = data.get('delivery_type') == 'nova_poshta'
 
-    np_info = f"НП: {data.get('np_city_name')}, {data.get('np_warehouse')}" if is_np else "САМОВИВІЗ"
+    np_info = f"<b>📍 НП:</b> {data.get('np_city_name')}, {data.get('np_warehouse')}" if is_np else "<b>🏬 САМОВИВІЗ</b>"
 
     time_info = 'НОВА ПОШТА' if is_np else 'БРОНЬ 2 ДНІ'
 
@@ -563,25 +563,38 @@ async def process_beans_final(user, chat_id, state, bot):
     if wishes:
         wishes_str += f"\nПОБАЖАННЯ: {wishes}"
 
-    rid = await orders_db.add_order(user.id, user.username, user.full_name, data['phone'], loc_id or "NP", time_info, '0', wishes_str, f"ЗЕРНА: {data['bean_name']}", order_type)
+    phone = data.get('phone') or '—'
+    rid = await orders_db.add_order(user.id, user.username, user.full_name, phone, loc_id or "NP", time_info, '0', wishes_str, f"ЗЕРНА: {data['bean_name']}", order_type)
 
     await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
 
-    await active_orders_db.add_active_order(rid, user.id, user.full_name, data['phone'], loc_id or "NP", data['bean_name'], order_type)
+    await active_orders_db.add_active_order(rid, user.id, user.full_name, phone, loc_id or "NP", data['bean_name'], order_type)
 
     loc_name = "НОВА ПОШТА"
 
-    if loc_id:
-
+    if loc_id and not is_np:
         loc = await location_db.get_location_by_id(loc_id)
-
         loc_name = loc['name'] if loc else '—'
 
-    msg = f"🌟 <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data['phone']}</code>\n🏛 <b>ОТРИМАННЯ:</b> {loc_name}\n🚚 <b>ТИП:</b> {np_info}\n☕️ <b>СОРТ:</b> {data['bean_name']} ({data['weight']}г)"
+    msg = f"☕️ <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n"
+    msg += f"👤 <b>КЛІЄНТ:</b> {user.full_name}\n"
+    msg += f"📞 <b>ТЕЛЕФОН:</b> <code>{phone}</code>\n"
+    
+    if is_np:
+        msg += f"🚚 <b>ДОСТАВКА:</b> {np_info}\n"
+    else:
+        msg += f"🏛 <b>ОТРИМАННЯ:</b> {loc_name}\n"
+
+    msg += f"📦 <b>СОРТ:</b> {data['bean_name']} ({data['weight']}г)\n"
+    
     if wishes:
         import html
-        msg += f"\n💬 <b>ПОБАЖАННЯ:</b> {html.escape(wishes)}"
-    msg += f"\n💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
+        msg += f"💬 <b>ПОБАЖАННЯ:</b> {html.escape(wishes)}\n"
+        
+    msg += f"💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
+
+    targets = set()
+    # ... rest remains same ...
 
     targets = set()
 
@@ -634,13 +647,13 @@ async def process_order_final(user, chat_id, state, bot):
     wishes_val = data.get('wishes')
     wishes_str = f"МЕНЮ. {wishes_val}" if wishes_val else "МЕНЮ"
 
-    rid = await orders_db.add_order(user.id, user.username, user.full_name, data['phone'], loc_id, time_info, '0', wishes_str, cart_s, data.get('order_type', 'order'), data.get('table_number', ''))
+    rid = await orders_db.add_order(user.id, user.username, user.full_name, data.get('phone', '—'), loc_id, time_info, '0', wishes_str, cart_s, data.get('order_type', 'order'), data.get('table_number', ''))
 
     if not is_house:
 
         await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
 
-    await active_orders_db.add_active_order(rid, user.id, user.full_name, data['phone'], loc_id, cart_s, data['order_type'], data.get('table_number'))
+    await active_orders_db.add_active_order(rid, user.id, user.full_name, data.get('phone', '—'), loc_id, cart_s, data['order_type'], data.get('table_number'))
 
     loc = await location_db.get_location_by_id(loc_id)
 
@@ -650,7 +663,7 @@ async def process_order_final(user, chat_id, state, bot):
 
     t_line = f"🪑 <b>СТОЛИК:</b> {data.get('table_number')}\n" if is_house else f'🕒 <b>ЧАС:</b> {time_info}\n'
 
-    msg = f"🔔 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data['phone']}</code>\n🏛 <b>ЗАКЛАД:</b> {loc_name}\n{t_line}🥘 <b>ПОЗИЦІЇ:</b> {cart_s}"
+    msg = f"🔔 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data.get('phone', '—')}</code>\n🏛 <b>ЗАКЛАД:</b> {loc_name}\n{t_line}🥘 <b>ПОЗИЦІЇ:</b> {cart_s}"
     if wishes_val:
         import html
         msg += f"\n💬 <b>ПОБАЖАННЯ:</b> {html.escape(wishes_val)}"

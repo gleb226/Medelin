@@ -190,15 +190,19 @@
                 </div>
 
                 <div id="verify-state">
-                    <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown);">Підтвердження</h2>
-                    <p style="margin-top:1rem; color:var(--color-text-muted);">Ми надіслали запит у ваш Telegram.<br>Будь ласка, натисніть <b>"Підтвердити"</b> в боті.</p>
-
-                    <div class="verify-pulse">
-                        <i class="fab fa-telegram-plane" style="font-size:2rem; color:var(--color-coffee);"></i>
+                    <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown); font-size: 2rem; margin-bottom: 0.5rem;">Підтвердження</h2>
+                    <p style="font-size: 0.95rem; margin-bottom: 2rem; color: var(--color-text-muted); line-height: 1.6;">Ми надіслали запит у ваш Telegram.<br>Натисніть <b>"Підтвердити"</b> для входу.</p>
+                    
+                    <div class="verify-pulse" style="width: 100px; height: 100px; background: var(--color-coffee-soft); margin: 0 auto 2rem;">
+                        <i class="fab fa-telegram-plane" style="font-size:2.5rem; color:var(--color-coffee); filter: drop-shadow(0 4px 10px rgba(139, 94, 60, 0.2));"></i>
                     </div>
 
-                    <p style="font-size:0.9rem; opacity:0.6;">Очікування відповіді...</p>
-                    <button class="btn btn--outline" onclick="resetLogin()" style="margin-top:2rem; padding: 0.5rem 1rem; font-size:0.8rem;">Скасувати</button>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.8rem;">
+                        <div style="font-size: 0.85rem; font-weight: 800; color: var(--color-coffee); letter-spacing: 2px; text-transform: uppercase; animation: fade 2s infinite;">Очікування...</div>
+                        <p style="font-size: 0.8rem; opacity: 0.5;">Перевірте сповіщення у боті</p>
+                    </div>
+
+                    <button class="btn btn--outline" onclick="resetLogin()" style="margin-top:2.5rem; padding: 0.7rem 1.5rem; font-size:0.85rem; border-radius: 15px; font-weight: 700;">Скасувати вхід</button>
                 </div>
             </div>
         </div>

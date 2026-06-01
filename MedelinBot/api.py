@@ -396,21 +396,19 @@ async def notify_admins_about_order(order_id: str):
     if order_type == 'nova_poshta' or order_type == 'beans_delivery':
         msg += f'🚚 Доставка: <b>Нова Пошта</b>\n'
         if wishes and 'НП:' in wishes:
-            # Extract full address from wishes
             addr = wishes.split('НП:')[1].split('|')[0].strip()
             msg += f"📍 Адреса: {addr}\n"
         elif wishes and 'ВАГА:' in wishes and 'НП:' in wishes:
-             # Logic for beans orders where wishes format is "ВАГА: 250г | НП: City, Warehouse"
              addr = wishes.split('НП:')[1].strip()
              msg += f"📍 Адреса: {addr}\n"
     elif order_type == 'beans_booking':
         msg += f'🏛 Заклад: {location_name}\n'
         msg += f'📦 Тип: Самовивіз зерен\n'
-    elif order_type == 'order_with_booking' or (date_time and date_time not in ('—', 'Сьогодні', 'None', '') and people_count and people_count not in ('1', 'None', '')):
+    elif order_type == 'order_with_booking':
         msg += f'🏛 Заклад: {location_name}\n'
-        if date_time and str(date_time) != 'None':
+        if date_time and str(date_time) != 'None' and date_time != '—':
             msg += f'🕒 Час: {date_time}\n'
-        if people_count and str(people_count) != 'None':
+        if people_count and str(people_count) != 'None' and people_count != '—':
             msg += f'👥 Гостей: {people_count}\n'
         msg += f'📝 Тип: Бронювання + Замовлення\n'
     else:
@@ -421,6 +419,9 @@ async def notify_admins_about_order(order_id: str):
             msg += f"🪑 Тип: В закладі (Столик: {table_number or '—'})\n"
         else:
             msg += f'📦 Тип: З собою\n'
+        
+        if date_time and date_time not in ('—', 'Сьогодні', 'None', '', 'ЗАРАЗ', 'ПО ГОТОВНОСТІ'):
+            msg += f'🕒 Час: {date_time}\n'
 
     msg += f'💰 Сума: <b>{total} грн</b>\n'
     msg += f"💳 Оплата: Онлайн (Сплачено)\n"
