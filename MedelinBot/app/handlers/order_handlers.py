@@ -773,13 +773,7 @@ async def process_order_final(user, chat_id, state, bot):
     reply_markup = kb.get_main_menu(is_admin)
     user_text = '✅ <b>ЗАМОВЛЕННЯ ПЕРЕДАНО АДМІНІСТРАТОРУ.</b>'
     if is_house and payment_mode == 'pay_at_checkout':
-        from app.common.config import WEB_APP_URL
-        payment_url = f"{WEB_APP_URL}/index.html?order_id={rid}"
-        reply_markup = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text='💳 Оплатити чек зараз', url=payment_url)],
-            [InlineKeyboardButton(text='↩️ На головну', callback_data='back_main_menu_only')]
-        ])
-        user_text += f'\n\nВаш столик: <b>{data.get("table_number")}</b>\nСума: <b>{total_uah} грн</b>\nМожете оплатити зараз або на касі.'
+        user_text += f'\n\nВаш столик: <b>{data.get("table_number")}</b>\nСума: <b>{total_uah} грн</b>\nОплата на касі.'
 
     await bot.send_message(chat_id, user_text, reply_markup=reply_markup, parse_mode='HTML')
 

@@ -654,7 +654,7 @@ async def process_repay(req: RepayRequest):
     if req.payment_method == 'googlepay': liqpay_paytypes = 'gpay'
     elif req.payment_method == 'applepay': liqpay_paytypes = 'apay'
     elif req.payment_method == 'privatpay': liqpay_paytypes = 'privat24'
-    elif req.payment_method == 'card': liqpay_paytypes = 'card,privat24,gpay,apay'
+    elif req.payment_method == 'card': liqpay_paytypes = 'card'
 
     result_url = WEB_APP_URL
     if '?' in result_url:
