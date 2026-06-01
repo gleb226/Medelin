@@ -1306,15 +1306,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <button class="payment-btn" type="button" data-action="submit-checkout" data-method="card">
                                         <i class="fas fa-credit-card"></i> <span>Оплата картою</span>
                                     </button>
-                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="applepay">
-                                        <i class="fab fa-apple-pay"></i> <span>Apple Pay</span>
-                                    </button>
-                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="googlepay">
-                                        <i class="fab fa-google-pay"></i> <span>Google Pay</span>
-                                    </button>
-                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="privatpay">
-                                        <i class="fas fa-university"></i> <span>PrivatPay</span>
-                                    </button>
                                 </div>
                             </div>
                         </div>`;

@@ -650,7 +650,7 @@ async def process_repay(req: RepayRequest):
                     d = await resp.json()
                     return {'status': 'ok', 'url': d['pageUrl'], 'provider': 'monobank'}
 
-    liqpay_paytypes = 'card,privat24'
+    liqpay_paytypes = 'card'
     if req.payment_method == 'googlepay': liqpay_paytypes = 'gpay'
     elif req.payment_method == 'applepay': liqpay_paytypes = 'apay'
     elif req.payment_method == 'privatpay': liqpay_paytypes = 'privat24'
@@ -753,11 +753,11 @@ async def process_checkout(req: CheckoutRequest):
                     d = await resp.json()
                     return {'status': 'ok', 'url': d['pageUrl'], 'order_id': oid, 'provider': 'monobank'}
 
-    liqpay_paytypes = 'card,privat24'
+    liqpay_paytypes = 'card'
     if method == 'googlepay': liqpay_paytypes = 'gpay'
     elif method == 'applepay': liqpay_paytypes = 'apay'
     elif method == 'privatpay': liqpay_paytypes = 'privat24'
-    elif method == 'card': liqpay_paytypes = 'card,privat24,gpay,apay'
+    elif method == 'card': liqpay_paytypes = 'card'
 
     result_url = WEB_APP_URL
     if '?' in result_url:
