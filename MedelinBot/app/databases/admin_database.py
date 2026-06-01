@@ -222,23 +222,49 @@ class AdminDatabase:
 
     async def find_admin_by_identifier(self, identifier: str):
         db = await get_db()
-        # Search by username (case insensitive)
-        clean_id = identifier.strip().replace('@', '').lower()
+        clean_id = str(identifier).strip().replace('@', '').lower()
+        
+        # 1. Спробуємо знайти в колекції admins (по username, phone або user_id)
+        # По username
         res = await db.admins.find_one({'username': {'$regex': f'^{re.escape(clean_id)}$', '$options': 'i'}}, projection_without_mongo_id())
         if res: return res
         
-        # Search by phone
+        # По phone
         from app.utils.phone_utils import normalize_phone
         norm = normalize_phone(identifier)
         if norm:
             res = await db.admins.find_one({'phone_digits': norm}, projection_without_mongo_id())
             if res: return res
             
-        # Search by user_id
+        # По user_id
         if identifier.isdigit():
             res = await db.admins.find_one({'user_id': int(identifier)}, projection_without_mongo_id())
             if res: return res
             
+        # 2. Якщо не знайдено в admins, перевіримо чи це розробник (DEVELOPER_IDS)
+        # Для цього нам потрібен user_id
+        from app.databases.user_database import user_db
+        user_info = None
+        
+        if identifier.isdigit():
+            target_id = int(identifier)
+            if str(target_id) in DEVELOPER_IDS:
+                user_info = await user_db.get_user_by_id(target_id)
+                if user_info:
+                    uid, name, uname, uphone = user_info
+                    return {'user_id': uid, 'display_name': name or 'Developer', 'role': 'developer', 'username': uname}
+                return {'user_id': target_id, 'display_name': 'Developer', 'role': 'developer'}
+        
+        # Спробуємо знайти в users по username або телефону, а потім звірити з DEVELOPER_IDS
+        user_info = await user_db.get_user_by_username(clean_id)
+        if not user_info and norm:
+            user_info = await user_db.get_user_by_phone(identifier)
+            
+        if user_info:
+            uid, name, uname, uphone = user_info
+            if str(uid) in DEVELOPER_IDS:
+                return {'user_id': uid, 'display_name': name or 'Developer', 'role': 'developer', 'username': uname}
+
         return None
 
     async def create_auth_request(self, user_id: int, code: str):

@@ -363,6 +363,10 @@ def get_np_warehouses_kb(warehouses, page=0):
     keyboard.append([InlineKeyboardButton(text='🏠 НА ГОЛОВНУ', callback_data='back_main_menu_only')])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
+def get_phone_kb():
+    keyboard = [[KeyboardButton(text='☎️ НАДІСЛАТИ НОМЕР ТЕЛЕФОНУ', request_contact=True)], [KeyboardButton(text='🏠 НА ГОЛОВНУ')]]
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
+
 async def get_contact_kb():
     socials = await socials_db.get_all_socials()
     keyboard = []

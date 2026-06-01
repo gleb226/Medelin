@@ -57,6 +57,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Medelin Menu API", default_response_class=CustomJSONResponse, lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Admin API Auth
 async def get_current_admin(request: Request):
     auth_header = request.headers.get('Authorization')
@@ -84,25 +92,6 @@ async def admin_login(data: dict):
         raise HTTPException(status_code=401, detail="Невірний пароль")
         
     admin = await admin_db.find_admin_by_identifier(identifier)
-    
-    # If not found in DB, check if it's a developer from ENV
-    if not admin:
-        is_dev = False
-        clean_id = identifier.replace('@', '').lower()
-        if identifier in DEVELOPER_IDS or clean_id in DEVELOPER_IDS:
-            is_dev = True
-        
-        if is_dev:
-            admin = {
-                'user_id': int(identifier) if identifier.isdigit() else 0,
-                'display_name': 'Developer',
-                'role': 'developer'
-            }
-            if identifier.isdigit():
-                from app.databases.user_database import user_db
-                u = await user_db.get_user(int(identifier))
-                if u:
-                    admin['display_name'] = u.get('fullname') or 'Developer'
         
     if not admin or not admin.get('user_id'):
         raise HTTPException(status_code=404, detail="Адміністратора не знайдено")
@@ -127,8 +116,8 @@ async def admin_login(data: dict):
     except Exception as e:
         logger.error(f"Failed to send 2FA message to {admin['user_id']}: {e}")
         if admin.get('role') == 'developer':
-             raise HTTPException(status_code=500, detail="Спочатку запустіть бота")
-        raise HTTPException(status_code=500, detail="Не вдалося надіслати повідомлення в Telegram")
+             raise HTTPException(status_code=500, detail="Ви розробник, але бот не може надіслати вам повідомлення. Будь ласка, напишіть боту /start або будь-яке повідомлення.")
+        raise HTTPException(status_code=500, detail="Не вдалося надіслати повідомлення в Telegram. Переконайтеся, що ви почали діалог з ботом.")
         
     return {"status": "ok", "user_id": admin['user_id']}
 
@@ -198,14 +187,6 @@ _uploads_dir.mkdir(parents=True, exist_ok=True)
 # Монтуємо /uploads для доступу через URL
 app.mount("/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
 app.mount("/cache", StaticFiles(directory=str(public_data_cache._dir)), name="cache")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 class CheckoutRequest(BaseModel):
     user_details: dict

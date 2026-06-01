@@ -202,15 +202,15 @@ async def order_table_entered(message: Message, state: FSMContext, bot: Bot):
 
 async def ask_phone_order(target, state: FSMContext):
 
-    text = '📞 <b>ВКАЖІТЬ ВАШ ТЕЛЕФОН (+380...):</b>'
+    text = '📞 <b>ВКАЖІТЬ ВАШ ТЕЛЕФОН (+380...):</b>\n\nНатисніть кнопку нижче або введіть вручну:'
 
     if isinstance(target, CallbackQuery):
 
-        await target.message.answer(text, parse_mode='HTML')
+        await target.message.answer(text, parse_mode='HTML', reply_markup=kb.get_phone_kb())
 
     else:
 
-        await target.answer(text, parse_mode='HTML')
+        await target.answer(text, parse_mode='HTML', reply_markup=kb.get_phone_kb())
 
     await state.set_state(OrderStates.entering_phone)
 
