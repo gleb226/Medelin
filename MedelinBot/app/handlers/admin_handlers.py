@@ -486,11 +486,24 @@ async def show_new_bookings(message: Message, state: FSMContext):
 
     for b in bookings:
 
-        loc_name = locations_dict.get(b['location_id'], {}).get('name', '—')
+        if b.get('order_type') in ('nova_poshta', 'beans_delivery') or b.get('location_id') == 'NP':
+            loc_name = 'Нова Пошта'
+            wishes = b.get('wishes') or ''
+            if 'НП:' in wishes:
+                loc_name = f"Нова Пошта — {wishes.split('НП:', 1)[1].split('|', 1)[0].strip()}"
+        else:
+            loc_name = locations_dict.get(b['location_id'], {}).get('name', '—')
 
         order_id = b.get('order_id') or str(b['_id'])
 
-        t = f"📥 <b>НОВИЙ ЗАПИТ</b>\n\n👤 <b>Клієнт:</b> {b['fullname']}\n📞 <code>{b['phone']}</code>\n🏛 <b>Заклад:</b> {loc_name}\n🕔 <b>Час:</b> {b['date_time']}\n👥 <b>Гостей:</b> {b['people_count']}\n🥘 <b>Замовлення:</b> {b['cart']}"
+        t = f"📥 <b>НОВИЙ ЗАПИТ</b>\n\n👤 <b>Клієнт:</b> {b['fullname']}\n📞 <code>{b['phone']}</code>\n🏛 <b>Заклад:</b> {loc_name}\n"
+        date_time = b.get('date_time')
+        people_count = b.get('people_count')
+        if date_time and str(date_time).lower() not in ('none', '—', '', 'зараз', 'по готовності'):
+            t += f"🕔 <b>Час:</b> {date_time}\n"
+        if people_count and str(people_count).lower() not in ('none', '—', '', '0'):
+            t += f"👥 <b>Гостей:</b> {people_count}\n"
+        t += f"🥘 <b>Замовлення:</b> {b['cart']}"
 
         await message.answer(t, reply_markup=akb.get_booking_manage_kb(order_id, b.get('user_id')), parse_mode='HTML')
 
@@ -512,28 +525,7 @@ async def show_active_panel_cb(callback: CallbackQuery):
 
 async def list_active_bookings(callback: CallbackQuery):
 
-    role = await get_user_role(callback.from_user.id)
-
-    if role in ('super', 'boss', 'owner', 'developer'):
-        locs = None
-    elif role == 'delivery_manager':
-        locs = ['NP']
-    else:
-        shift_loc = await admin_db.is_on_shift(callback.from_user.id)
-        if isinstance(shift_loc, str) and shift_loc not in ("True", "1", "False", "0"):
-            locs = [shift_loc]
-        else:
-            locs = await admin_db.get_locations_for_admin(callback.from_user.id) or None
-
-    bookings = await active_bookings_db.get_active_bookings(locs)
-
-    if not bookings:
-
-        await callback.answer('Немає активних броней.')
-
-        return
-
-    await safe_edit_message(callback.message, '📅 <b>АКТИВНІ БРОНІ:</b>\nНатисніть для завершення:', reply_markup=akb.get_active_bookings_list_kb(bookings), parse_mode='HTML')
+    await list_active_orders(callback)
 
 @admin_router.callback_query(F.data == 'active_orders')
 
@@ -799,13 +791,16 @@ async def confirm_order_cb(callback: CallbackQuery, bot: Bot):
 
     if order.get('order_type') == 'booking':
 
-        await active_bookings_db.add_booking(oid, order['fullname'], order['location_id'], order['date_time'], order['people_count'])
-
         text = '✅ <b>ВАШЕ БРОНЮВАННЯ ПІДТВЕРДЖЕНО!</b>\n\nЧекаємо на вас у Medelin! ☕'
 
     else:
 
-        await active_orders_db.add_order(oid, order['fullname'], order['location_id'], order['order_type'], order['cart'])
+        await active_orders_db.add_active_order(
+            oid, order.get('user_id'), order['fullname'], order.get('phone', '—'),
+            order['location_id'], order['cart'], order['order_type'],
+            order.get('table_number', ''), order.get('total_amount', 0),
+            order.get('payment_mode', ''), order.get('wishes', '')
+        )
 
         text = '✅ <b>ВАШЕ ЗАМОВЛЕННЯ ПІДТВЕРДЖЕНО!</b>\n\nМи вже почали готувати. Смачного! ☕'
 

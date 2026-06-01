@@ -446,9 +446,9 @@ async def notify_admins_about_order(order_id: str):
     from app.databases.active_bookings_database import active_bookings_db
     
     if order_type == 'order_with_booking':
-        await active_bookings_db.add_active_booking(oid, user_id, fullname, phone, loc_id, date_time, people_count, wishes)
+        await active_orders_db.add_active_order(oid, user_id, fullname, phone, loc_id, items_text, order_type, table_number, total, order.get('payment_mode', ''), wishes)
     else:
-        await active_orders_db.add_active_order(oid, user_id, fullname, phone, loc_id, items_text, order_type, table_number)
+        await active_orders_db.add_active_order(oid, user_id, fullname, phone, loc_id, items_text, order_type, table_number, total, order.get('payment_mode', ''), wishes)
 
     await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id)
     if DEVELOPER_IDS:
@@ -562,6 +562,11 @@ async def process_checkout(req: CheckoutRequest):
     
     comment = user.get('comment', '').strip()
     wishes_str = f'TG: {tg_nick}'
+    if order_type == 'nova_poshta':
+        np_city = (user.get('np_city_name') or '').strip()
+        np_warehouse = (user.get('np_warehouse') or '').strip()
+        if np_city or np_warehouse:
+            wishes_str += f'\nНП: {np_city}, {np_warehouse}'.strip()
     if comment:
         wishes_str += f'\nКоментар: {comment}'
 
@@ -588,6 +593,11 @@ async def process_checkout(req: CheckoutRequest):
             import html
             msg += f'\n💬 Коментар: {html.escape(comment)}'
         msg += f'\n\n🛒 {items_text}'
+        from app.databases.active_orders_database import active_orders_db
+        await active_orders_db.add_active_order(
+            oid, None, user.get('name', '—'), phone, loc_id, items_text,
+            order_type, user.get('table_number', ''), total, payment_mode, wishes_str
+        )
         await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id)
         return {'status': 'ok', 'manual': True, 'order_id': oid}
 
@@ -655,15 +665,55 @@ async def get_admin_panel(request: Request):
     raise HTTPException(status_code=404, detail="Not Found")
 
 # Admin API endpoints
+async def _admin_visible_location_ids(admin: dict):
+    role = admin.get('role') or 'admin'
+    if role in ('super', 'boss', 'owner', 'developer'):
+        return None
+    if role == 'delivery_manager':
+        return ['NP']
+    user_id = admin.get('user_id')
+    shift_loc = await admin_db.is_on_shift(user_id) if user_id else False
+    if isinstance(shift_loc, str) and shift_loc not in ("True", "1", "False", "0"):
+        return [shift_loc]
+    locs = await admin_db.get_locations_for_admin(user_id) if user_id else []
+    return locs or None
+
+async def _decorate_active_order(order: dict):
+    loc_id = str(order.get('location_id') or '')
+    order_type = order.get('order_type')
+    location_name = 'Сайт'
+    if loc_id == 'NP' or order_type in ('nova_poshta', 'beans_delivery'):
+        location_name = 'Нова Пошта'
+        wishes = order.get('wishes') or ''
+        if 'НП:' in wishes:
+            location_name = f"Нова Пошта — {wishes.split('НП:', 1)[1].split('|', 1)[0].strip()}"
+    elif loc_id and loc_id not in ('web', 'unknown', 'None'):
+        loc = await location_db.get_location_by_id(loc_id)
+        if loc:
+            location_name = loc.get('name') or loc.get('address') or location_name
+
+    full_order = await orders_db.get_order_by_id(str(order.get('order_id')))
+    if full_order:
+        if not order.get('total'):
+            order['total'] = full_order.get('total_amount', 0)
+        if not order.get('payment_mode'):
+            order['payment_mode'] = full_order.get('payment_mode', '')
+        order['is_paid'] = bool(full_order.get('payment_id') or full_order.get('provider_payment_id'))
+    else:
+        order['is_paid'] = False
+    order['location_name'] = location_name
+    return order
+
 @app.get('/api/admin/active-orders')
 async def get_admin_active_orders(admin: dict = fastapi.Depends(get_current_admin)):
     from app.databases.active_orders_database import active_orders_db
-    return await active_orders_db.get_all_active_orders()
+    locs = await _admin_visible_location_ids(admin)
+    orders = await active_orders_db.get_active_orders(locs)
+    return [await _decorate_active_order(o) for o in orders]
 
 @app.get('/api/admin/active-bookings')
 async def get_admin_active_bookings(admin: dict = fastapi.Depends(get_current_admin)):
-    from app.databases.active_bookings_database import active_bookings_db
-    return await active_bookings_db.get_all_active_bookings()
+    return await get_admin_active_orders(admin)
 
 @app.post('/api/admin/orders/{order_id}/complete')
 async def complete_order(order_id: str, admin: dict = fastapi.Depends(get_current_admin)):
@@ -673,13 +723,15 @@ async def complete_order(order_id: str, admin: dict = fastapi.Depends(get_curren
     order = await active_orders_db.get_active_order_by_id(order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+
+    full_order = await orders_db.get_order_by_id(order_id)
     
     await sales_db.add_sale(
         order_id=order_id,
         user_id=order.get('user_id'),
         fullname=order.get('fullname'),
-        items=order.get('items'),
-        total=order.get('total', 0),
+        items=order.get('cart') or order.get('items'),
+        total=order.get('total') or (full_order or {}).get('total_amount', 0),
         location_id=order.get('location_id')
     )
     await active_orders_db.delete_active_order(order_id)

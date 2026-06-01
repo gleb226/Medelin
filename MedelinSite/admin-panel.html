@@ -216,9 +216,6 @@
                 <a class="nav-item nav-item--active" data-section="orders">
                     <i class="fas fa-shopping-bag"></i> Активні замовлення
                 </a>
-                <a class="nav-item" data-section="bookings">
-                    <i class="fas fa-calendar-check"></i> Бронювання
-                </a>
                 <a class="nav-item" data-section="menu">
                     <i class="fas fa-utensils"></i> Меню
                 </a>
@@ -424,7 +421,20 @@
                     orders.forEach(o => {
                         const div = document.createElement('div');
                         div.className = 'order-item';
-                        div.innerHTML = `<div class="order-info"><div class="order-title">#${o.order_id} — ${o.fullname}</div><div class="order-meta"><i class="fas fa-phone"></i> ${o.phone} | <i class="fas fa-map-marker-alt"></i> ${o.location_name || 'Сайт'}</div><div class="order-items">${o.cart}</div></div><div class="order-actions"><button class="btn btn--success" onclick="completeOrder('${o.order_id}')">Готово</button></div>`;
+                        const typeLabel = {
+                            in_house: 'В закладі',
+                            takeaway: 'З собою',
+                            order_with_booking: 'Бронь + замовлення',
+                            beans_booking: 'Зерно в закладі',
+                            beans_delivery: 'Нова Пошта',
+                            nova_poshta: 'Нова Пошта'
+                        }[o.order_type] || 'Замовлення';
+                        const table = o.table_number ? ` | <i class="fas fa-chair"></i> Столик: ${o.table_number}` : '';
+                        const payState = o.is_paid ? '<span style="color:#2e7d32; font-weight:800;">Оплачено</span>' : '<span style="color:#b26a00; font-weight:800;">Очікує оплату</span>';
+                        const payBtn = !o.is_paid && Number(o.total || 0) > 0
+                            ? `<a class="btn btn--outline btn--sm" href="/index.html?order_id=${o.order_id}" target="_blank">Оплатити</a>`
+                            : '';
+                        div.innerHTML = `<div class="order-info"><div class="order-title">#${String(o.order_id).slice(-6)} — ${o.fullname || 'Гість'}</div><div class="order-meta"><i class="fas fa-phone"></i> ${o.phone || '—'} | <i class="fas fa-map-marker-alt"></i> ${o.location_name || 'Сайт'}${table} | ${typeLabel} | ${payState}</div><div class="order-items">${o.cart || ''}</div></div><div class="order-actions">${payBtn}<button class="btn btn--success" onclick="completeOrder('${o.order_id}')">Готово</button><button class="btn btn--danger btn--sm" onclick="cancelOrder('${o.order_id}')">Скасувати</button></div>`;
                         list.appendChild(div);
                     });
                 }
@@ -434,6 +444,13 @@
             async function completeOrder(oid) {
                 if (confirm('Завершити замовлення?')) {
                     await apiFetch(`orders/${oid}/complete`, 'POST');
+                    loadOrders();
+                }
+            }
+
+            async function cancelOrder(oid) {
+                if (confirm('Скасувати замовлення?')) {
+                    await apiFetch(`orders/${oid}/cancel`, 'POST');
                     loadOrders();
                 }
             }
@@ -582,7 +599,7 @@
 
             function refreshData() {
                 if (currentSection === 'orders') loadOrders();
-                else if (currentSection === 'bookings') loadBookings();
+                else if (currentSection === 'bookings') loadOrders();
                 else if (currentSection === 'support') loadSupport();
                 else if (currentSection === 'menu') loadMenu();
                 else if (currentSection === 'beans') loadBeans();

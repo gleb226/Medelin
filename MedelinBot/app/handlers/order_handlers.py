@@ -68,6 +68,7 @@ class OrderStates(StatesGroup):
     choosing_location = State()
 
     entering_table_number = State()
+    choosing_payment_mode = State()
     entering_pickup_time = State()
     entering_wishes = State()
     entering_phone = State()
@@ -198,7 +199,18 @@ async def order_table_entered(message: Message, state: FSMContext, bot: Bot):
 
     await state.update_data(table_number=val)
 
-    await ask_wishes_order(message, state)
+    kb_pay_mode = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='💳 Оплатити зараз', callback_data='order_pay_now')],
+        [InlineKeyboardButton(text='💵 Оплатити на касі', callback_data='order_pay_at_checkout')]
+    ])
+    await message.answer('💳 <b>ОБЕРІТЬ ОПЛАТУ:</b>', reply_markup=kb_pay_mode, parse_mode='HTML')
+    await state.set_state(OrderStates.choosing_payment_mode)
+
+@order_router.callback_query(F.data.startswith('order_pay_'), OrderStates.choosing_payment_mode)
+async def order_payment_mode_chosen(callback: CallbackQuery, state: FSMContext):
+    payment_mode = 'pay_at_checkout' if callback.data == 'order_pay_at_checkout' else 'pay_now'
+    await state.update_data(payment_mode=payment_mode)
+    await ask_wishes_order(callback, state)
 
 async def ask_phone_order(target, state: FSMContext):
 
@@ -230,7 +242,7 @@ async def order_wishes_entered(message: Message, state: FSMContext, bot: Bot):
     
     async def _next_step():
         data = await state.get_data()
-        if data.get('order_type') == 'in_house':
+        if data.get('order_type') == 'in_house' and data.get('payment_mode') != 'pay_now':
             await process_order_final(message.from_user, message.chat.id, state, bot)
         else:
             await send_order_invoice(message.from_user, message.chat.id, state, bot)
@@ -300,7 +312,7 @@ async def order_phone_entered(message: Message, state: FSMContext, bot: Bot):
 
     data = await state.get_data()
 
-    if data.get('order_type') == 'in_house':
+    if data.get('order_type') == 'in_house' and data.get('payment_mode') != 'pay_now':
 
         await process_order_final(message.from_user, message.chat.id, state, bot)
 
@@ -309,6 +321,37 @@ async def order_phone_entered(message: Message, state: FSMContext, bot: Bot):
         await send_order_invoice(message.from_user, message.chat.id, state, bot)
 
 from app.common.bot_instance import bot
+
+async def _build_cart_text_and_total(cart):
+    cart_items_with_prices = []
+    total_uah = 0
+    for display_name in cart:
+        pure_name = display_name
+        embedded_price = None
+        if ' [' in display_name and display_name.endswith(']'):
+            parts = display_name.rsplit(' [', 1)
+            pure_name = parts[0]
+            try:
+                embedded_price = int(parts[1].replace(']', ''))
+            except Exception:
+                embedded_price = None
+
+        if embedded_price is None:
+            base_name = pure_name.split(' (')[0]
+            row = await menu_db.get_item_by_name(base_name)
+            embedded_price = _parse_menu_price(row) or 0
+            if embedded_price and '(' in pure_name:
+                opts = pure_name.split('(', 1)[1].replace(')', '').lower()
+                for opt in [o.strip() for o in opts.split(',')]:
+                    if opt in ['декаф', 'мед', 'молоко']:
+                        embedded_price += 10
+
+        if embedded_price:
+            total_uah += embedded_price
+            cart_items_with_prices.append(f"- {pure_name} ({embedded_price} грн)")
+        else:
+            cart_items_with_prices.append(f"- {pure_name}")
+    return total_uah, '\n'.join(cart_items_with_prices).upper()
 
 async def send_order_invoice(user, chat_id, state, bot_unused=None):
 
@@ -516,7 +559,11 @@ async def process_booking_order_final(user, chat_id, state, bot):
 
     await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
 
-    await active_bookings_db.add_active_booking(rid, user.id, user.full_name, data.get('phone', '—'), loc_id, data.get('date_time'), data.get('people_count'), data.get('wishes'))
+    await active_orders_db.add_active_order(
+        rid, user.id, user.full_name, data.get('phone', '—'), loc_id,
+        ', '.join(data['cart']).upper(), 'order_with_booking',
+        total=0, payment_mode='pay_now', wishes=data.get('wishes', '')
+    )
 
     loc = await location_db.get_location_by_id(loc_id)
 
@@ -658,26 +705,34 @@ async def process_order_final(user, chat_id, state, bot):
 
     loc_id = data['location_id']
 
-    cart_s = ', '.join(data['cart']).upper()
+    total_uah, cart_s = await _build_cart_text_and_total(data['cart'])
 
     time_info = data.get('pickup_time', 'ЗАРАЗ')
 
     wishes_val = data.get('wishes')
     wishes_str = f"МЕНЮ. {wishes_val}" if wishes_val else "МЕНЮ"
+    payment_mode = data.get('payment_mode') or ('pay_at_checkout' if is_house else 'pay_now')
 
-    rid = await orders_db.add_order(user.id, user.username, user.full_name, data.get('phone', '—'), loc_id, time_info, '0', wishes_str, cart_s, data.get('order_type', 'order'), data.get('table_number', ''))
+    rid = await orders_db.add_order(
+        user.id, user.username, user.full_name, data.get('phone', '—'), loc_id,
+        time_info, '0', wishes_str, cart_s, data.get('order_type', 'order'),
+        payment_mode, data.get('table_number', ''), total_uah
+    )
 
-    if not is_house:
+    if not is_house or payment_mode == 'pay_now':
 
         await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
 
-    await active_orders_db.add_active_order(rid, user.id, user.full_name, data.get('phone', '—'), loc_id, cart_s, data['order_type'], data.get('table_number'))
+    await active_orders_db.add_active_order(
+        rid, user.id, user.full_name, data.get('phone', '—'), loc_id, cart_s,
+        data['order_type'], data.get('table_number'), total_uah, payment_mode, wishes_str
+    )
 
     loc = await location_db.get_location_by_id(loc_id)
 
     loc_name = loc['name'] if loc else '—'
 
-    p_stat = '💰 <b>ОПЛАЧЕНО</b>' if not is_house else '⏳ <b>ОПЛАТА В ЗАКЛАДІ</b>'
+    p_stat = '💰 <b>ОПЛАЧЕНО</b>' if (not is_house or payment_mode == 'pay_now') else '⏳ <b>ОПЛАТА НА КАСІ</b>'
     
     phone = data.get('phone', '—')
 
@@ -715,6 +770,17 @@ async def process_order_final(user, chat_id, state, bot):
 
             pass
 
-    await bot.send_message(chat_id, '✅ <b>ЗАМОВЛЕННЯ ПЕРЕДАНО АДМІНІСТРАТОРУ.</b>', reply_markup=kb.get_main_menu(is_admin), parse_mode='HTML')
+    reply_markup = kb.get_main_menu(is_admin)
+    user_text = '✅ <b>ЗАМОВЛЕННЯ ПЕРЕДАНО АДМІНІСТРАТОРУ.</b>'
+    if is_house and payment_mode == 'pay_at_checkout':
+        from app.common.config import WEB_APP_URL
+        payment_url = f"{WEB_APP_URL}/index.html?order_id={rid}"
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='💳 Оплатити чек зараз', url=payment_url)],
+            [InlineKeyboardButton(text='↩️ На головну', callback_data='back_main_menu_only')]
+        ])
+        user_text += f'\n\nВаш столик: <b>{data.get("table_number")}</b>\nСума: <b>{total_uah} грн</b>\nМожете оплатити зараз або на касі.'
+
+    await bot.send_message(chat_id, user_text, reply_markup=reply_markup, parse_mode='HTML')
 
     await state.clear()

@@ -856,6 +856,7 @@ window.backToDetails = function () {
 
 window.submitCheckout = function (method) {
     const btn = window.event ? window.event.target.closest('button') : null;
+    const container = document.getElementById('checkout-modal-container');
     
     if (window.CURRENT_ORDER_ID) {
         if (btn) {
@@ -963,13 +964,25 @@ window.submitCheckout = function (method) {
                     document.body.appendChild(form);
                     form.submit();
                 } else {
+                    const payLaterLink = res.order_id ? `${window.location.origin}${window.location.pathname}?order_id=${res.order_id}` : '';
                     window.showToast('Замовлення прийнято!', 'success');
                     cart_menu.length = 0;
                     cart_beans.length = 0;
                     localStorage.removeItem('cart_menu');
                     localStorage.removeItem('cart_beans');
                     updateCartBadge();
-                    window.closeCheckoutModal();
+                    if (payLaterLink) {
+                        container.innerHTML = `
+                            <div class="cart-modal__overlay" data-action="close-cart-modal"></div>
+                            <div class="checkout-modal cart-modal__content">
+                                <button class="cart-modal__close" type="button" data-action="close-cart-modal"><i class="fas fa-times"></i></button>
+                                <h3 class="checkout-modal__title">Замовлення прийнято</h3>
+                                <p style="text-align:center; margin: 1rem 0 1.5rem;">Можете оплатити чек зараз або на касі.</p>
+                                <a class="btn--checkout" style="display:block; text-align:center; text-decoration:none;" href="${payLaterLink}">Оплатити чек зараз</a>
+                            </div>`;
+                    } else {
+                        window.closeCheckoutModal();
+                    }
                 }
             } else {
                 let errorMsg = res.detail;
