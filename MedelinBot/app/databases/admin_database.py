@@ -302,7 +302,14 @@ class AdminDatabase:
             'expires_at': {'$gt': datetime.utcnow()}
         })
         if not sess: return None
-        return await self.get_admin_by_id(sess['user_id'])
+        
+        user_id = sess['user_id']
+        admin = await self.get_admin_by_id(user_id)
+        
+        if not admin and str(user_id) in DEVELOPER_IDS:
+            return {'user_id': int(user_id), 'display_name': 'Developer', 'role': 'developer'}
+            
+        return admin
 
     async def get_locations_for_admin(self, user_id: int) -> list:
 
