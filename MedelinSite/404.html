@@ -118,11 +118,15 @@
                 </div>
 
                 <div id="two-fa-section">
-                    <p style="font-size: 0.9rem; margin-bottom: 1.5rem;">Підтвердіть вхід у Telegram-боті</p>
-                    <div style="display: flex; justify-content: center; margin-bottom: 1.5rem;">
-                        <div class="spinner" style="width: 30px; height: 30px; border: 3px solid var(--color-cream); border-top-color: var(--color-coffee); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <h2 style="font-family:'Marcellus', serif; color:var(--color-coffee); margin-bottom: 1rem;">Підтвердження</h2>
+                    <p style="font-size: 0.9rem; margin-bottom: 1.5rem; opacity: 0.8;">Ми надіслали запит у ваш Telegram.<br>Натисніть <b>"Підтвердити"</b> в боті.</p>
+                    
+                    <div class="verify-pulse">
+                        <i class="fab fa-telegram-plane" style="font-size:2rem; color:var(--color-coffee);"></i>
                     </div>
-                    <p id="timer-text" style="font-size: 0.8rem; opacity: 0.5;">Очікування підтвердження...</p>
+
+                    <p id="timer-text" style="font-size: 0.8rem; opacity: 0.5;">Очікування відповіді...</p>
+                    <button class="btn btn--outline" onclick="resetForm()" style="margin-top:2rem; padding: 0.5rem 1rem; font-size:0.8rem; background: transparent; border: 1px solid var(--color-coffee); color: var(--color-coffee);">Скасувати</button>
                 </div>
 
                 <div class="status-msg" id="status-msg"></div>

@@ -504,6 +504,65 @@
                 showLoader(false);
             }
 
+            async function loadMenu() {
+                showLoader(true);
+                const menu = await apiFetch('menu');
+                const list = document.getElementById('items-list');
+                list.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;"><h3>Керування меню</h3><button class="btn btn--primary btn--sm" onclick="editMenuItem()"><i class="fas fa-plus"></i> Додати позицію</button></div>';
+                if (!menu || menu.length === 0) {
+                    list.innerHTML += '<p style="text-align:center; padding:3rem; opacity:0.5;">Меню порожнє</p>';
+                } else {
+                    menu.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'order-item';
+                        div.innerHTML = `<div class="order-info"><div class="order-title">${item.name}</div><div class="order-meta">${item.category} | ${item.price} грн</div></div><div class="order-actions"><button class="btn btn--outline btn--sm" onclick="editMenuItem('${item.id}')">Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteMenuItem('${item.id}')">Видалити</button></div>`;
+                        list.appendChild(div);
+                    });
+                }
+                showLoader(false);
+            }
+
+            async function loadBeans() {
+                showLoader(true);
+                const beans = await apiFetch('beans');
+                const list = document.getElementById('items-list');
+                list.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;"><h3>Кава в зернах</h3><button class="btn btn--primary btn--sm" onclick="editBean()"><i class="fas fa-plus"></i> Додати сорт</button></div>';
+                if (!beans || beans.length === 0) {
+                    list.innerHTML += '<p style="text-align:center; padding:3rem; opacity:0.5;">Сортів не знайдено</p>';
+                } else {
+                    beans.forEach(b => {
+                        const div = document.createElement('div');
+                        div.className = 'order-item';
+                        div.innerHTML = `<div class="order-info"><div class="order-title">${b.name}</div><div class="order-meta">Ціна: ${b.price_250}грн/250г</div></div><div class="order-actions"><button class="btn btn--outline btn--sm" onclick="editBean('${b._id}')">Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteBean('${b._id}')">Видалити</button></div>`;
+                        list.appendChild(div);
+                    });
+                }
+                showLoader(false);
+            }
+
+            async function loadLocations() {
+                showLoader(true);
+                const locs = await apiFetch('../locations'); // Use public API for simplicity
+                const list = document.getElementById('items-list');
+                list.innerHTML = '<h3>Локації</h3>';
+                if (!locs || locs.length === 0) {
+                    list.innerHTML += '<p style="text-align:center; padding:3rem; opacity:0.5;">Локацій не знайдено</p>';
+                } else {
+                    locs.forEach(l => {
+                        const div = document.createElement('div');
+                        div.className = 'order-item';
+                        div.innerHTML = `<div class="order-info"><div class="order-title">${l.name}</div><div class="order-meta">${l.address}</div></div><div class="order-actions"><button class="btn btn--outline btn--sm">Деталі</button></div>`;
+                        list.appendChild(div);
+                    });
+                }
+                showLoader(false);
+            }
+
+            function editMenuItem(id) { alert('Ця функція розробляється. Використовуйте бота для редагування.'); }
+            function deleteMenuItem(id) { if(confirm('Видалити?')) { apiFetch(`menu/${id}`, 'DELETE').then(loadMenu); } }
+            function editBean(id) { alert('Ця функція розробляється. Використовуйте бота для редагування.'); }
+            function deleteBean(id) { if(confirm('Видалити?')) { apiFetch(`beans/${id}`, 'DELETE').then(loadBeans); } }
+
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.onclick = (e) => {
                     const section = item.getAttribute('data-section');
@@ -519,11 +578,11 @@
 
             function refreshData() {
                 if (currentSection === 'orders') loadOrders();
-                if (currentSection === 'bookings') loadBookings();
-                if (currentSection === 'support') loadSupport();
-                if (['menu', 'beans', 'locations'].includes(currentSection)) {
-                    document.getElementById('items-list').innerHTML = '<p style="text-align:center; padding:3rem; opacity:0.5;">Ця секція керується через Telegram-бота (кнопки у боті надійніші)</p>';
-                }
+                else if (currentSection === 'bookings') loadBookings();
+                else if (currentSection === 'support') loadSupport();
+                else if (currentSection === 'menu') loadMenu();
+                else if (currentSection === 'beans') loadBeans();
+                else if (currentSection === 'locations') loadLocations();
             }
 
             document.getElementById('refresh-btn').onclick = refreshData;
