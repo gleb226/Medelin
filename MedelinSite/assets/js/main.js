@@ -790,9 +790,6 @@ window.openCheckoutModal = function () {
                         <button class="payment-btn" type="button" data-action="submit-checkout" data-method="privatpay">
                             <i class="fas fa-university"></i> <span>PrivatPay</span>
                         </button>
-                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="monobank">
-                            <i class="fas fa-wallet"></i> <span>MonoPay</span>
-                        </button>
                     </div>
                     <div style="padding: 0 1.5rem 1.5rem;">
                         <button class="btn-back" type="button" data-action="back-to-details"><i class="fas fa-arrow-left btn__icon--left"></i> Назад до деталей</button>
@@ -1300,9 +1297,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </button>
                                     <button class="payment-btn" type="button" data-action="submit-checkout" data-method="privatpay">
                                         <i class="fas fa-university"></i> <span>PrivatPay</span>
-                                    </button>
-                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="monobank">
-                                        <i class="fas fa-wallet"></i> <span>MonoPay</span>
                                     </button>
                                 </div>
                             </div>
