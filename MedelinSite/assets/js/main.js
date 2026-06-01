@@ -5,6 +5,7 @@ const isFileProto = _proto === 'file:';
 const isLocal = _host === 'localhost' || _host === '127.0.0.1' || _host === '';
 
 window.API_BASE_URL = '';
+const reportedClientErrors = new Set();
 
 if (isLocal && _port === '8000') {
     window.API_BASE_URL = 'http://localhost:8000';
@@ -46,16 +47,41 @@ window.fetchMedelinData = async function (key) {
             console.warn(`[Medelin] Failed to fetch from ${url}:`, e.message);
         }
     }
-    
+    window.reportClientError(`Failed to load ${key}`, `all data endpoints failed for ${key}`);
     return null;
 };
 
+window.reportClientError = function (message, context = '') {
+    try {
+        const signature = `${message}|${context}`.slice(0, 240);
+        if (reportedClientErrors.has(signature)) return;
+        reportedClientErrors.add(signature);
+        fetch(`${window.API_BASE_URL}/api/client-error`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                source: 'site',
+                path: window.location.href,
+                message: String(message || 'Client error'),
+                context: String(context || '')
+            })
+        });
+    } catch (e) {}
+};
+
 window.onerror = function(msg, url, lineNo, columnNo, error) {
+    window.reportClientError(msg || (error && error.message) || 'Window error', `${url || ''}:${lineNo || 0}:${columnNo || 0}`);
     if (window.showToast) {
-        window.showToast('Сталася помилка в роботі сайту.', 'error');
+        window.showToast('Сталася помилка. Адміни вже працюють над цим.', 'error');
     }
     return false;
 };
+
+window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason;
+    const message = reason && reason.message ? reason.message : String(reason || 'Unhandled promise rejection');
+    window.reportClientError(message, 'unhandledrejection');
+});
 
 window.showToast = function (message, type = 'success') {
     let container = document.querySelector('.toast-container');

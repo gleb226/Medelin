@@ -5,6 +5,7 @@ import pathlib
 import os
 import logging
 import re
+import html
 import aiohttp
 from typing import Any
 import asyncio
@@ -27,7 +28,7 @@ from app.databases.location_database import location_db
 from app.databases.orders_database import orders_db
 from app.databases.admin_database import admin_db
 from app.keyboards import admin_keyboards as akb
-from app.utils.admin_notifications import send_admin_notification
+from app.utils.admin_notifications import send_admin_notification, send_developer_error
 from app.utils.data_cache import public_data_cache
 from app.utils.phone_utils import format_phone
 
@@ -299,6 +300,10 @@ def _load_site_data_json(name: str) -> Any | None:
         logger.warning("Failed to read site data %s: %s", path, e)
         return None
 
+def _safe_alert_text(value: Any, limit: int = 900) -> str:
+    text = html.escape(str(value or '').strip())
+    return text[:limit] + ('...' if len(text) > limit else '')
+
 def build_cart_text(cart_menu: list) -> tuple[int, str]:
     total = 0
     items = []
@@ -424,6 +429,27 @@ async def get_order_details(order_id: str):
         logger.error(f"Error fetching order {oid_str}: {str(e)}")
         if isinstance(e, HTTPException): raise e
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post('/api/client-error')
+async def report_client_error(request: Request):
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    source = _safe_alert_text(data.get('source') or 'site', 120)
+    message = _safe_alert_text(data.get('message') or 'Client error')
+    context = _safe_alert_text(data.get('context') or '', 700)
+    path = _safe_alert_text(data.get('path') or str(request.url), 300)
+    user_agent = _safe_alert_text(request.headers.get('user-agent', ''), 300)
+    await send_developer_error(
+        f"Client error\n"
+        f"source: <code>{source}</code>\n"
+        f"path: <code>{path}</code>\n"
+        f"message: <code>{message}</code>\n"
+        f"context: <code>{context}</code>\n"
+        f"user-agent: <code>{user_agent}</code>"
+    )
+    return {"status": "ok"}
 
 async def notify_admins_about_order(order_id: str):
     order = await orders_db.get_order_by_id(order_id)
@@ -875,14 +901,20 @@ async def admin_get_menu(admin: dict = fastapi.Depends(get_current_admin)):
     if admin.get('role') not in ('boss', 'owner', 'developer'):
         raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.menu_database import menu_db
-    items = await menu_db.get_all_items_detailed()
-    if items:
-        return items
+    try:
+        items = await menu_db.get_all_items_detailed()
+        if items:
+            return items
+    except Exception as e:
+        await send_developer_error(f"Admin menu load failed:\n<code>{_safe_alert_text(e)}</code>")
     cached = public_data_cache.get('menu')
     flattened = _flatten_public_menu(cached)
     if flattened:
         return flattened
-    return _flatten_public_menu(_load_site_data_json('menu'))
+    flattened = _flatten_public_menu(_load_site_data_json('menu'))
+    if flattened:
+        return flattened
+    raise HTTPException(status_code=503, detail="Дані тимчасово недоступні")
 
 @app.post('/api/admin/menu')
 async def admin_save_menu_item(request: Request, admin: dict = fastapi.Depends(get_current_admin)):
@@ -938,9 +970,12 @@ async def admin_get_menu_categories(admin: dict = fastapi.Depends(get_current_ad
     if admin.get('role') not in ('boss', 'owner', 'developer'):
         raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.menu_database import menu_db
-    categories = await menu_db.get_categories()
-    if categories:
-        return categories
+    try:
+        categories = await menu_db.get_categories()
+        if categories:
+            return categories
+    except Exception as e:
+        await send_developer_error(f"Admin menu categories load failed:\n<code>{_safe_alert_text(e)}</code>")
     cached = public_data_cache.get('menu') or _load_site_data_json('menu') or []
     return [section.get('category') for section in cached if isinstance(section, dict) and section.get('category')]
 
@@ -1189,14 +1224,22 @@ async def admin_get_chats(admin: dict = fastapi.Depends(get_current_admin)):
     if admin.get('role') not in ('super', 'boss', 'owner', 'developer'):
         raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.guest_messages_database import guest_messages_db
-    return await guest_messages_db.get_unique_chats()
+    try:
+        return await guest_messages_db.get_unique_chats()
+    except Exception as e:
+        await send_developer_error(f"Admin support chats load failed:\n<code>{_safe_alert_text(e)}</code>")
+        raise HTTPException(status_code=503, detail="Чати тимчасово недоступні")
 
 @app.get('/api/admin/support/messages')
 async def admin_get_messages(request: Request, phone: str = None, order_id: str = None, admin: dict = fastapi.Depends(get_current_admin)):
     if admin.get('role') not in ('super', 'boss', 'owner', 'developer'):
         raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.guest_messages_database import guest_messages_db
-    return await guest_messages_db.get_messages(phone, order_id)
+    try:
+        return await guest_messages_db.get_messages(phone, order_id if order_id not in ('', 'none', 'null', 'undefined') else None)
+    except Exception as e:
+        await send_developer_error(f"Admin support messages load failed:\nphone={_safe_alert_text(phone, 120)}\norder_id={_safe_alert_text(order_id, 120)}\n<code>{_safe_alert_text(e)}</code>")
+        raise HTTPException(status_code=503, detail="Повідомлення тимчасово недоступні")
 
 @app.post('/api/admin/support/reply')
 async def admin_reply_support(request: Request, admin: dict = fastapi.Depends(get_current_admin)):
@@ -1208,7 +1251,11 @@ async def admin_reply_support(request: Request, admin: dict = fastapi.Depends(ge
     text = data.get('text')
     
     from app.databases.guest_messages_database import guest_messages_db
-    await guest_messages_db.add_message(order_id, phone, 'admin', text)
+    try:
+        await guest_messages_db.add_message(order_id, phone, 'admin', text)
+    except Exception as e:
+        await send_developer_error(f"Admin support reply failed:\nphone={_safe_alert_text(phone, 120)}\norder_id={_safe_alert_text(order_id, 120)}\n<code>{_safe_alert_text(e)}</code>")
+        raise HTTPException(status_code=503, detail="Відповідь тимчасово не відправилась")
     return {"status": "ok"}
 
 @app.delete('/api/admin/support/messages')

@@ -453,7 +453,7 @@
                     const response = await fetch(url, options);
                     if (response.status === 401) return logout();
                     if (!response.ok) {
-                        let message = 'API Error';
+                        let message = 'Сталася помилка. Адміни вже працюють над цим.';
                         try {
                             const err = await response.json();
                             message = err.detail || message;
@@ -463,7 +463,8 @@
                     return await response.json();
                 } catch (e) {
                     console.error(e);
-                    alert(e.message || 'Помилка API');
+                    reportClientError(e.message, `admin api: ${endpoint}`);
+                    alert(e.message || 'Сталася помилка. Адміни вже працюють над цим.');
                     return null;
                 }
             }
@@ -485,6 +486,20 @@
             function showLoader(show) { document.getElementById('loader').style.display = show ? 'flex' : 'none'; }
             function esc(value) {
                 return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+            }
+            function reportClientError(message, context = '') {
+                try {
+                    fetch('/api/client-error', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            source: 'admin-panel',
+                            path: location.href,
+                            message: String(message || 'Client error'),
+                            context: String(context || '')
+                        })
+                    });
+                } catch(e) {}
             }
             function roleName(role) {
                 return ({ developer: 'Розробник', owner: 'Власник', boss: 'Власник', super: 'Супер-адмін', admin: 'Адмін', delivery_manager: 'Менеджер доставки' }[role] || role || '—');
@@ -684,7 +699,11 @@
 
             async function openChat(phone, orderId) {
                 showLoader(true);
-                const messages = await apiFetch(`support/messages?phone=${phone}&order_id=${orderId || ''}`);
+                const messages = await apiFetch(`support/messages?phone=${encodeURIComponent(phone || '')}&order_id=${encodeURIComponent(orderId || '')}`);
+                if (!messages) {
+                    showLoader(false);
+                    return;
+                }
                 const list = document.getElementById('items-list');
                 list.innerHTML = `<div style="display:flex; align-items:center; gap:1rem; margin-bottom:2rem; flex-wrap:wrap;"><button class="btn btn--outline" onclick="loadSupport()"><i class="fas fa-arrow-left"></i> Назад</button><h3 style="font-family:var(--font-accent); font-size:1.8rem; flex:1;">Чат: ${esc(phone)}</h3><button class="btn btn--danger btn--sm" onclick="clearSupportChat('${esc(phone)}','${esc(orderId || '')}')"><i class="fas fa-trash"></i> Очистити</button></div><div id="chat-window"></div><div style="margin-top:2rem; display:flex; gap:1rem; background:white; padding:1.5rem; border-radius:var(--radius); box-shadow:var(--shadow);"><input type="text" id="reply-input" placeholder="Напишіть відповідь..."><button class="btn btn--primary" id="send-btn"><i class="fas fa-paper-plane"></i> Відправити</button></div>`;
                 const win = document.getElementById('chat-window');

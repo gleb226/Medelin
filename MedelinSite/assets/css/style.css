@@ -1001,11 +1001,11 @@ h4 {
 }
 
 .past-order__btn {
-    padding: 12px 22px !important;
-    font-size: 1rem !important;
+    padding: 7px 10px !important;
+    font-size: 0.82rem !important;
     height: auto !important;
-    min-height: auto !important;
-    border-radius: 16px !important;
+    min-height: 34px !important;
+    border-radius: 10px !important;
     background: var(--color-coffee-soft) !important;
 }
 
@@ -3514,6 +3514,9 @@ h4 {
 }
 
 .past-order__btn {
-    padding: 12px 20px !important;
-    font-size: 1rem !important;
+    padding: 7px 10px !important;
+    font-size: 0.82rem !important;
+    min-height: 34px;
+    border-radius: 10px;
+    gap: 6px;
 }
