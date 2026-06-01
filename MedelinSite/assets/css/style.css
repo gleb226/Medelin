@@ -2807,10 +2807,12 @@ h4 {
 }
 
 .past-order__btn {
-    padding: 8px 12px;
-    font-size: 0.9rem;
-    border-radius: 12px;
+    padding: 7px 10px;
+    font-size: 0.82rem;
+    border-radius: 10px;
     flex-shrink: 0;
+    gap: 6px;
+    min-height: 34px;
 }
 
 #chk_table_wrap {

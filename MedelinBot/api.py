@@ -267,6 +267,38 @@ def _parse_locations(value):
         return [str(x) for x in value if str(x).strip()]
     return [x.strip() for x in str(value or '').split(',') if x.strip()]
 
+def _has_field(data: dict, key: str) -> bool:
+    return key in data and data.get(key) is not None
+
+def _flatten_public_menu(menu_data: Any) -> list[dict[str, Any]]:
+    if not isinstance(menu_data, list):
+        return []
+    rows: list[dict[str, Any]] = []
+    for section in menu_data:
+        if not isinstance(section, dict):
+            continue
+        category = section.get('category', '')
+        for item in section.get('items') or []:
+            if not isinstance(item, dict):
+                continue
+            row = dict(item)
+            row['category'] = category
+            row['id'] = str(row.get('id') or row.get('_id') or '')
+            rows.append(row)
+    return rows
+
+def _load_site_data_json(name: str) -> Any | None:
+    if not _site_dir:
+        return None
+    path = _site_dir / "assets" / "data" / f"{name}.json"
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception as e:
+        logger.warning("Failed to read site data %s: %s", path, e)
+        return None
+
 def build_cart_text(cart_menu: list) -> tuple[int, str]:
     total = 0
     items = []
@@ -843,7 +875,14 @@ async def admin_get_menu(admin: dict = fastapi.Depends(get_current_admin)):
     if admin.get('role') not in ('boss', 'owner', 'developer'):
         raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.menu_database import menu_db
-    return await menu_db.get_all_items_detailed()
+    items = await menu_db.get_all_items_detailed()
+    if items:
+        return items
+    cached = public_data_cache.get('menu')
+    flattened = _flatten_public_menu(cached)
+    if flattened:
+        return flattened
+    return _flatten_public_menu(_load_site_data_json('menu'))
 
 @app.post('/api/admin/menu')
 async def admin_save_menu_item(request: Request, admin: dict = fastapi.Depends(get_current_admin)):
@@ -852,32 +891,35 @@ async def admin_save_menu_item(request: Request, admin: dict = fastapi.Depends(g
     item = await request.json()
     from app.databases.menu_database import menu_db
 
-    payload = {
-        'category': _clean_text(item.get('category')),
-        'name': _clean_text(item.get('name')),
-        'price': _to_float(item.get('price'), 0),
-        'description': _clean_text(item.get('description')),
-        'volume': _clean_text(item.get('volume')),
-        'calories': _clean_text(item.get('calories')),
-        'image_url': _clean_text(item.get('image_url')),
-        'composition': _clean_text(item.get('composition')),
-        'strength': _to_int(item.get('strength'), 0),
-        'sweetness': _to_int(item.get('sweetness'), 0),
-        'country': _clean_text(item.get('country')),
-        'altitude': _clean_text(item.get('altitude')),
-        'sort': _clean_text(item.get('sort')),
-        'processing': _clean_text(item.get('processing')),
-        'roast': _clean_text(item.get('roast')),
-        'taste': _clean_text(item.get('taste')),
+    converters = {
+        'category': _clean_text,
+        'name': _clean_text,
+        'price': lambda v: _to_float(v, 0),
+        'description': _clean_text,
+        'volume': _clean_text,
+        'calories': _clean_text,
+        'image_url': _clean_text,
+        'composition': _clean_text,
     }
-    if not payload['category'] or not payload['name']:
+    payload = {key: convert(item.get(key)) for key, convert in converters.items() if _has_field(item, key)}
+    if not payload.get('category') or not payload.get('name'):
         raise HTTPException(status_code=400, detail="Category and name are required")
 
     item_id = item.get('id') or item.get('_id')
     if item_id:
-        await menu_db.update_item(item_id, payload)
+        if not await menu_db.update_item(item_id, payload):
+            raise HTTPException(status_code=404, detail="Menu item not found in database")
     else:
-        await menu_db.add_item(**payload)
+        await menu_db.add_item(
+            category=payload.get('category', ''),
+            name=payload.get('name', ''),
+            price=payload.get('price', 0),
+            description=payload.get('description', ''),
+            volume=payload.get('volume', ''),
+            calories=payload.get('calories', ''),
+            image_url=payload.get('image_url', ''),
+            composition=payload.get('composition', ''),
+        )
     
     await public_data_cache.refresh_menu()
     return {"status": "ok"}
@@ -896,7 +938,11 @@ async def admin_get_menu_categories(admin: dict = fastapi.Depends(get_current_ad
     if admin.get('role') not in ('boss', 'owner', 'developer'):
         raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.menu_database import menu_db
-    return await menu_db.get_categories()
+    categories = await menu_db.get_categories()
+    if categories:
+        return categories
+    cached = public_data_cache.get('menu') or _load_site_data_json('menu') or []
+    return [section.get('category') for section in cached if isinstance(section, dict) and section.get('category')]
 
 @app.post('/api/admin/menu/categories')
 async def admin_save_menu_category(request: Request, admin: dict = fastapi.Depends(get_current_admin)):
@@ -938,40 +984,43 @@ async def admin_save_bean(request: Request, admin: dict = fastapi.Depends(get_cu
     bean = await request.json()
     from app.databases.coffee_beans_database import coffee_beans_db
 
-    payload = {
-        'name': _clean_text(bean.get('name')),
-        'price_250': _to_float(bean.get('price_250'), 0),
-        'price_500': _to_float(bean.get('price_500'), 0) or None,
-        'price_1000': _to_float(bean.get('price_1000'), 0) or None,
-        'description': _clean_text(bean.get('description')),
-        'sort': _clean_text(bean.get('sort')),
-        'taste': _clean_text(bean.get('taste')),
-        'roast': _clean_text(bean.get('roast')),
-        'image_url': _clean_text(bean.get('image_url')),
-        'country': _clean_text(bean.get('country')),
-        'altitude': _clean_text(bean.get('altitude')),
-        'processing': _clean_text(bean.get('processing')),
-        'recommendation': _clean_text(bean.get('recommendation')),
-        'variety': _clean_text(bean.get('variety')),
-        'cup_score': _clean_text(bean.get('cup_score')),
-        'harvest': _clean_text(bean.get('harvest')),
-        'acidity': _to_int(bean.get('acidity'), 0),
-        'bitterness': _to_int(bean.get('bitterness'), 0),
-        'body': _to_int(bean.get('body'), 0),
+    converters = {
+        'name': _clean_text,
+        'price_250': lambda v: _to_float(v, 0),
+        'description': _clean_text,
+        'sort': _clean_text,
+        'taste': _clean_text,
+        'roast': _clean_text,
+        'image_url': _clean_text,
+        'acidity': lambda v: _to_int(v, 0),
+        'bitterness': lambda v: _to_int(v, 0),
+        'body': lambda v: _to_int(v, 0),
     }
-    if not payload['name']:
+    payload = {key: convert(bean.get(key)) for key, convert in converters.items() if _has_field(bean, key)}
+    if 'price_250' in payload:
+        prices = coffee_beans_db.calculate_prices(payload['price_250'])
+        payload['price_250'] = prices['250']
+        payload['price_500'] = prices['500']
+        payload['price_1000'] = prices['1000']
+    if not payload.get('name'):
         raise HTTPException(status_code=400, detail="Name is required")
 
     bean_id = bean.get('_id')
     if bean_id:
-        update = dict(payload)
-        if update['price_500'] is None:
-            update.pop('price_500')
-        if update['price_1000'] is None:
-            update.pop('price_1000')
-        await coffee_beans_db.update_bean(bean_id, update)
+        await coffee_beans_db.update_bean(bean_id, payload)
     else:
-        await coffee_beans_db.add_bean(**payload)
+        await coffee_beans_db.add_bean(
+            name=payload.get('name', ''),
+            price_250=payload.get('price_250', 0),
+            description=payload.get('description', ''),
+            sort=payload.get('sort', ''),
+            taste=payload.get('taste', ''),
+            roast=payload.get('roast', ''),
+            image_url=payload.get('image_url', ''),
+            acidity=payload.get('acidity', 0),
+            bitterness=payload.get('bitterness', 0),
+            body=payload.get('body', 0),
+        )
     
     await public_data_cache.refresh_coffee()
     return {"status": "ok"}
@@ -1003,22 +1052,29 @@ async def admin_save_location(request: Request, admin: dict = fastapi.Depends(ge
         raise HTTPException(status_code=403, detail="Forbidden")
     data = await request.json()
     loc_id = data.get('_id') or data.get('id')
-    payload = {
-        'name': data.get('name', ''),
-        'address': data.get('address', ''),
-        'schedule': data.get('schedule', ''),
-        'phone': data.get('phone', ''),
-        'email': data.get('email', ''),
-        'google_maps_url': data.get('google_maps_url', ''),
-        'max_tables': int(data.get('max_tables') or 10),
-        'image_url': data.get('image_url', ''),
-        'amenities': data.get('amenities') if isinstance(data.get('amenities'), list) else [x.strip() for x in str(data.get('amenities', '')).split(',') if x.strip()],
-        'atmosphere': data.get('atmosphere', ''),
-    }
+    payload = {}
+    for key in ('name', 'address', 'schedule', 'phone', 'google_maps_url', 'image_url', 'atmosphere'):
+        if _has_field(data, key):
+            payload[key] = _clean_text(data.get(key))
+    if _has_field(data, 'amenities'):
+        payload['amenities'] = data.get('amenities') if isinstance(data.get('amenities'), list) else [x.strip() for x in str(data.get('amenities', '')).split(',') if x.strip()]
+    if not loc_id:
+        payload.setdefault('max_tables', 10)
     if loc_id:
         await location_db.update_location(loc_id, payload)
     else:
-        await location_db.add_location(**payload)
+        await location_db.add_location(
+            name=payload.get('name', ''),
+            address=payload.get('address', ''),
+            schedule=payload.get('schedule', ''),
+            phone=payload.get('phone', ''),
+            email='',
+            google_maps_url=payload.get('google_maps_url', ''),
+            max_tables=payload.get('max_tables', 10),
+            image_url=payload.get('image_url', ''),
+            amenities=payload.get('amenities', []),
+            atmosphere=payload.get('atmosphere', ''),
+        )
     await public_data_cache.refresh_locations()
     return {"status": "ok"}
 

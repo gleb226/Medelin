@@ -129,8 +129,12 @@
             .admin-field input, .admin-field select, .admin-field textarea {
                 width: 100%; padding: 0.9rem 1rem; border: 2px solid var(--color-coffee-soft);
                 border-radius: 12px; font-family: var(--font-main); font-size: 0.95rem; outline: none; background: #fffdfa;
+                appearance: none;
             }
-            .admin-field textarea { min-height: 96px; resize: vertical; }
+            .admin-field input[type="number"] { -moz-appearance: textfield; }
+            .admin-field input[type="number"]::-webkit-outer-spin-button,
+            .admin-field input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+            .admin-field textarea { min-height: 96px; resize: none; }
             .admin-field input:focus, .admin-field select:focus, .admin-field textarea:focus { border-color: var(--color-coffee); }
             .admin-modal { position: fixed; inset: 0; background: rgba(60, 47, 47, 0.38); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1rem; }
             .admin-modal--active { display: flex; }
@@ -448,10 +452,18 @@
                 try {
                     const response = await fetch(url, options);
                     if (response.status === 401) return logout();
-                    if (!response.ok) throw new Error('API Error');
+                    if (!response.ok) {
+                        let message = 'API Error';
+                        try {
+                            const err = await response.json();
+                            message = err.detail || message;
+                        } catch(e) {}
+                        throw new Error(message);
+                    }
                     return await response.json();
                 } catch (e) {
                     console.error(e);
+                    alert(e.message || 'Помилка API');
                     return null;
                 }
             }
@@ -512,6 +524,9 @@
             function field(name, label, value = '', type = 'text', full = false) {
                 return `<div class="admin-field ${full ? 'admin-field--full' : ''}"><label>${label}</label><input name="${name}" type="${type}" value="${esc(value)}"></div>`;
             }
+            function readonlyField(name, label, value = '', type = 'text') {
+                return `<div class="admin-field"><label>${label}</label><input name="${name}" type="${type}" value="${esc(value)}" readonly tabindex="-1"></div>`;
+            }
             function fileField(name, label, full = true) {
                 return `<div class="admin-field ${full ? 'admin-field--full' : ''}"><label>${label}</label><input name="${name}" type="file" accept="image/*"></div>`;
             }
@@ -527,6 +542,23 @@
             }
             function toolbar(title, buttonText, action, extra = '') {
                 return `<div class="admin-toolbar"><h3>${title}</h3><div class="order-actions">${extra}<button class="btn btn--primary btn--sm" onclick="${action}"><i class="fas fa-plus"></i> ${buttonText}</button></div></div>`;
+            }
+            function calcBeanPrice(base, size) {
+                const n = Number(String(base || '').replace(',', '.'));
+                if (!Number.isFinite(n) || n <= 0) return '';
+                return Math.round(size === 500 ? n * 2 * 0.97 : n * 4 * 0.92);
+            }
+            function hydrateBeanPriceCalculator() {
+                const base = document.querySelector('#admin-modal-form input[name="price_250"]');
+                const p500 = document.querySelector('#admin-modal-form input[name="price_500"]');
+                const p1000 = document.querySelector('#admin-modal-form input[name="price_1000"]');
+                if (!base || !p500 || !p1000) return;
+                const update = () => {
+                    p500.value = calcBeanPrice(base.value, 500);
+                    p1000.value = calcBeanPrice(base.value, 1000);
+                };
+                base.addEventListener('input', update);
+                update();
             }
 
             async function loadOrders() {
@@ -712,7 +744,7 @@
                     currentBeans.forEach(b => {
                         const div = document.createElement('div');
                         div.className = 'order-item';
-                        div.innerHTML = `<div class="order-info"><div class="order-title">${esc(b.name)}</div><div class="order-meta">${esc(b.country || '')} ${esc(b.sort || '')} | 250г: ${esc(b.price_250)} грн | 500г: ${esc(b.price_500)} грн | 1кг: ${esc(b.price_1000)} грн</div><div class="order-items">${esc(b.taste || b.description || 'Без опису')}</div></div><div class="order-actions"><button class="btn btn--outline btn--sm" onclick="editBean('${b._id}')">Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteBean('${b._id}')">Видалити</button></div>`;
+                        div.innerHTML = `<div class="order-info"><div class="order-title">${esc(b.name)}</div><div class="order-meta">${esc(b.sort || '')} | 250г: ${esc(b.price_250)} грн | 500г: ${esc(b.price_500)} грн | 1кг: ${esc(b.price_1000)} грн</div><div class="order-items">${esc(b.taste || b.description || 'Без опису')}</div></div><div class="order-actions"><button class="btn btn--outline btn--sm" onclick="editBean('${b._id}')">Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteBean('${b._id}')">Видалити</button></div>`;
                         list.appendChild(div);
                     });
                 }
@@ -811,17 +843,17 @@
             function editBean(id) {
                 const b = currentBeans.find(x => String(x._id) === String(id)) || {};
                 openAdminModal(id ? 'Редагування зерна' : 'Нове зерно', `<div class="admin-grid">
-                    ${field('name', 'Назва', b.name || '')}${field('price_250', 'Ціна 250г', b.price_250 || '', 'number')}${field('price_500', 'Ціна 500г', b.price_500 || '', 'number')}${field('price_1000', 'Ціна 1кг', b.price_1000 || '', 'number')}
-                    ${field('country', 'Країна', b.country || '')}${field('sort', 'Сорт', b.sort || '')}${field('processing', 'Обробка', b.processing || '')}${field('roast', 'Обсмаження', b.roast || '')}
-                    ${field('altitude', 'Висота', b.altitude || '')}${field('variety', 'Різновид', b.variety || '')}${field('harvest', 'Врожай', b.harvest || '')}${field('cup_score', 'Cup score', b.cup_score || '')}
-                    ${field('acidity', 'Кислотність 0-5', b.acidity || 0, 'number')}${field('bitterness', 'Гіркота 0-5', b.bitterness || 0, 'number')}${field('body', 'Тіло 0-5', b.body || 0, 'number')}${field('image_url', 'Фото URL', b.image_url || '', 'url', true)}
+                    ${field('name', 'Назва', b.name || '')}${field('price_250', 'Ціна 250г', b.price_250 || '', 'number')}${readonlyField('price_500', 'Ціна 500г', b.price_500 || '', 'number')}${readonlyField('price_1000', 'Ціна 1кг', b.price_1000 || '', 'number')}
+                    ${field('sort', 'Склад', b.sort || '')}${field('roast', 'Обсмаження', b.roast || '')}
+                    ${field('acidity', 'Кислинка 0-5', b.acidity || 0, 'number')}${field('bitterness', 'Гірчинка 0-5', b.bitterness || 0, 'number')}${field('body', 'Тіло 0-5', b.body || 0, 'number')}${field('image_url', 'Фото URL', b.image_url || '', 'url', true)}
                     ${fileField('image_file', 'Або завантажити фото')}
-                    ${textareaField('taste', 'Смак', b.taste || '')}${textareaField('recommendation', 'Рекомендація', b.recommendation || '')}${textareaField('description', 'Опис', b.description || '')}
+                    ${textareaField('taste', 'Смак', b.taste || '')}${textareaField('description', 'Опис', b.description || '')}
                 </div>`, async fd => {
                     const payload = await payloadWithUpload(fd);
                     if (id) payload._id = id;
                     await apiFetch('beans', 'POST', payload);
                 });
+                hydrateBeanPriceCalculator();
             }
             function deleteBean(id) { if(confirm('Видалити зерно?')) apiFetch(`beans/${id}`, 'DELETE').then(loadBeans); }
 
@@ -829,7 +861,7 @@
                 const l = currentLocations.find(x => String(x._id) === String(id)) || {};
                 openAdminModal(id ? 'Редагування закладу' : 'Новий заклад', `<div class="admin-grid">
                     ${field('name', 'Назва', l.name || '')}${field('address', 'Адреса', l.address || '')}${field('schedule', 'Графік', l.schedule || '')}${field('phone', 'Телефон', l.phone || '')}
-                    ${field('email', 'Email', l.email || '', 'email')}${field('max_tables', 'Кількість столів', l.max_tables || 10, 'number')}${field('google_maps_url', 'Google Maps URL', l.google_maps_url || '', 'url', true)}${field('image_url', 'Фото URL', l.image_url || '', 'url', true)}
+                    ${field('google_maps_url', 'Google Maps URL', l.google_maps_url || '', 'url', true)}${field('image_url', 'Фото URL', l.image_url || '', 'url', true)}
                     ${fileField('image_file', 'Або завантажити фото')}
                     ${textareaField('amenities', 'Зручності через кому', (l.amenities || []).join(', '))}${textareaField('atmosphere', 'Атмосфера', l.atmosphere || '')}
                 </div>`, async fd => {

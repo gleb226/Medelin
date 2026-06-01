@@ -339,11 +339,12 @@
     }
 
     #cart-modal-container .past-order__btn {
-        width: 100%;
-        min-height: 48px;
-        padding: 10px 14px !important;
-        font-size: 0.95rem !important;
-        border-radius: 14px !important;
+        width: auto;
+        min-height: 34px;
+        justify-self: start;
+        padding: 7px 10px !important;
+        font-size: 0.82rem !important;
+        border-radius: 10px !important;
     }
 
     .cart-modal__list li {

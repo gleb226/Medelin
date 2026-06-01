@@ -458,7 +458,7 @@ window.openCartModal = function () {
                         <strong>${itemCount} — ${order.total} ₴</strong>
                         <div class="past-order__date">${date}</div>
                     </div>
-                    ${order.items && order.items.length > 0 ? `<button class="btn past-order__btn" type="button" data-action="repeat-order" data-order-index="${idx}">Повторити</button>` : ''}
+                    ${order.items && order.items.length > 0 ? `<button class="btn past-order__btn" type="button" data-action="repeat-order" data-order-index="${idx}"><i class="fas fa-redo-alt"></i><span>Повтор</span></button>` : ''}
                 </div>`;
             });
         } else {
