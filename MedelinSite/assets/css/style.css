@@ -951,18 +951,18 @@ h4 {
 
 /* --- Past Orders Styles (in Cart) --- */
 .cart-modal__past-orders {
-    padding: 1.5rem;
+    padding: 2rem 2.5rem 2.5rem;
     background: rgba(139, 94, 60, 0.05);
-    border-radius: 20px;
-    margin: 1.5rem 0;
+    border-radius: 24px;
+    margin: 2rem 0;
     border: 1px solid rgba(139, 94, 60, 0.1);
 }
 
 .cart-modal__past-orders-title {
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     font-weight: 800;
     color: var(--color-dark-brown);
-    margin-bottom: 1.2rem;
+    margin-bottom: 1.5rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -970,7 +970,7 @@ h4 {
 .cart-modal__past-orders-list {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 18px;
 }
 
 .past-order {
@@ -978,34 +978,34 @@ h4 {
     justify-content: space-between;
     align-items: center;
     background: #fff;
-    padding: 15px 20px;
-    border-radius: 18px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    padding: 1.2rem 1.8rem;
+    border-radius: 20px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.04);
     border: 1px solid rgba(0, 0, 0, 0.02);
 }
 
 .past-order__meta {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
 }
 
 .past-order__meta strong {
-    font-size: 1.05rem;
+    font-size: 1.15rem;
     color: var(--color-dark-brown);
 }
 
 .past-order__date {
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     color: var(--color-muted);
 }
 
 .past-order__btn {
-    padding: 10px 18px !important;
-    font-size: 0.9rem !important;
+    padding: 12px 22px !important;
+    font-size: 1rem !important;
     height: auto !important;
     min-height: auto !important;
-    border-radius: 14px !important;
+    border-radius: 16px !important;
     background: var(--color-coffee-soft) !important;
 }
 
@@ -1013,47 +1013,47 @@ h4 {
 .payment-methods-grid {
     display: flex !important;
     flex-direction: column !important;
-    gap: 20px !important;
-    padding: 1rem 0 2rem !important;
+    gap: 15px !important;
+    padding: 0.5rem 0 1.5rem !important;
     width: 100% !important;
 }
 
 .payment-btn {
     display: flex !important;
     align-items: center !important;
-    gap: 30px !important;
-    padding: 2.2rem 3.5rem !important;
-    border-radius: 32px !important;
-    border: 3.5px solid rgba(139, 94, 60, 0.15) !important;
+    gap: 22px !important;
+    padding: 1.4rem 2rem !important;
+    border-radius: 24px !important;
+    border: 3px solid rgba(139, 94, 60, 0.12) !important;
     background: #fff !important;
-    font-weight: 900 !important;
+    font-weight: 800 !important;
     font-family: var(--font-main) !important;
-    font-size: 1.5rem !important;
+    font-size: 1.15rem !important;
     color: var(--color-dark-brown) !important;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     text-align: left !important;
     width: 100% !important;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05) !important;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.04) !important;
 }
 
 .payment-btn i {
-    font-size: 2.8rem !important;
+    font-size: 2.2rem !important;
     color: var(--color-coffee) !important;
-    width: 50px !important;
+    width: 40px !important;
     text-align: center !important;
 }
 
 .payment-btn:hover {
     border-color: var(--color-coffee-soft) !important;
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(139, 94, 60, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(139, 94, 60, 0.08);
 }
 
 .payment-btn--active {
     background: var(--color-coffee) !important;
     border-color: var(--color-coffee) !important;
     color: #fff !important;
-    box-shadow: 0 12px 30px rgba(139, 94, 60, 0.25);
+    box-shadow: 0 10px 25px rgba(139, 94, 60, 0.25);
 }
 
 .payment-btn--active i {
@@ -1570,21 +1570,31 @@ h4 {
 }
 
 .btn-back {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
     width: 100%;
-    padding: 0.8rem;
+    padding: 1.2rem !important;
     background: transparent;
-    border: 2px solid var(--color-coffee-soft);
+    border: 3px solid var(--color-coffee-soft);
     color: var(--color-coffee);
     border-radius: 50px;
-    font-weight: 600;
+    font-weight: 800;
+    font-size: 1.1rem;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    margin-top: 1rem;
+}
+
+.btn-back i {
+    font-size: 1.2rem;
 }
 
 .btn-back:hover {
     background: var(--color-coffee-soft);
-    color: var(--color-cream);
+    color: var(--color-dark-brown);
+    transform: translateX(-5px);
 }
 
 @media (max-width: 992px) {
@@ -3429,4 +3439,79 @@ h4 {
 }
 .np-result-item:hover {
     background: rgba(139, 94, 60, 0.05);
+}
+
+/* --- FINAL UI REFINEMENTS --- */
+
+/* 1. Payment Methods: 1 Column, Moderate Size */
+.payment-methods-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    padding: 1rem 0 !important;
+    width: 100% !important;
+}
+
+.payment-btn {
+    display: flex !important;
+    align-items: center !important;
+    gap: 18px !important;
+    padding: 1.2rem 1.8rem !important;
+    border-radius: 22px !important;
+    font-size: 1.1rem !important;
+    width: 100% !important;
+}
+
+.payment-btn i {
+    font-size: 1.8rem !important;
+    width: 35px !important;
+}
+
+/* 2. Back button: Large and Prominent */
+.btn-back {
+    display: flex !important;
+    padding: 1.4rem !important;
+    font-size: 1.2rem !important;
+    font-weight: 800 !important;
+    border: 3px solid var(--color-coffee) !important;
+    color: var(--color-coffee) !important;
+    margin-top: 1.5rem !important;
+    background: #fff !important;
+    box-shadow: 0 4px 12px rgba(139, 94, 60, 0.1) !important;
+}
+
+/* 3. Cart & Past Orders: Larger */
+.cart-modal__list li {
+    padding: 1.4rem !important;
+}
+
+.cart-modal__list li strong {
+    font-size: 1.25rem !important;
+}
+
+.cart-modal__item-price {
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+}
+
+.cart-modal__total {
+    font-size: 1.5rem !important;
+}
+
+.cart-modal__past-orders-title {
+    font-size: 1.4rem !important;
+    margin-bottom: 1.2rem !important;
+}
+
+.past-order {
+    padding: 1.2rem 1.5rem !important;
+}
+
+.past-order__meta strong {
+    font-size: 1.1rem !important;
+}
+
+.past-order__btn {
+    padding: 12px 20px !important;
+    font-size: 1rem !important;
 }

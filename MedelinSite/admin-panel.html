@@ -292,19 +292,37 @@
                 if (!id || !pass) return alert('Введіть логін та пароль');
                 showLoader(true);
                 try {
+                    // Використовуємо таймаут для фечу
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
                     const resp = await fetch('/api/admin/login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ identifier: id, password: pass })
+                        body: JSON.stringify({ identifier: id, password: pass }),
+                        signal: controller.signal
                     });
+                    
+                    clearTimeout(timeoutId);
+
                     if (!resp.ok) {
-                        const err = await resp.json();
-                        throw new Error(err.detail || 'Помилка входу');
+                        let errorMsg = 'Помилка входу';
+                        try {
+                            const err = await resp.json();
+                            errorMsg = err.detail || errorMsg;
+                        } catch(e) {}
+                        throw new Error(errorMsg);
                     }
                     const data = await resp.json();
                     startVerification(data.user_id);
                 } catch (e) {
-                    alert(e.message);
+                    if (e.name === 'AbortError') {
+                        alert('Сервер занадто довго не відповідає (можливо, він прокидається). Спробуйте ще раз через 10 секунд.');
+                    } else if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+                        alert('Помилка мережі. Перевірте зʼєднання або спробуйте оновити сторінку.');
+                    } else {
+                        alert(e.message);
+                    }
                 } finally {
                     showLoader(false);
                 }

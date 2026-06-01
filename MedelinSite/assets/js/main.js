@@ -14,25 +14,26 @@ window.fetchMedelinData = async function (key) {
     const fileName = `${key}.json`;
     const endpoints = [
         `${window.API_BASE_URL}/api/${key}`,
+        `/api/${key}`,
         `${window.API_BASE_URL}/assets/data/${fileName}`
     ];
     
     const isRoot = !window.location.pathname.includes('/pages/');
-    if (isRoot) {
-        endpoints.push(`./assets/data/${fileName}`);
-    } else {
-        endpoints.push(`../assets/data/${fileName}`);
-    }
-    
+    const dataPath = isRoot ? `./assets/data/${fileName}` : `../assets/data/${fileName}`;
+    endpoints.push(dataPath);
     endpoints.push(`/assets/data/${fileName}`);
 
     for (const url of endpoints) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            // Збільшуємо таймаут до 10 секунд для холодного старту на Render
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
             
             const finalUrl = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`;
-            const response = await fetch(finalUrl, { signal: controller.signal });
+            const response = await fetch(finalUrl, { 
+                signal: controller.signal,
+                headers: { 'Cache-Control': 'no-cache' }
+            });
             clearTimeout(timeoutId);
 
             if (response.ok) {
@@ -42,6 +43,7 @@ window.fetchMedelinData = async function (key) {
                 }
             }
         } catch (e) {
+            console.warn(`[Medelin] Failed to fetch from ${url}:`, e.message);
         }
     }
     
