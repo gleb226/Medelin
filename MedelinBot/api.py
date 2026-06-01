@@ -395,8 +395,14 @@ async def notify_admins_about_order(order_id: str):
     
     if order_type == 'nova_poshta' or order_type == 'beans_delivery':
         msg += f'🚚 Доставка: <b>Нова Пошта</b>\n'
-        if 'НП:' in wishes:
-            msg += f"📍 Адреса: {wishes.split('НП:')[1].split('|')[0].strip()}\n"
+        if wishes and 'НП:' in wishes:
+            # Extract full address from wishes
+            addr = wishes.split('НП:')[1].split('|')[0].strip()
+            msg += f"📍 Адреса: {addr}\n"
+        elif wishes and 'ВАГА:' in wishes and 'НП:' in wishes:
+             # Logic for beans orders where wishes format is "ВАГА: 250г | НП: City, Warehouse"
+             addr = wishes.split('НП:')[1].strip()
+             msg += f"📍 Адреса: {addr}\n"
     elif order_type == 'beans_booking':
         msg += f'🏛 Заклад: {location_name}\n'
         msg += f'📦 Тип: Самовивіз зерен\n'

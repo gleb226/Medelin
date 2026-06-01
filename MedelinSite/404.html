@@ -118,15 +118,19 @@
                 </div>
 
                 <div id="two-fa-section">
-                    <h2 style="font-family:'Marcellus', serif; color:var(--color-coffee); margin-bottom: 1rem;">Підтвердження</h2>
-                    <p style="font-size: 0.9rem; margin-bottom: 1.5rem; opacity: 0.8;">Ми надіслали запит у ваш Telegram.<br>Натисніть <b>"Підтвердити"</b> в боті.</p>
+                    <h2 style="font-family:'Marcellus', serif; color:var(--color-coffee); font-size: 2rem; margin-bottom: 0.5rem; letter-spacing: 1px;">Підтвердження</h2>
+                    <p style="font-size: 0.95rem; margin-bottom: 2.5rem; color: var(--color-text); opacity: 0.7; line-height: 1.6;">Ми надіслали запит у ваш Telegram.<br>Натисніть <b>"Підтвердити"</b> для входу.</p>
                     
-                    <div class="verify-pulse">
-                        <i class="fab fa-telegram-plane" style="font-size:2rem; color:var(--color-coffee);"></i>
+                    <div class="verify-pulse" style="width: 100px; height: 100px; background: rgba(111, 78, 55, 0.05); margin: 0 auto 2.5rem;">
+                        <i class="fab fa-telegram-plane" style="font-size:2.5rem; color:var(--color-coffee); filter: drop-shadow(0 4px 10px rgba(111, 78, 55, 0.2));"></i>
                     </div>
 
-                    <p id="timer-text" style="font-size: 0.8rem; opacity: 0.5;">Очікування відповіді...</p>
-                    <button class="btn btn--outline" onclick="resetForm()" style="margin-top:2rem; padding: 0.5rem 1rem; font-size:0.8rem; background: transparent; border: 1px solid var(--color-coffee); color: var(--color-coffee);">Скасувати</button>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+                        <div style="font-size: 0.85rem; font-weight: 700; color: var(--color-coffee); letter-spacing: 2px; text-transform: uppercase; animation: fade 2s infinite;">Очікування...</div>
+                        <p id="timer-text" style="font-size: 0.8rem; opacity: 0.4;">Перевірте сповіщення у вашому боті</p>
+                    </div>
+
+                    <button class="btn btn--outline" onclick="resetForm()" style="margin-top:3rem; padding: 0.7rem 1.5rem; font-size:0.85rem; background: transparent; border: 1.5px solid rgba(111, 78, 55, 0.2); color: var(--color-coffee); border-radius: 15px; font-weight: 700; transition: all 0.3s;">Скасувати вхід</button>
                 </div>
 
                 <div class="status-msg" id="status-msg"></div>

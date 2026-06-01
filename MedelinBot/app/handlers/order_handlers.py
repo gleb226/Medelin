@@ -247,6 +247,16 @@ async def _ensure_phone_and_run(target, state: FSMContext, user, action):
         return False
 
     data = await state.get_data()
+    
+    # Визначаємо, чи потрібен телефон. 
+    # Телефон потрібен для замовлення зерен (доставка) або бронювання.
+    # Для звичайного замовлення в закладі/на виніс — ні.
+    order_type = data.get('order_type', '')
+    needs_phone = order_type in ('beans_delivery', 'beans_booking', 'order_with_booking') or data.get('booking_mode')
+
+    if not needs_phone:
+        await action()
+        return True
 
     phone = data.get('phone')
 
