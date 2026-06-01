@@ -8,9 +8,10 @@ import re
 import aiohttp
 from typing import Any
 import asyncio
+from datetime import datetime
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Response, Request, Form
+from fastapi import FastAPI, HTTPException, Response, Request, Form, UploadFile, File
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -241,6 +242,30 @@ async def resolve_location(value: str | None):
 def parse_price(value):
     digits = re.sub('[^\\d]', '', str(value))
     return int(digits) if digits else 0
+
+def _clean_text(value, default=''):
+    return str(value if value is not None else default).strip()
+
+def _to_int(value, default=0):
+    try:
+        if value in (None, ''):
+            return default
+        return int(float(str(value).replace(',', '.')))
+    except Exception:
+        return default
+
+def _to_float(value, default=0):
+    try:
+        if value in (None, ''):
+            return default
+        return float(str(value).replace(',', '.'))
+    except Exception:
+        return default
+
+def _parse_locations(value):
+    if isinstance(value, list):
+        return [str(x) for x in value if str(x).strip()]
+    return [x.strip() for x in str(value or '').split(',') if x.strip()]
 
 def build_cart_text(cart_menu: list) -> tuple[int, str]:
     total = 0
@@ -704,6 +729,70 @@ async def _decorate_active_order(order: dict):
     order['location_name'] = location_name
     return order
 
+@app.get('/api/admin/me')
+async def admin_me(admin: dict = fastapi.Depends(get_current_admin)):
+    user_id = admin.get('user_id')
+    shift = await admin_db.is_on_shift(user_id) if user_id else False
+    locations = await admin_db.get_locations_for_admin(user_id) if user_id else []
+    return {
+        "user_id": user_id,
+        "name": admin.get('display_name') or admin.get('name') or 'Admin',
+        "role": admin.get('role') or 'admin',
+        "is_on_shift": shift,
+        "locations": locations,
+    }
+
+@app.post('/api/admin/uploads')
+async def admin_upload_image(file: UploadFile = File(...), admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    content_type = (file.content_type or '').lower()
+    if not content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="Only images are allowed")
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Empty file")
+    if len(raw) > 8 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image is too large")
+
+    stem = secrets.token_hex(5)
+    try:
+        from PIL import Image, ImageOps
+        import io
+        img = Image.open(io.BytesIO(raw))
+        img = ImageOps.exif_transpose(img)
+        img = img.convert('RGBA') if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info) else img.convert('RGB')
+        filename = f'{stem}.webp'
+        img.save(str(_uploads_dir / filename), 'WEBP', quality=85, method=6)
+    except Exception:
+        ext = pathlib.Path(file.filename or '').suffix.lower()
+        if ext not in ('.jpg', '.jpeg', '.png', '.webp', '.gif'):
+            ext = '.jpg'
+        filename = f'{stem}{ext}'
+        (_uploads_dir / filename).write_bytes(raw)
+    return {"url": f"/uploads/{filename}"}
+
+@app.post('/api/admin/shift/start')
+async def admin_start_shift(request: Request, admin: dict = fastapi.Depends(get_current_admin)):
+    if (admin.get('role') or 'admin') != 'admin':
+        raise HTTPException(status_code=403, detail="Forbidden")
+    data = await request.json()
+    loc_id = _clean_text(data.get('location_id'))
+    allowed = await admin_db.get_locations_for_admin(admin.get('user_id'))
+    if allowed and loc_id not in [str(x) for x in allowed]:
+        raise HTTPException(status_code=403, detail="No location access")
+    if not loc_id:
+        raise HTTPException(status_code=400, detail="Location is required")
+    await admin_db.set_shift_status(admin.get('user_id'), loc_id)
+    return {"status": "ok"}
+
+@app.post('/api/admin/shift/end')
+async def admin_end_shift(admin: dict = fastapi.Depends(get_current_admin)):
+    if (admin.get('role') or 'admin') != 'admin':
+        raise HTTPException(status_code=403, detail="Forbidden")
+    await admin_db.set_shift_status(admin.get('user_id'), False)
+    return {"status": "ok"}
+
 @app.get('/api/admin/active-orders')
 async def get_admin_active_orders(admin: dict = fastapi.Depends(get_current_admin)):
     from app.databases.active_orders_database import active_orders_db
@@ -762,12 +851,33 @@ async def admin_save_menu_item(request: Request, admin: dict = fastapi.Depends(g
         raise HTTPException(status_code=403, detail="Forbidden")
     item = await request.json()
     from app.databases.menu_database import menu_db
-    
-    item_id = item.get('id')
+
+    payload = {
+        'category': _clean_text(item.get('category')),
+        'name': _clean_text(item.get('name')),
+        'price': _to_float(item.get('price'), 0),
+        'description': _clean_text(item.get('description')),
+        'volume': _clean_text(item.get('volume')),
+        'calories': _clean_text(item.get('calories')),
+        'image_url': _clean_text(item.get('image_url')),
+        'composition': _clean_text(item.get('composition')),
+        'strength': _to_int(item.get('strength'), 0),
+        'sweetness': _to_int(item.get('sweetness'), 0),
+        'country': _clean_text(item.get('country')),
+        'altitude': _clean_text(item.get('altitude')),
+        'sort': _clean_text(item.get('sort')),
+        'processing': _clean_text(item.get('processing')),
+        'roast': _clean_text(item.get('roast')),
+        'taste': _clean_text(item.get('taste')),
+    }
+    if not payload['category'] or not payload['name']:
+        raise HTTPException(status_code=400, detail="Category and name are required")
+
+    item_id = item.get('id') or item.get('_id')
     if item_id:
-        await menu_db.update_item(item_id, item)
+        await menu_db.update_item(item_id, payload)
     else:
-        await menu_db.add_item(item)
+        await menu_db.add_item(**payload)
     
     await public_data_cache.refresh_menu()
     return {"status": "ok"}
@@ -778,6 +888,39 @@ async def admin_delete_menu_item(item_id: str, admin: dict = fastapi.Depends(get
         raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.menu_database import menu_db
     await menu_db.delete_item(item_id)
+    await public_data_cache.refresh_menu()
+    return {"status": "ok"}
+
+@app.get('/api/admin/menu/categories')
+async def admin_get_menu_categories(admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from app.databases.menu_database import menu_db
+    return await menu_db.get_categories()
+
+@app.post('/api/admin/menu/categories')
+async def admin_save_menu_category(request: Request, admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    data = await request.json()
+    from app.databases.menu_database import menu_db
+    old_name = (data.get('old_name') or '').strip()
+    name = (data.get('name') or '').strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Назва категорії обовʼязкова")
+    if old_name and old_name != name:
+        await menu_db.update_category(old_name, name)
+    else:
+        await menu_db.add_category(name)
+    await public_data_cache.refresh_menu()
+    return {"status": "ok"}
+
+@app.delete('/api/admin/menu/categories/{name}')
+async def admin_delete_menu_category(name: str, admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from app.databases.menu_database import menu_db
+    await menu_db.delete_category(name)
     await public_data_cache.refresh_menu()
     return {"status": "ok"}
 
@@ -794,12 +937,41 @@ async def admin_save_bean(request: Request, admin: dict = fastapi.Depends(get_cu
         raise HTTPException(status_code=403, detail="Forbidden")
     bean = await request.json()
     from app.databases.coffee_beans_database import coffee_beans_db
-    
+
+    payload = {
+        'name': _clean_text(bean.get('name')),
+        'price_250': _to_float(bean.get('price_250'), 0),
+        'price_500': _to_float(bean.get('price_500'), 0) or None,
+        'price_1000': _to_float(bean.get('price_1000'), 0) or None,
+        'description': _clean_text(bean.get('description')),
+        'sort': _clean_text(bean.get('sort')),
+        'taste': _clean_text(bean.get('taste')),
+        'roast': _clean_text(bean.get('roast')),
+        'image_url': _clean_text(bean.get('image_url')),
+        'country': _clean_text(bean.get('country')),
+        'altitude': _clean_text(bean.get('altitude')),
+        'processing': _clean_text(bean.get('processing')),
+        'recommendation': _clean_text(bean.get('recommendation')),
+        'variety': _clean_text(bean.get('variety')),
+        'cup_score': _clean_text(bean.get('cup_score')),
+        'harvest': _clean_text(bean.get('harvest')),
+        'acidity': _to_int(bean.get('acidity'), 0),
+        'bitterness': _to_int(bean.get('bitterness'), 0),
+        'body': _to_int(bean.get('body'), 0),
+    }
+    if not payload['name']:
+        raise HTTPException(status_code=400, detail="Name is required")
+
     bean_id = bean.get('_id')
     if bean_id:
-        await coffee_beans_db.update_bean(bean_id, bean)
+        update = dict(payload)
+        if update['price_500'] is None:
+            update.pop('price_500')
+        if update['price_1000'] is None:
+            update.pop('price_1000')
+        await coffee_beans_db.update_bean(bean_id, update)
     else:
-        await coffee_beans_db.add_bean(bean)
+        await coffee_beans_db.add_bean(**payload)
     
     await public_data_cache.refresh_coffee()
     return {"status": "ok"}
@@ -811,6 +983,149 @@ async def admin_delete_bean(bean_id: str, admin: dict = fastapi.Depends(get_curr
     from app.databases.coffee_beans_database import coffee_beans_db
     await coffee_beans_db.delete_bean(bean_id)
     await public_data_cache.refresh_coffee()
+    return {"status": "ok"}
+
+@app.get('/api/admin/locations')
+async def admin_get_locations(admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('admin', 'super', 'boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    locations = await location_db.get_all_locations()
+    if admin.get('role') == 'admin':
+        allowed = await admin_db.get_locations_for_admin(admin.get('user_id'))
+        if allowed:
+            allowed_set = {str(x) for x in allowed}
+            locations = [loc for loc in locations if str(loc.get('_id')) in allowed_set]
+    return locations
+
+@app.post('/api/admin/locations')
+async def admin_save_location(request: Request, admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    data = await request.json()
+    loc_id = data.get('_id') or data.get('id')
+    payload = {
+        'name': data.get('name', ''),
+        'address': data.get('address', ''),
+        'schedule': data.get('schedule', ''),
+        'phone': data.get('phone', ''),
+        'email': data.get('email', ''),
+        'google_maps_url': data.get('google_maps_url', ''),
+        'max_tables': int(data.get('max_tables') or 10),
+        'image_url': data.get('image_url', ''),
+        'amenities': data.get('amenities') if isinstance(data.get('amenities'), list) else [x.strip() for x in str(data.get('amenities', '')).split(',') if x.strip()],
+        'atmosphere': data.get('atmosphere', ''),
+    }
+    if loc_id:
+        await location_db.update_location(loc_id, payload)
+    else:
+        await location_db.add_location(**payload)
+    await public_data_cache.refresh_locations()
+    return {"status": "ok"}
+
+@app.delete('/api/admin/locations/{loc_id}')
+async def admin_delete_location(loc_id: str, admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    await location_db.delete_location(loc_id)
+    await public_data_cache.refresh_locations()
+    return {"status": "ok"}
+
+@app.get('/api/admin/socials')
+async def admin_get_socials(admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from app.databases.socials_database import socials_db
+    return await socials_db.get_all_socials()
+
+@app.post('/api/admin/socials')
+async def admin_save_social(request: Request, admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    data = await request.json()
+    from app.databases.socials_database import socials_db
+    social_id = data.get('_id') or data.get('id')
+    payload = {'name': data.get('name', ''), 'url': data.get('url', '')}
+    if social_id:
+        await socials_db.update_social(social_id, payload)
+    else:
+        await socials_db.add_social(payload['name'], payload['url'])
+    await public_data_cache.refresh_socials()
+    return {"status": "ok"}
+
+@app.delete('/api/admin/socials/{social_id}')
+async def admin_delete_social(social_id: str, admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from app.databases.socials_database import socials_db
+    await socials_db.delete_social(social_id)
+    await public_data_cache.refresh_socials()
+    return {"status": "ok"}
+
+def _can_manage_admin(caller_role: str, target_role: str) -> bool:
+    levels = {'developer': 5, 'owner': 4, 'boss': 4, 'super': 3, 'admin': 2, 'delivery_manager': 2}
+    caller_role = (caller_role or '').lower()
+    target_role = (target_role or '').lower()
+    if caller_role == 'developer':
+        return True
+    if target_role == 'developer':
+        return False
+    if caller_role in ('owner', 'boss'):
+        return target_role != 'developer'
+    if caller_role == 'super':
+        return target_role in ('admin', 'delivery_manager')
+    return levels.get(caller_role, 0) > levels.get(target_role, 0)
+
+@app.get('/api/admin/team')
+async def admin_get_team(admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('super', 'boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from app.databases.mongo_client import get_db, projection_without_mongo_id
+    db = await get_db()
+    rows = await db.admins.find({}, projection_without_mongo_id()).sort('role', 1).to_list(length=None)
+    return rows
+
+@app.post('/api/admin/team')
+async def admin_save_team_member(request: Request, admin: dict = fastapi.Depends(get_current_admin)):
+    caller_role = admin.get('role') or 'admin'
+    if caller_role not in ('super', 'boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    data = await request.json()
+    user_id = int(data.get('user_id') or 0)
+    role = (data.get('role') or 'admin').strip()
+    if not user_id or not _can_manage_admin(caller_role, role):
+        raise HTTPException(status_code=403, detail="Недостатньо прав")
+    receive_notifications = bool(data.get('receive_notifications', True))
+    locations = [str(x) for x in (data.get('locations') or [])]
+    from app.databases.mongo_client import get_db
+    db = await get_db()
+    old = await db.admins.find_one({'user_id': user_id}, {'_id': 0, 'role': 1})
+    if old and not _can_manage_admin(caller_role, old.get('role') or 'admin'):
+        raise HTTPException(status_code=403, detail="Недостатньо прав")
+    await db.admins.update_one(
+        {'user_id': user_id},
+        {'$set': {
+            'user_id': user_id,
+            'username': (data.get('username') or '').replace('@', ''),
+            'display_name': data.get('display_name') or data.get('username') or str(user_id),
+            'role': role,
+            'receive_notifications': receive_notifications,
+            'locations': locations,
+        }, '$setOnInsert': {'created_at': datetime.utcnow(), 'added_by': int(admin.get('user_id') or 0)}},
+        upsert=True
+    )
+    return {"status": "ok"}
+
+@app.delete('/api/admin/team/{user_id}')
+async def admin_delete_team_member(user_id: int, admin: dict = fastapi.Depends(get_current_admin)):
+    caller_role = admin.get('role') or 'admin'
+    if caller_role not in ('super', 'boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from app.databases.mongo_client import get_db
+    db = await get_db()
+    target = await db.admins.find_one({'user_id': int(user_id)}, {'_id': 0, 'role': 1})
+    if not target or not _can_manage_admin(caller_role, target.get('role') or 'admin'):
+        raise HTTPException(status_code=403, detail="Недостатньо прав")
+    await db.admins.delete_one({'user_id': int(user_id)})
     return {"status": "ok"}
 
 @app.get('/api/admin/support/chats')
@@ -838,6 +1153,21 @@ async def admin_reply_support(request: Request, admin: dict = fastapi.Depends(ge
     
     from app.databases.guest_messages_database import guest_messages_db
     await guest_messages_db.add_message(order_id, phone, 'admin', text)
+    return {"status": "ok"}
+
+@app.delete('/api/admin/support/messages')
+async def admin_clear_support_chat(phone: str, order_id: str = None, admin: dict = fastapi.Depends(get_current_admin)):
+    if admin.get('role') not in ('super', 'boss', 'owner', 'developer'):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from app.databases.mongo_client import get_db
+    from app.utils.phone_utils import normalize_phone
+    db = await get_db()
+    query = {'phone_digits': normalize_phone(phone)}
+    if order_id and order_id != 'none':
+        query['order_id'] = order_id
+    else:
+        query['order_id'] = {'$in': [None, 'none', '']}
+    await db.guest_messages.delete_many(query)
     return {"status": "ok"}
 
 @app.get('/api/past-orders')

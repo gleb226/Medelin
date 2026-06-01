@@ -114,7 +114,21 @@ class AdminDatabase:
 
         locs = list(locations or [])
 
-        await db.admins.update_one({'user_id': int(user_id)}, {'$set': {'username': username, 'display_name': display_name, 'role': role, 'added_by': int(added_by), 'receive_notifications': bool(int(receive_notifications)), 'locations': locs}, '$setOnInsert': {'created_at': datetime.utcnow()}}, upsert=True)
+        await db.admins.update_one(
+            {'user_id': int(user_id)},
+            {
+                '$set': {
+                    'username': username,
+                    'display_name': display_name,
+                    'role': role,
+                    'added_by': int(added_by),
+                    'receive_notifications': bool(int(receive_notifications)),
+                    'locations': locs,
+                },
+                '$setOnInsert': {'created_at': datetime.utcnow()},
+            },
+            upsert=True,
+        )
 
     async def remove_admin(self, user_id: int):
 
