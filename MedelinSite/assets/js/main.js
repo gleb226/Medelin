@@ -117,6 +117,55 @@ window.getPastOrders = function () {
     return JSON.parse(localStorage.getItem('medelin_past_orders') || '[]');
 };
 
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function getCurrentOrderKind() {
+    return window.location.pathname.includes('beans.html') ? 'beans' : 'menu';
+}
+
+function normalizeOrderKind(type, itemsText = '') {
+    const t = String(type || '').toLowerCase();
+    if (['beans', 'bean', 'coffee', 'pickup', 'nova_poshta', 'beans_delivery'].includes(t)) return 'beans';
+    if (['menu', 'takeaway', 'in_house'].includes(t)) return 'menu';
+    return /\((250|500|1000)\s*(г|g)\)/i.test(String(itemsText || '')) ? 'beans' : 'menu';
+}
+
+function parsePastOrderItems(itemsText) {
+    return String(itemsText || '')
+        .split(/\r?\n/)
+        .map((line, idx) => {
+            const cleanLine = line.replace(/^\s*[-•]\s*/, '').trim();
+            if (!cleanLine) return null;
+            const match = cleanLine.match(/^(.*?)\s*\((\d+)\s*(?:грн|₴|uah)?\)\s*$/i);
+            const name = (match ? match[1] : cleanLine).trim();
+            const price = match ? parseInt(match[2], 10) : 0;
+            return {
+                id: `past:${Date.now()}:${idx}:${name}`,
+                name,
+                price: Number.isFinite(price) ? price : 0
+            };
+        })
+        .filter(Boolean);
+}
+
+function getPastOrderItems(order) {
+    if (order && Array.isArray(order.items) && order.items.length > 0) return order.items;
+    return parsePastOrderItems(order && order.items_text);
+}
+
+function getPastOrderSummary(order) {
+    const items = getPastOrderItems(order);
+    if (items.length > 0) return items.map((item) => item.name).join(', ');
+    return String((order && order.items_text) || 'Замовлення').replace(/\s+/g, ' ').trim();
+}
+
 window.syncPastOrders = async function(force = false) {
     const userData = window.getUserData();
     if (!userData || !userData.phone) return;
@@ -134,11 +183,11 @@ window.syncPastOrders = async function(force = false) {
             if (Array.isArray(serverOrders)) {
                 // Мапимо серверний формат на локальний
                 const localOrders = serverOrders.map(o => ({
-                    items: [], 
+                    items: parsePastOrderItems(o.items_text),
                     items_text: o.items_text,
                     total: o.total,
                     timestamp: new Date(o.timestamp).getTime(),
-                    type: o.type,
+                    type: normalizeOrderKind(o.type, o.items_text),
                     id: o.order_id
                 }));
                 localStorage.setItem('medelin_past_orders', JSON.stringify(localOrders.slice(0, 10)));
@@ -465,30 +514,36 @@ window.openCartModal = function () {
     }
 
     const pastOrders = window.getPastOrders();
+    const currentOrderKind = getCurrentOrderKind();
+    const visiblePastOrders = pastOrders
+        .map((order, index) => ({ order, index }))
+        .filter(({ order }) => normalizeOrderKind(order && order.type, order && order.items_text) === currentOrderKind);
     const userData = window.getUserData();
     let pastOrdersHtml = '';
-    if (pastOrders.length > 0 || (userData && userData.phone)) {
+    if (visiblePastOrders.length > 0 || (userData && userData.phone)) {
         pastOrdersHtml += `<div class="cart-modal__past-orders">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div class="cart-modal__past-orders-head">
                 <h4 class="cart-modal__past-orders-title" style="margin: 0;">Минулі замовлення</h4>
-                ${userData.phone ? `<button type="button" class="btn btn--sm btn--outline" onclick="window.syncPastOrders(true)" style="padding: 4px 10px; font-size: 0.7rem; border-radius: 8px;"><i class="fas fa-sync-alt"></i></button>` : ''}
             </div>
             <div class="cart-modal__past-orders-list">`;
 
-        if (pastOrders.length > 0) {
-            pastOrders.slice(0, 3).forEach((order, idx) => {
+        if (visiblePastOrders.length > 0) {
+            visiblePastOrders.slice(0, 4).forEach(({ order, index }) => {
                 const date = new Date(order.timestamp).toLocaleDateString('uk-UA');
-                const itemCount = order.items && order.items.length ? `${order.items.length} тов.` : 'Замовлення';
-                pastOrdersHtml += `<div class="past-order">
+                const items = getPastOrderItems(order);
+                const summary = getPastOrderSummary(order);
+                const itemCount = items.length ? `${items.length} тов.` : 'Замовлення';
+                pastOrdersHtml += `<button class="past-order" type="button" data-action="repeat-order" data-order-index="${index}">
                     <div class="past-order__meta">
                         <strong>${itemCount} — ${order.total} ₴</strong>
                         <div class="past-order__date">${date}</div>
+                        <div class="past-order__items">${escapeHtml(summary)}</div>
                     </div>
-                    ${order.items && order.items.length > 0 ? `<button class="btn past-order__btn" type="button" data-action="repeat-order" data-order-index="${idx}"><i class="fas fa-redo-alt"></i><span>Повтор</span></button>` : ''}
-                </div>`;
+                    <span class="past-order__add-icon"><i class="fas fa-plus"></i></span>
+                </button>`;
             });
         } else {
-            pastOrdersHtml += `<div class="cart-modal__empty" style="padding: 10px 0;">Натисніть 🔄 щоб оновити історію</div>`;
+            pastOrdersHtml += `<div class="cart-modal__empty" style="padding: 10px 0;">Попередніх замовлень цього типу ще немає</div>`;
         }
 
         pastOrdersHtml += `</div></div>`;
@@ -524,11 +579,16 @@ window.repeatOrder = function (idx) {
     const pastOrders = window.getPastOrders();
     const order = pastOrders[idx];
     if (!order) return;
+    const items = getPastOrderItems(order);
+    if (!items.length) {
+        window.showToast('Не вдалося відновити склад замовлення', 'error');
+        return;
+    }
 
-    if (order.type === 'beans') {
-        cart_beans = [...cart_beans, ...order.items];
+    if (normalizeOrderKind(order.type, order.items_text) === 'beans') {
+        cart_beans = [...cart_beans, ...items];
     } else {
-        cart_menu = [...cart_menu, ...order.items];
+        cart_menu = [...cart_menu, ...items];
     }
     saveCart();
     updateCartBadge();

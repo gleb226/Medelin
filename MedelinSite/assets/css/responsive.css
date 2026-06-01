@@ -313,9 +313,9 @@
 
     #cart-modal-container .past-order {
         display: grid !important;
-        grid-template-columns: minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) 42px;
         gap: 10px;
-        align-items: stretch;
+        align-items: center;
         padding: 1rem !important;
         border-radius: 18px !important;
         background: #fff !important;
@@ -338,13 +338,20 @@
         font-size: 0.85rem;
     }
 
+    #cart-modal-container .past-order__items {
+        font-size: 0.85rem;
+        line-height: 1.3;
+        -webkit-line-clamp: 3;
+    }
+
     #cart-modal-container .past-order__btn {
-        width: auto;
-        min-height: 34px;
-        justify-self: start;
-        padding: 7px 10px !important;
-        font-size: 0.82rem !important;
-        border-radius: 10px !important;
+        display: none !important;
+    }
+
+    #cart-modal-container .past-order__add-icon {
+        justify-self: end;
+        width: 38px;
+        height: 38px;
     }
 
     .cart-modal__list li {

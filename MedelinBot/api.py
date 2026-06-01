@@ -442,12 +442,12 @@ async def report_client_error(request: Request):
     path = _safe_alert_text(data.get('path') or str(request.url), 300)
     user_agent = _safe_alert_text(request.headers.get('user-agent', ''), 300)
     await send_developer_error(
-        f"Client error\n"
-        f"source: <code>{source}</code>\n"
-        f"path: <code>{path}</code>\n"
-        f"message: <code>{message}</code>\n"
-        f"context: <code>{context}</code>\n"
-        f"user-agent: <code>{user_agent}</code>"
+        f"🌐 <b>SITE CLIENT ERROR</b>\n\n"
+        f"<b>Source:</b> <code>{source}</code>\n"
+        f"<b>Message:</b>\n<pre>{message}</pre>\n"
+        f"<b>Path:</b>\n<pre>{path}</pre>\n"
+        f"<b>Context:</b>\n<pre>{context or '—'}</pre>\n"
+        f"<b>User-Agent:</b>\n<pre>{user_agent or '—'}</pre>"
     )
     return {"status": "ok"}
 
