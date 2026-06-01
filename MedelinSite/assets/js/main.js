@@ -1213,6 +1213,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.setupMobileMenu) window.setupMobileMenu();
     if (typeof window.syncPastOrders === 'function') window.syncPastOrders();
 
+    // Додаємо клас .js-enabled для активації анімацій через CSS
+    document.body.classList.add('js-enabled');
+
     // Перевірка успішної оплати через URL параметр
     const paymentStatus = window.getURLParameter('payment');
     if (paymentStatus === 'success') {
@@ -1225,18 +1228,44 @@ document.addEventListener('DOMContentLoaded', () => {
         window.history.replaceState({}, document.title, url.pathname + url.search);
     }
     
-    const revealObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('revealable--active');
-            }
+    // Ініціалізація анімацій появи
+    const initRevealAnimations = () => {
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('revealable--active');
+                    // Після активації можна припинити спостереження
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { 
+            threshold: 0.05, // Починаємо анімацію раніше
+            rootMargin: '0px 0px -50px 0px' 
         });
-    }, { threshold: 0.1 });
 
-    document.querySelectorAll('.revealable, .product-card, .promo-card, .category').forEach(el => {
-        if (!el.classList.contains('revealable')) el.classList.add('revealable');
-        revealObserver.observe(el);
-    });
+        const revealElements = document.querySelectorAll('.revealable, .product-card, .promo-card, .category, .menu-item');
+        revealElements.forEach(el => {
+            if (!el.classList.contains('revealable')) el.classList.add('revealable');
+            revealObserver.observe(el);
+        });
+
+        // Запасний механізм: активуємо всі елементи, що видимі при завантаженні
+        setTimeout(() => {
+            revealElements.forEach(el => {
+                const rect = el.getBoundingClientRect();
+                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                    el.classList.add('revealable--active');
+                }
+            });
+        }, 500);
+    };
+
+    initRevealAnimations();
+
+    // Повторна ініціалізація після динамічного завантаження даних
+    window.refreshAnimations = () => {
+        initRevealAnimations();
+    };
 
     const orderId = window.getURLParameter('order_id');
     if (orderId && paymentStatus !== 'success') {

@@ -330,6 +330,11 @@ function renderMenuData(menuData) {
             console.error('[Medelin] Помилка рендерингу секції:', e);
         }
     });
+
+    // Оновлюємо анімації після додавання нових елементів у DOM
+    if (typeof window.refreshAnimations === 'function') {
+        window.refreshAnimations();
+    }
 }
 
 if (document.readyState === 'loading') {

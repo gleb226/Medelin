@@ -116,23 +116,25 @@ body::-webkit-scrollbar {
 .hero__decoration--delayed-2 { animation-delay: 0.4s; }
 
 .revealable {
-    opacity: 0;
-    transform: translateY(30px);
+    opacity: 1;
+    transform: none;
     transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
     will-change: transform, opacity;
 }
 
-.revealable--active {
-    opacity: 1;
-    transform: translateY(0);
+/* Приховуємо лише якщо JS активний і додав клас .js-enabled до body */
+.js-enabled .revealable:not(.revealable--active) {
+    opacity: 0;
+    transform: translateY(30px);
 }
 
-.revealable--zoom {
+.js-enabled .revealable--zoom:not(.revealable--active) {
     transform: scale(0.95) translateY(20px);
 }
 
-.revealable--zoom.revealable--active {
-    transform: scale(1) translateY(0);
+.revealable--active {
+    opacity: 1 !important;
+    transform: none !important;
 }
 
 .product-card, .promo-card, .contact-card {
