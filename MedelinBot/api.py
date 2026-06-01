@@ -1275,8 +1275,10 @@ async def admin_delete_team_member(user_id: int, admin: dict = fastapi.Depends(g
     from app.databases.mongo_client import get_db
     db = await get_db()
     target = await db.admins.find_one({'user_id': int(user_id)}, {'_id': 0, 'role': 1})
-    if not target or not _can_manage_admin(caller_role, target.get('role') or 'admin'):
-        raise HTTPException(status_code=403, detail="Недостатньо прав")
+    if not target:
+        raise HTTPException(status_code=404, detail="Адміністратора не знайдено")
+    if not _can_manage_admin(caller_role, target.get('role') or 'admin'):
+        raise HTTPException(status_code=403, detail="Недостатньо прав для видалення цього користувача")
     await db.admins.delete_one({'user_id': int(user_id)})
     return {"status": "ok"}
 
