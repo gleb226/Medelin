@@ -453,6 +453,27 @@ function saveCart() {
     localStorage.setItem('cart_beans', JSON.stringify(cart_beans));
 }
 
+function clearCart() {
+    cart_menu.length = 0;
+    cart_beans.length = 0;
+    localStorage.removeItem('cart_menu');
+    localStorage.removeItem('cart_beans');
+    localStorage.removeItem('medelin_pending_order_id');
+    window.CURRENT_ORDER_ID = null;
+    updateCartBadge();
+}
+
+function clearPendingPayment() {
+    localStorage.removeItem('medelin_pending_order_id');
+    window.CURRENT_ORDER_ID = null;
+}
+
+function rememberPendingPayment(orderId) {
+    if (!orderId) return;
+    window.CURRENT_ORDER_ID = String(orderId);
+    localStorage.setItem('medelin_pending_order_id', String(orderId));
+}
+
 function updateCartBadge() {
     const badge = document.getElementById('cart-badge');
     if (!badge) return;
@@ -467,6 +488,7 @@ function updateCartBadge() {
 }
 
 window.addMenuToCart = function (id, name, price) {
+    clearPendingPayment();
     cart_menu.push({ id, name, price });
     saveCart();
     updateCartBadge();
@@ -474,6 +496,7 @@ window.addMenuToCart = function (id, name, price) {
 };
 
 window.addBeanToCart = function (id, name, weightName) {
+    clearPendingPayment();
     const r = document.querySelector(`input[name="${weightName}"]:checked`);
     if (!r) {
         alert('Будь ласка, оберіть вагу');
@@ -530,14 +553,11 @@ window.openCartModal = function () {
         if (visiblePastOrders.length > 0) {
             visiblePastOrders.slice(0, 4).forEach(({ order, index }) => {
                 const date = new Date(order.timestamp).toLocaleDateString('uk-UA');
-                const items = getPastOrderItems(order);
                 const summary = getPastOrderSummary(order);
-                const itemCount = items.length ? `${items.length} тов.` : 'Замовлення';
                 pastOrdersHtml += `<button class="past-order" type="button" data-action="repeat-order" data-order-index="${index}">
                     <div class="past-order__meta">
-                        <strong>${itemCount} — ${order.total} ₴</strong>
-                        <div class="past-order__date">${date}</div>
-                        <div class="past-order__items">${escapeHtml(summary)}</div>
+                        <strong class="past-order__summary">${escapeHtml(summary)}</strong>
+                        <div class="past-order__date">${date} — ${order.total} ₴</div>
                     </div>
                     <span class="past-order__add-icon"><i class="fas fa-plus"></i></span>
                 </button>`;
@@ -585,6 +605,7 @@ window.repeatOrder = function (idx) {
         return;
     }
 
+    clearPendingPayment();
     if (normalizeOrderKind(order.type, order.items_text) === 'beans') {
         cart_beans = [...cart_beans, ...items];
     } else {
@@ -603,6 +624,7 @@ window.closeCartModal = function () {
 };
 
 window.removeFromCart = function (t, i) {
+    clearPendingPayment();
     if (t === 'menu') cart_menu.splice(i, 1);
     else cart_beans.splice(i, 1);
     saveCart();
@@ -1029,20 +1051,9 @@ window.submitCheckout = function (method) {
                     type: isBeans ? 'beans' : 'menu',
                 });
                 if (res.url) {
-                    cart_menu.length = 0;
-                    cart_beans.length = 0;
-                    localStorage.removeItem('cart_menu');
-                    localStorage.removeItem('cart_beans');
-                    updateCartBadge();
                     window.location.href = res.url;
                 }
                 else if (res.data && res.signature) {
-                    cart_menu.length = 0;
-                    cart_beans.length = 0;
-                    localStorage.removeItem('cart_menu');
-                    localStorage.removeItem('cart_beans');
-                    updateCartBadge();
-
                     const form = document.createElement('form');
                     form.method = 'POST';
                     form.action = 'https://www.liqpay.ua/api/3/checkout';
@@ -1052,11 +1063,7 @@ window.submitCheckout = function (method) {
                 } else {
                     const payLaterLink = res.order_id ? `${window.location.origin}${window.location.pathname}?order_id=${res.order_id}` : '';
                     window.showToast('Замовлення прийнято!', 'success');
-                    cart_menu.length = 0;
-                    cart_beans.length = 0;
-                    localStorage.removeItem('cart_menu');
-                    localStorage.removeItem('cart_beans');
-                    updateCartBadge();
+                    clearCart();
                     if (payLaterLink) {
                         container.innerHTML = `
                             <div class="cart-modal__overlay" data-action="close-cart-modal"></div>
@@ -1220,6 +1227,18 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartBadge();
     if (window.setupMobileMenu) window.setupMobileMenu();
     if (typeof window.syncPastOrders === 'function') window.syncPastOrders();
+
+    // Перевірка успішної оплати через URL параметр
+    const paymentStatus = window.getURLParameter('payment');
+    if (paymentStatus === 'success') {
+        clearCart();
+        window.showToast('Оплату успішно проведено! Дякуємо за замовлення.', 'success');
+        // Очищаємо параметри з URL
+        const url = new URL(window.location);
+        url.searchParams.delete('payment');
+        url.searchParams.delete('order_id');
+        window.history.replaceState({}, document.title, url.pathname + url.search);
+    }
     
     const revealObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -1235,7 +1254,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const orderId = window.getURLParameter('order_id');
-    if (orderId) {
+    if (orderId && paymentStatus !== 'success') {
         window.CURRENT_ORDER_ID = orderId;
         const container = document.getElementById('checkout-modal-container');
         if (container) {

@@ -313,6 +313,38 @@ def build_cart_text(cart_menu: list) -> tuple[int, str]:
         items.append(f"- {item['name']} ({price} грн)")
     return (total, '\n'.join(items))
 
+async def create_monobank_invoice(order_id: str, total: int | float) -> str:
+    if not MONOBANK_TOKEN:
+        raise HTTPException(status_code=503, detail="MonoPay token is not configured")
+
+    redirect_url = WEB_APP_URL
+    if '?' in redirect_url:
+        redirect_url += f"&payment=success&order_id={order_id}"
+    else:
+        redirect_url += f"?payment=success&order_id={order_id}"
+
+    payload = {
+        'amount': int(total * 100), 'ccy': 980,
+        'merchantPaymInfo': {'reference': str(order_id), 'destination': f'Замовлення #{order_id}'},
+        'redirectUrl': redirect_url, 'webhookUrl': f"{WEB_APP_URL}/api/payments/monobank-callback",
+        'validity': 3600
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.post('https://api.monobank.ua/api/merchant/invoice/create', json=payload, headers={'X-Token': MONOBANK_TOKEN}) as resp:
+            try:
+                data = await resp.json()
+            except Exception:
+                data = {'raw': await resp.text()}
+            if resp.status == 200 and data.get('pageUrl'):
+                return data['pageUrl']
+            await send_developer_error(
+                f"💳 <b>MONOPAY INVOICE FAILED</b>\n\n"
+                f"<b>Order:</b> <code>{html.escape(str(order_id))}</code>\n"
+                f"<b>Status:</b> <code>{resp.status}</code>\n"
+                f"<b>Response:</b>\n<pre>{_safe_alert_text(data, 900)}</pre>"
+            )
+            raise HTTPException(status_code=502, detail="MonoPay invoice was not created")
+
 @app.get('/api/nova-poshta/cities')
 async def get_np_cities(search: str):
     logger.info(f"NP: Searching cities for '{search}'")
@@ -597,7 +629,12 @@ async def process_repay(req: RepayRequest):
     if total <= 0:
         raise HTTPException(status_code=400, detail="Сума замовлення 0.")
 
-    if req.payment_method == 'monobank' and MONOBANK_TOKEN:
+    # Prioritize MonoPay if token is configured
+    if MONOBANK_TOKEN and req.payment_method in ['monobank', 'applepay', 'googlepay', 'card']:
+        url = await create_monobank_invoice(oid, total)
+        return {'status': 'ok', 'url': url, 'provider': 'monobank'}
+
+    if req.payment_method == '_disabled_monobank_legacy':
         payload = {
             'amount': int(total * 100), 'ccy': 980,
             'merchantPaymInfo': {'reference': oid, 'destination': f'Замовлення #{oid}'},
@@ -616,9 +653,15 @@ async def process_repay(req: RepayRequest):
     elif req.payment_method == 'privatpay': liqpay_paytypes = 'privat24'
     elif req.payment_method == 'card': liqpay_paytypes = 'card,privat24,gpay,apay'
 
+    result_url = WEB_APP_URL
+    if '?' in result_url:
+        result_url += f"&payment=success&order_id={oid}"
+    else:
+        result_url += f"?payment=success&order_id={oid}"
+
     liqpay_params = {
         'action': 'pay', 'amount': total, 'currency': 'UAH', 'description': f'Замовлення #{oid}',
-        'order_id': oid, 'version': '3', 'public_key': LIQPAY_PUBLIC_KEY, 'result_url': WEB_APP_URL,
+        'order_id': oid, 'version': '3', 'public_key': LIQPAY_PUBLIC_KEY, 'result_url': result_url,
         'server_url': f"{WEB_APP_URL}/api/payments/liqpay-callback-raw",
         'paytypes': liqpay_paytypes
     }
@@ -684,7 +727,13 @@ async def process_checkout(req: CheckoutRequest):
         await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, -1), location_id=loc_id)
         return {'status': 'ok', 'manual': True, 'order_id': oid}
 
-    if data.get('payment_method') == 'monobank' and MONOBANK_TOKEN:
+    # Prioritize MonoPay if token is configured
+    method = data.get('payment_method')
+    if MONOBANK_TOKEN and method in ['monobank', 'applepay', 'googlepay', 'card']:
+        url = await create_monobank_invoice(str(oid), total)
+        return {'status': 'ok', 'url': url, 'order_id': oid, 'provider': 'monobank'}
+
+    if data.get('payment_method') == '_disabled_monobank_legacy':
         payload = {
             'amount': int(total * 100), 'ccy': 980,
             'merchantPaymInfo': {'reference': str(oid), 'destination': f'Замовлення #{oid}'},
@@ -698,15 +747,20 @@ async def process_checkout(req: CheckoutRequest):
                     return {'status': 'ok', 'url': d['pageUrl'], 'order_id': oid, 'provider': 'monobank'}
 
     liqpay_paytypes = 'card,privat24'
-    method = data.get('payment_method')
     if method == 'googlepay': liqpay_paytypes = 'gpay'
     elif method == 'applepay': liqpay_paytypes = 'apay'
     elif method == 'privatpay': liqpay_paytypes = 'privat24'
     elif method == 'card': liqpay_paytypes = 'card,privat24,gpay,apay'
 
+    result_url = WEB_APP_URL
+    if '?' in result_url:
+        result_url += f"&payment=success&order_id={oid}"
+    else:
+        result_url += f"?payment=success&order_id={oid}"
+
     liqpay_params = {
         'action': 'pay', 'amount': total, 'currency': 'UAH', 'description': f'Замовлення #{oid}',
-        'order_id': str(oid), 'version': '3', 'public_key': LIQPAY_PUBLIC_KEY, 'result_url': WEB_APP_URL,
+        'order_id': str(oid), 'version': '3', 'public_key': LIQPAY_PUBLIC_KEY, 'result_url': result_url,
         'server_url': f"{WEB_APP_URL}/api/payments/liqpay-callback-raw",
         'paytypes': liqpay_paytypes
     }
