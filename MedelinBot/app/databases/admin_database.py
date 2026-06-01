@@ -243,11 +243,11 @@ class AdminDatabase:
         res = await db.admins.find_one({'username': {'$regex': f'^{re.escape(clean_id)}$', '$options': 'i'}}, projection_without_mongo_id())
         if res: return res
         
-        # По phone
+        # По phone (нормалізованому)
         from app.utils.phone_utils import normalize_phone
         norm = normalize_phone(identifier)
-        if norm:
-            res = await db.admins.find_one({'phone_digits': norm}, projection_without_mongo_id())
+        if norm and len(norm) >= 10:
+            res = await db.admins.find_one({'$or': [{'phone_digits': norm}, {'phone': {'$regex': re.escape(norm)}}]}, projection_without_mongo_id())
             if res: return res
             
         # По user_id
@@ -256,7 +256,6 @@ class AdminDatabase:
             if res: return res
             
         # 2. Якщо не знайдено в admins, перевіримо чи це розробник (DEVELOPER_IDS)
-        # Для цього нам потрібен user_id
         from app.databases.user_database import user_db
         user_info = None
         
@@ -269,10 +268,13 @@ class AdminDatabase:
                     return {'user_id': uid, 'display_name': name or 'Developer', 'role': 'developer', 'username': uname}
                 return {'user_id': target_id, 'display_name': 'Developer', 'role': 'developer'}
         
-        # Спробуємо знайти в users по username або телефону, а потім звірити з DEVELOPER_IDS
-        user_info = await user_db.get_user_by_username(clean_id)
-        if not user_info and norm:
-            user_info = await user_db.get_user_by_phone(identifier)
+        # Спробуємо знайти в users по телефону, а потім звірити з DEVELOPER_IDS
+        if norm and len(norm) >= 10:
+            user_info = await user_db.get_user_by_phone(norm)
+            
+        # Потім по username
+        if not user_info:
+            user_info = await user_db.get_user_by_username(clean_id)
             
         if user_info:
             uid, name, uname, uphone = user_info
