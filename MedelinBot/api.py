@@ -620,11 +620,19 @@ async def process_booking(req: BookingRequest):
 @app.get('/admin-panel')
 async def get_admin_panel(request: Request):
     auth = request.query_params.get('auth')
-    if auth == ADMIN_PANEL_PASSWORD:
-        admin_path = _site_dir / "admin-panel.html"
-        if admin_path.exists():
-            return FileResponse(admin_path)
     
+    # Тільки валідний токен сесії дозволяє перегляд. 
+    # Статичний пароль ADMIN_PANEL_PASSWORD більше не пускає в адмінку напряму,
+    # а лише дозволяє відкрити форму входу (якщо потрібно) або ми просто редиректимо на 404.
+    
+    if auth:
+        admin = await admin_db.verify_session(auth)
+        if admin:
+            admin_path = _site_dir / "admin-panel.html"
+            if admin_path.exists():
+                return FileResponse(admin_path)
+    
+    # Якщо токен невірний або його немає — показуємо 404 (де прихована форма входу)
     login_path = _site_dir / "404.html"
     if login_path.exists():
         return FileResponse(login_path)
