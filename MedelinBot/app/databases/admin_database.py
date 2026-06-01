@@ -1,7 +1,8 @@
 
 from app.common.config import DEVELOPER_IDS
 
-from datetime import datetime
+from datetime import datetime, timedelta
+import re
 
 from app.databases.mongo_client import get_db, projection_without_mongo_id
 
@@ -113,7 +114,21 @@ class AdminDatabase:
 
         locs = list(locations or [])
 
-        await db.admins.update_one({'user_id': int(user_id)}, {'$set': {'username': username, 'display_name': display_name, 'role': role, 'added_by': int(added_by), 'receive_notifications': bool(int(receive_notifications)), 'locations': locs}, '$setOnInsert': {'created_at': datetime.utcnow()}}, upsert=True)
+        await db.admins.update_one(
+            {'user_id': int(user_id)},
+            {
+                '$set': {
+                    'username': username,
+                    'display_name': display_name,
+                    'role': role,
+                    'added_by': int(added_by),
+                    'receive_notifications': bool(int(receive_notifications)),
+                    'locations': locs,
+                },
+                '$setOnInsert': {'created_at': datetime.utcnow()},
+            },
+            upsert=True,
+        )
 
     async def remove_admin(self, user_id: int):
 
@@ -216,10 +231,101 @@ class AdminDatabase:
         return result
 
     async def get_admin_by_id(self, user_id: int):
-
         db = await get_db()
-
         return await db.admins.find_one({'user_id': int(user_id)}, projection_without_mongo_id())
+
+    async def find_admin_by_identifier(self, identifier: str):
+        db = await get_db()
+        clean_id = str(identifier).strip().replace('@', '').lower()
+        
+        # 1. Спробуємо знайти в колекції admins (по username, phone або user_id)
+        # По username
+        res = await db.admins.find_one({'username': {'$regex': f'^{re.escape(clean_id)}$', '$options': 'i'}}, projection_without_mongo_id())
+        if res: return res
+        
+        # По phone (нормалізованому)
+        from app.utils.phone_utils import normalize_phone
+        norm = normalize_phone(identifier)
+        if norm and len(norm) >= 10:
+            res = await db.admins.find_one({'$or': [{'phone_digits': norm}, {'phone': {'$regex': re.escape(norm)}}]}, projection_without_mongo_id())
+            if res: return res
+            
+        # По user_id
+        if identifier.isdigit():
+            res = await db.admins.find_one({'user_id': int(identifier)}, projection_without_mongo_id())
+            if res: return res
+            
+        # 2. Якщо не знайдено в admins, перевіримо чи це розробник (DEVELOPER_IDS)
+        from app.databases.user_database import user_db
+        user_info = None
+        
+        if identifier.isdigit():
+            target_id = int(identifier)
+            if str(target_id) in DEVELOPER_IDS:
+                user_info = await user_db.get_user_by_id(target_id)
+                if user_info:
+                    uid, name, uname, uphone = user_info
+                    return {'user_id': uid, 'display_name': name or 'Developer', 'role': 'developer', 'username': uname}
+                return {'user_id': target_id, 'display_name': 'Developer', 'role': 'developer'}
+        
+        # Спробуємо знайти в users по телефону, а потім звірити з DEVELOPER_IDS
+        if norm and len(norm) >= 10:
+            user_info = await user_db.get_user_by_phone(norm)
+            
+        # Потім по username
+        if not user_info:
+            user_info = await user_db.get_user_by_username(clean_id)
+            
+        if user_info:
+            uid, name, uname, uphone = user_info
+            if str(uid) in DEVELOPER_IDS:
+                return {'user_id': uid, 'display_name': name or 'Developer', 'role': 'developer', 'username': uname}
+
+        return None
+
+    async def create_auth_request(self, user_id: int, code: str):
+        db = await get_db()
+        await db.admin_auth_requests.update_one(
+            {'user_id': int(user_id)},
+            {'$set': {'code': code, 'confirmed': False, 'created_at': datetime.utcnow()}},
+            upsert=True
+        )
+
+    async def confirm_auth_request(self, user_id: int):
+        db = await get_db()
+        await db.admin_auth_requests.update_one(
+            {'user_id': int(user_id)},
+            {'$set': {'confirmed': True}}
+        )
+
+    async def get_auth_request(self, user_id: int):
+        db = await get_db()
+        return await db.admin_auth_requests.find_one({'user_id': int(user_id)})
+
+    async def create_session(self, user_id: int, token: str):
+        db = await get_db()
+        await db.admin_sessions.insert_one({
+            'user_id': int(user_id),
+            'token': token,
+            'created_at': datetime.utcnow(),
+            'expires_at': datetime.utcnow() + timedelta(days=7)
+        })
+
+    async def verify_session(self, token: str):
+        db = await get_db()
+        sess = await db.admin_sessions.find_one({
+            'token': token,
+            'expires_at': {'$gt': datetime.utcnow()}
+        })
+        if not sess: return None
+        
+        user_id = sess['user_id']
+        admin = await self.get_admin_by_id(user_id)
+        
+        if not admin and str(user_id) in DEVELOPER_IDS:
+            return {'user_id': int(user_id), 'display_name': 'Developer', 'role': 'developer'}
+            
+        return admin
 
     async def get_locations_for_admin(self, user_id: int) -> list:
 

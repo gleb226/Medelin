@@ -10,3 +10,6 @@ __pycache__/
 .venv/
 .idea/
 MedelinBot/cache/
+MedelinSite/assets/images/uploads/
+MedelinSite/assets/data/*.json
+MedelinSite/cache/

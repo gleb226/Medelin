@@ -29,8 +29,9 @@ ORDER_TYPE_NAMES = {
     'in_house': 'В закладі',
     'takeaway': 'На виніс',
     'booking': 'Бронювання',
+    'order_with_booking': 'Бронь + замовлення',
     'beans_booking': 'Зерно (самовивіз)',
-    'beans_delivery': 'Зерно (доставка)'
+    'beans_delivery': 'Нова Пошта'
 }
 
 def get_main_admin_menu(is_on_shift: bool=False, role: str='admin'):
@@ -67,7 +68,7 @@ def get_main_admin_menu(is_on_shift: bool=False, role: str='admin'):
 
 def get_active_types_kb():
 
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='📅 АКТИВНІ БРОНІ', callback_data='active_bookings')], [InlineKeyboardButton(text='🛍 АКТИВНІ ЗАМОВЛЕННЯ', callback_data='active_orders')], [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')]])
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='🛍 АКТИВНІ ЗАМОВЛЕННЯ', callback_data='active_orders')], [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')]])
 
 def get_active_bookings_list_kb(bookings):
 
@@ -296,6 +297,12 @@ def get_support_chats_kb(chats):
     
     buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_admin_login_confirm_kb(user_id: int):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='✅ ПІДТВЕРДИТИ ВХІД', callback_data=f'admin_auth_confirm_{user_id}')],
+        [InlineKeyboardButton(text='❌ ВІДХИЛИТИ', callback_data=f'admin_auth_reject_{user_id}')]
+    ])
 
 def get_socials_list_kb(socs, prefix='soc_delete'):
 

@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Medelin Admin Panel</title>
+        <title>Medelin | Admin Panel</title>
         <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ50BUE2d30GBASKRdrCoBgrFBfvjFTiAKCYA&s" type="image/png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -11,232 +11,245 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
         <style>
             :root {
-                --color-coffee: #6f4e37;
-                --color-coffee-dark: #4e3629;
-                --color-bg: #f8f9fa;
-                --color-sidebar: #2c3e50;
+                --color-cream: #f7f3e9;
+                --color-dark-brown: #3c2f2f;
+                --color-coffee: #8b5e3c;
+                --color-coffee-soft: rgba(139, 94, 60, 0.1);
                 --color-text: #2d3436;
                 --color-text-muted: #636e72;
-                --sidebar-width: 260px;
-                --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                --radius: 12px;
+                --sidebar-width: 280px;
+                --shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+                --radius: 20px;
+                --font-main: 'Manrope', sans-serif;
+                --font-accent: 'Marcellus', serif;
             }
 
-            * {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-            }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
 
             body {
-                font-family: 'Manrope', sans-serif;
-                background-color: var(--color-bg);
+                font-family: var(--font-main);
+                background-color: var(--color-cream);
                 color: var(--color-text);
                 display: flex;
                 min-height: 100vh;
+                overflow-x: hidden;
             }
 
-            /* Sidebar Styles */
+            /* Hide scrollbars globally */
+            html, body { scrollbar-width: none; -ms-overflow-style: none; }
+            html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+
+            /* Login Screen Styles */
+            #login-screen {
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: var(--color-cream);
+                display: flex; justify-content: center; align-items: center;
+                z-index: 5000; transition: all 0.5s ease;
+            }
+
+            .login-card {
+                background: white; padding: 3rem; border-radius: 30px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+                width: 100%; max-width: 450px; text-align: center;
+            }
+
+            .login-logo { font-family: var(--font-accent); font-size: 3rem; color: var(--color-dark-brown); margin-bottom: 0.5rem; }
+            .login-subtitle { color: var(--color-coffee); font-weight: 800; font-size: 0.8rem; letter-spacing: 3px; margin-bottom: 2.5rem; text-transform: uppercase; }
+
+            .input-group { margin-bottom: 1.5rem; text-align: left; }
+            .input-label { display: block; margin-bottom: 0.6rem; font-weight: 700; font-size: 0.9rem; color: var(--color-dark-brown); }
+            .login-input {
+                width: 100%; padding: 1.2rem; border-radius: 15px; border: 2px solid var(--color-coffee-soft);
+                font-family: var(--font-main); font-size: 1rem; outline: none; transition: all 0.3s;
+            }
+            .login-input:focus { border-color: var(--color-coffee); background: #fffdfa; }
+
+            /* Verification state */
+            #verify-state { display: none; }
+            .verify-pulse {
+                width: 80px; height: 80px; background: var(--color-coffee-soft);
+                border-radius: 50%; margin: 2rem auto; display: flex; align-items: center; justify-content: center;
+                position: relative;
+            }
+            .verify-pulse::after {
+                content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+                border: 4px solid var(--color-coffee); border-radius: 50%;
+                animation: pulse 2s infinite;
+            }
+            @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+
+            /* Sidebar & Main */
             .sidebar {
-                width: var(--sidebar-width);
-                background-color: var(--color-sidebar);
-                color: white;
-                display: flex;
-                flex-direction: column;
-                position: fixed;
-                height: 100vh;
-                transition: transform 0.3s ease;
-                z-index: 1000;
+                width: var(--sidebar-width); background: var(--color-dark-brown);
+                color: white; display: flex; flex-direction: column; position: fixed; height: 100vh;
+                transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                z-index: 2000; box-shadow: 10px 0 30px rgba(0,0,0,0.1);
             }
 
-            .sidebar__header {
-                padding: 2rem;
-                text-align: center;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            }
-
-            .sidebar__logo {
-                font-family: 'Marcellus', serif;
-                font-size: 1.8rem;
-                letter-spacing: 2px;
-                color: white;
-                text-decoration: none;
-            }
-
-            .sidebar__nav {
-                flex: 1;
-                padding: 1.5rem 0;
-                overflow-y: auto;
-            }
-
-            .nav-item {
-                padding: 1rem 2rem;
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-                cursor: pointer;
-                transition: background 0.2s, color 0.2s;
-                color: rgba(255, 255, 255, 0.7);
-                text-decoration: none;
-            }
-
-            .nav-item:hover, .nav-item--active {
-                background-color: rgba(255, 255, 255, 0.1);
-                color: white;
-            }
-
-            .nav-item i {
-                width: 20px;
-                text-align: center;
-            }
-
-            /* Main Content Styles */
             .main-content {
-                flex: 1;
-                margin-left: var(--sidebar-width);
-                padding: 2rem;
-                width: calc(100% - var(--sidebar-width));
+                flex: 1; margin-left: var(--sidebar-width); padding: 3rem;
+                width: calc(100% - var(--sidebar-width)); transition: all 0.4s ease;
             }
 
-            .header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 2rem;
+            .sidebar__header { padding: 3rem 2rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+            .sidebar__logo { font-family: var(--font-accent); font-size: 2.2rem; letter-spacing: 3px; color: white; text-decoration: none; display: block; }
+            .sidebar__nav { flex: 1; padding: 2rem 0; overflow-y: auto; }
+            .nav-item { padding: 1.2rem 2.5rem; display: flex; align-items: center; gap: 1.2rem; cursor: pointer; transition: all 0.3s ease; color: rgba(255, 255, 255, 0.6); text-decoration: none; font-weight: 500; border-left: 4px solid transparent; }
+            .nav-item:hover, .nav-item--active { background-color: rgba(255, 255, 255, 0.05); color: white; border-left-color: var(--color-coffee); }
+            .nav-item i { width: 24px; text-align: center; font-size: 1.2rem; }
+
+            .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; gap: 1rem; }
+            .header__title { font-family: var(--font-accent); font-size: clamp(1.8rem, 5vw, 2.5rem); font-weight: 400; color: var(--color-dark-brown); }
+
+            .card { background: white; border-radius: var(--radius); padding: clamp(1.5rem, 4vw, 2.5rem); box-shadow: var(--shadow); margin-bottom: 2rem; border: 1px solid rgba(139, 94, 60, 0.05); }
+
+            .btn { padding: 0.8rem 1.5rem; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; transition: all 0.3s ease; font-family: var(--font-main); display: inline-flex; align-items: center; gap: 8px; text-decoration: none; white-space: nowrap; }
+            .btn--primary { background-color: var(--color-coffee); color: white; box-shadow: 0 4px 15px rgba(139, 94, 60, 0.3); }
+            .btn--primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(139, 94, 60, 0.4); }
+            .btn--block { width: 100%; justify-content: center; padding: 1.2rem; font-size: 1.1rem; }
+            .btn--success { background-color: #55efc4; color: var(--color-dark-brown); }
+            .btn--danger { background-color: #ff7675; color: white; }
+            .btn--outline { background: transparent; border: 2px solid var(--color-coffee); color: var(--color-coffee); }
+            .btn--sm { padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 8px; }
+
+            .order-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); padding: 1.5rem 0; gap: 1.5rem; }
+            .order-item:last-child { border-bottom: none; }
+            .order-info { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+            .order-title { font-weight: 800; font-size: 1.2rem; color: var(--color-dark-brown); }
+            .order-meta { color: var(--color-text-muted); font-size: 0.95rem; }
+            .order-items { margin-top: 0.8rem; font-size: 1rem; color: #444; background: var(--color-coffee-soft); padding: 1rem; border-radius: 12px; }
+            .order-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: flex-end; }
+            .order-info, .order-title, .order-meta, .order-items { min-width: 0; overflow-wrap: anywhere; }
+            .admin-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+            .admin-toolbar h3 { font-family: var(--font-accent); color: var(--color-dark-brown); font-size: 1.7rem; font-weight: 400; }
+            .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+            .admin-field { display: flex; flex-direction: column; gap: 0.45rem; }
+            .admin-field--full { grid-column: 1 / -1; }
+            .admin-field label { font-size: 0.82rem; font-weight: 800; color: var(--color-dark-brown); }
+            .admin-field input, .admin-field select, .admin-field textarea {
+                width: 100%; padding: 0.9rem 1rem; border: 2px solid var(--color-coffee-soft);
+                border-radius: 12px; font-family: var(--font-main); font-size: 0.95rem; outline: none; background: #fffdfa;
+                appearance: none;
+            }
+            .admin-field input[type="number"] { -moz-appearance: textfield; }
+            .admin-field input[type="number"]::-webkit-outer-spin-button,
+            .admin-field input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+            .admin-field textarea { min-height: 96px; resize: none; }
+            .admin-field input:focus, .admin-field select:focus, .admin-field textarea:focus { border-color: var(--color-coffee); }
+            .admin-modal { position: fixed; inset: 0; background: rgba(60, 47, 47, 0.38); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1rem; }
+            .admin-modal--active { display: flex; }
+            .admin-modal__panel { width: min(880px, 100%); max-height: min(88vh, 900px); overflow-y: auto; background: white; border-radius: var(--radius); padding: clamp(1.2rem, 3vw, 2rem); box-shadow: 0 25px 70px rgba(0,0,0,0.18); }
+            .admin-modal__header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+            .admin-modal__title { font-family: var(--font-accent); color: var(--color-dark-brown); font-size: 1.9rem; font-weight: 400; }
+            .admin-modal__footer { display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 1.5rem; flex-wrap: wrap; }
+            .chip-list { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+            .chip { border: 1px solid rgba(139, 94, 60, 0.22); background: var(--color-coffee-soft); color: var(--color-dark-brown); padding: 0.32rem 0.6rem; border-radius: 999px; font-size: 0.76rem; font-weight: 800; }
+
+            #chat-window { height: 500px; overflow-y: auto; padding: 1.5rem; background: #fdfcf9; border-radius: var(--radius); display: flex; flex-direction: column; gap: 1rem; border: 1px solid rgba(139, 94, 60, 0.1); }
+            .msg { max-width: 85%; padding: 1rem 1.25rem; border-radius: 20px; position: relative; font-size: 1rem; line-height: 1.5; }
+            .msg--admin { align-self: flex-end; background: var(--color-coffee); color: white; border-bottom-right-radius: 4px; }
+            .msg--guest { align-self: flex-start; background: white; color: var(--color-dark-brown); border-bottom-left-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
+            .loader-wrap { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(247, 243, 233, 0.9); display: none; justify-content: center; align-items: center; z-index: 2000; }
+            .spinner { width: 60px; height: 60px; border: 6px solid rgba(139, 94, 60, 0.1); border-top-color: var(--color-coffee); border-radius: 50%; animation: spin 1s linear infinite; }
+            @keyframes spin { to { transform: rotate(360deg); } }
+
+            #reply-input { flex: 1; padding: 1.2rem; border-radius: 15px; border: 2px solid var(--color-coffee-soft); font-family: var(--font-main); font-size: 1rem; outline: none; transition: border-color 0.3s; min-width: 0; }
+            #reply-input:focus { border-color: var(--color-coffee); }
+
+            /* Mobile Sidebar Toggle */
+            .sidebar-toggle {
+                display: none; width: 45px; height: 45px; background: var(--color-dark-brown); color: white;
+                border-radius: 10px; align-items: center; justify-content: center; cursor: pointer; border: none;
+                font-size: 1.2rem;
             }
 
-            .header__title {
-                font-size: 1.5rem;
-                font-weight: 700;
+            @media (max-width: 1024px) {
+                .sidebar { transform: translateX(-100%); }
+                .sidebar--active { transform: translateX(0); }
+                .main-content { margin-left: 0; width: 100%; padding: 1.5rem; }
+                .sidebar-toggle { display: flex; }
+
+                .header { margin-bottom: 2rem; }
+                .order-item { flex-direction: column; align-items: flex-start; }
+                .order-actions { width: 100%; justify-content: flex-start; }
+                .btn--block-mobile { width: 100%; }
             }
 
-            .card {
-                background: white;
-                border-radius: var(--radius);
-                padding: 1.5rem;
-                box-shadow: var(--shadow);
-                margin-bottom: 1.5rem;
-            }
-
-            .btn {
-                padding: 0.6rem 1.2rem;
-                border-radius: 8px;
-                border: none;
-                cursor: pointer;
-                font-weight: 600;
-                transition: opacity 0.2s;
-            }
-
-            .btn--primary {
-                background-color: var(--color-coffee);
-                color: white;
-            }
-
-            .btn--danger {
-                background-color: #e74c3c;
-                color: white;
-            }
-
-            .btn--success {
-                background-color: #2ecc71;
-                color: white;
-            }
-
-            /* Order List Styles */
-            .order-item {
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-start;
-                border-bottom: 1px solid #eee;
-                padding-bottom: 1rem;
-                margin-bottom: 1rem;
-            }
-
-            .order-item:last-child {
-                border-bottom: none;
-                margin-bottom: 0;
-                padding-bottom: 0;
-            }
-
-            .order-info {
-                display: flex;
-                flex-direction: column;
-                gap: 0.3rem;
-            }
-
-            .order-title {
-                font-weight: 700;
-                font-size: 1.1rem;
-            }
-
-            .order-meta {
-                color: var(--color-text-muted);
-                font-size: 0.9rem;
-            }
-
-            .order-items {
-                margin-top: 0.5rem;
-                font-size: 0.95rem;
-                white-space: pre-line;
-                color: #444;
-            }
-
-            .order-actions {
-                display: flex;
-                gap: 0.5rem;
-            }
-
-            /* Responsive */
-            @media (max-width: 768px) {
-                .sidebar {
-                    transform: translateX(-100%);
-                }
-                .main-content {
-                    margin-left: 0;
-                    width: 100%;
-                }
-                .sidebar--open {
-                    transform: translateX(0);
-                }
-            }
-
-            .loading-overlay {
-                position: fixed;
-                top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(255,255,255,0.8);
-                display: none;
-                justify-content: center;
-                align-items: center;
-                z-index: 2000;
-            }
-
-            .spinner {
-                width: 50px;
-                height: 50px;
-                border: 5px solid #f3f3f3;
-                border-top: 5px solid var(--color-coffee);
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-            }
-
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
+            @media (max-width: 600px) {
+                .login-card { padding: 2rem; border-radius: 20px; }
+                .main-content { padding: 1rem; }
+                .card { padding: 1.25rem; border-radius: 15px; }
+                .header { flex-wrap: wrap; }
+                .header__actions { width: 100%; display: flex; gap: 10px; margin-top: 1rem; }
+                .header__actions .btn { flex: 1; }
+                .order-actions .btn { flex: 1 1 140px; justify-content: center; }
+                .order-items { width: 100%; font-size: 0.92rem; line-height: 1.45; }
+                .admin-toolbar { align-items: stretch; }
+                .admin-toolbar .order-actions { width: 100%; }
+                .admin-grid { grid-template-columns: 1fr; }
+                .admin-modal__footer .btn { flex: 1; justify-content: center; }
+                #chat-window { height: 400px; padding: 1rem; }
             }
         </style>
-    </head>
-    <body>
-        <aside class="sidebar">
+        </head>
+        <body>
+        <!-- Mobile Sidebar Toggle -->
+        <button class="sidebar-toggle" id="menu-toggle" style="position:fixed; top:1.5rem; right:1.5rem; z-index:2100;">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <!-- Login Screen -->
+        <div id="login-screen">
+            <div class="login-card">
+                <div id="login-form">
+                    <h1 class="login-logo">MEDELIN</h1>
+                    <p class="login-subtitle">Admin Access</p>
+
+                    <div class="input-group">
+                        <label class="input-label">Ідентифікатор (@username / телефон / ID)</label>
+                        <input type="text" id="login-id" class="login-input" placeholder="@uzh_boss">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Код доступу</label>
+                        <input type="password" id="login-pass" class="login-input" placeholder="••••">
+                    </div>
+
+                    <button class="btn btn--primary btn--block" onclick="attemptLogin()">
+                        Увійти <i class="fas fa-arrow-right" style="margin-left:10px;"></i>
+                    </button>
+                </div>
+
+                <div id="verify-state">
+                    <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown); font-size: 2rem; margin-bottom: 0.5rem;">Підтвердження</h2>
+                    <p style="font-size: 0.95rem; margin-bottom: 2rem; color: var(--color-text-muted); line-height: 1.6;">Ми надіслали запит у ваш Telegram.<br>Натисніть <b>"Підтвердити"</b> для входу.</p>
+                    
+                    <div class="verify-pulse" style="width: 100px; height: 100px; background: var(--color-coffee-soft); margin: 0 auto 2rem;">
+                        <i class="fab fa-telegram-plane" style="font-size:2.5rem; color:var(--color-coffee); filter: drop-shadow(0 4px 10px rgba(139, 94, 60, 0.2));"></i>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.8rem;">
+                        <div style="font-size: 0.85rem; font-weight: 800; color: var(--color-coffee); letter-spacing: 2px; text-transform: uppercase; animation: fade 2s infinite;">Очікування...</div>
+                        <p style="font-size: 0.8rem; opacity: 0.5;">Перевірте сповіщення у боті</p>
+                    </div>
+
+                    <button class="btn btn--outline" onclick="resetLogin()" style="margin-top:2.5rem; padding: 0.7rem 1.5rem; font-size:0.85rem; border-radius: 15px; font-weight: 700;">Скасувати вхід</button>
+                </div>
+            </div>
+        </div>
+
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar__header">
-                <a href="/" class="sidebar__logo">MEDELIN</a>
-                <p style="font-size: 0.8rem; opacity: 0.5; margin-top: 0.5rem;">ADMIN PANEL</p>
+                <a href="index.html" class="sidebar__logo">MEDELIN</a>
+                <p style="font-size: 0.75rem; letter-spacing: 2px; opacity: 0.5; margin-top: 0.8rem; font-weight: 800; color: var(--color-coffee);">ADMIN PANEL</p>
             </div>
             <nav class="sidebar__nav">
                 <a class="nav-item nav-item--active" data-section="orders">
                     <i class="fas fa-shopping-bag"></i> Активні замовлення
                 </a>
-                <a class="nav-item" data-section="bookings">
-                    <i class="fas fa-calendar-check"></i> Бронювання
+                <a class="nav-item" data-section="shift">
+                    <i class="fas fa-clock"></i> Зміна
                 </a>
                 <a class="nav-item" data-section="menu">
                     <i class="fas fa-utensils"></i> Меню
@@ -247,149 +260,320 @@
                 <a class="nav-item" data-section="locations">
                     <i class="fas fa-map-marker-alt"></i> Локації
                 </a>
+                <a class="nav-item" data-section="socials">
+                    <i class="fas fa-share-nodes"></i> Соцмережі
+                </a>
                 <a class="nav-item" data-section="support">
                     <i class="fas fa-comments"></i> Підтримка
                 </a>
+                <a class="nav-item" data-section="team">
+                    <i class="fas fa-users-gear"></i> Команда
+                </a>
             </nav>
-            <div style="padding: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                <a href="/" style="color: rgba(255,255,255,0.5); text-decoration: none; font-size: 0.9rem;">
+            <div style="padding: 2rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                <a href="index.html" class="nav-item" style="padding: 0; background: none; border: none; font-size: 0.9rem;">
                     <i class="fas fa-arrow-left"></i> На сайт
                 </a>
             </div>
         </aside>
 
-        <main class="main-content">
+        <main class="main-content" id="main-content">
             <header class="header">
-                <h2 class="header__title" id="section-title">Активні замовлення</h2>
+                <div>
+                    <h2 class="header__title" id="section-title">Активні замовлення</h2>
+                    <p id="admin-info" style="font-size:0.85rem; color:var(--color-coffee); margin-top:5px; font-weight:700;"></p>
+                </div>
                 <div class="header__actions">
                     <button class="btn btn--primary" id="refresh-btn">
                         <i class="fas fa-sync-alt"></i> Оновити
                     </button>
+                    <button class="btn btn--outline" onclick="logout()" style="margin-left:5px;">Вийти</button>
                 </div>
             </header>
 
             <div id="content-area">
-                <!-- Content will be loaded here -->
                 <div class="card">
                     <div id="items-list">Завантаження...</div>
                 </div>
             </div>
         </main>
 
-        <div class="loading-overlay" id="loader">
+        <div class="loader-wrap" id="loader">
             <div class="spinner"></div>
         </div>
 
-        <script>
-            const API_AUTH = new URLSearchParams(window.location.search).get('auth') || '';
-            let currentSection = 'orders';
+        <div class="admin-modal" id="admin-modal"></div>
 
-            if (!API_AUTH) {
-                window.location.href = '/admin-panel';
+        <script>
+            let sessionToken = localStorage.getItem('medelin_admin_token') || '';
+            let currentAdmin = JSON.parse(localStorage.getItem('medelin_admin_user') || 'null');
+            let currentSection = 'orders';
+            let verifyInterval = null;
+            let currentMenu = [];
+            let currentBeans = [];
+            let currentLocations = [];
+            let currentSocials = [];
+            let currentTeam = [];
+            let currentProfile = null;
+
+            // Sidebar Toggle Logic
+            const menuToggle = document.getElementById('menu-toggle');
+            const sidebar = document.getElementById('sidebar');
+
+            menuToggle.onclick = () => {
+                sidebar.classList.toggle('sidebar--active');
+                const icon = menuToggle.querySelector('i');
+                icon.className = sidebar.classList.contains('sidebar--active') ? 'fas fa-times' : 'fas fa-bars';
+            };
+
+            // Close sidebar on item click (mobile)
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth <= 1024) {
+                        sidebar.classList.remove('sidebar--active');
+                        menuToggle.querySelector('i').className = 'fas fa-bars';
+                    }
+                });
+            });
+
+            async function attemptLogin() {
+                const id = document.getElementById('login-id').value;
+                const pass = document.getElementById('login-pass').value;
+                if (!id || !pass) return alert('Введіть логін та пароль');
+                showLoader(true);
+                try {
+                    // Використовуємо таймаут для фечу
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+                    const resp = await fetch('/api/admin/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ identifier: id, password: pass }),
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+
+                    if (!resp.ok) {
+                        let errorMsg = 'Помилка входу';
+                        try {
+                            const err = await resp.json();
+                            errorMsg = err.detail || errorMsg;
+                        } catch(e) {}
+                        throw new Error(errorMsg);
+                    }
+                    const data = await resp.json();
+                    startVerification(data.user_id);
+                } catch (e) {
+                    if (e.name === 'AbortError') {
+                        alert('Сервер занадто довго не відповідає (можливо, він прокидається). Спробуйте ще раз через 10 секунд.');
+                    } else if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+                        alert('Помилка мережі. Перевірте зʼєднання або спробуйте оновити сторінку.');
+                    } else {
+                        alert(e.message);
+                    }
+                } finally {
+                    showLoader(false);
+                }
             }
 
-            function showLoader(show) {
-                document.getElementById('loader').style.display = show ? 'flex' : 'none';
+            function startVerification(userId) {
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('verify-state').style.display = 'block';
+                if (verifyInterval) clearInterval(verifyInterval);
+                verifyInterval = setInterval(async () => {
+                    try {
+                        const resp = await fetch(`/api/admin/verify?user_id=${userId}`);
+                        const data = await resp.json();
+                        if (data.status === 'ok') {
+                            clearInterval(verifyInterval);
+                            finishLogin(data.token, data.admin);
+                        }
+                    } catch (e) {}
+                }, 2000);
+            }
+
+            function finishLogin(token, admin) {
+                sessionToken = token;
+                currentAdmin = admin;
+                localStorage.setItem('medelin_admin_token', token);
+                localStorage.setItem('medelin_admin_user', JSON.stringify(admin));
+                document.getElementById('login-screen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('login-screen').style.display = 'none';
+                    showPanel();
+                }, 500);
+            }
+
+            function showPanel() {
+                document.getElementById('sidebar').style.display = 'flex';
+                document.getElementById('main-content').style.display = 'block';
+                document.getElementById('admin-info').textContent = `${currentAdmin.name} (${currentAdmin.role})`;
+                const restricted = ['menu', 'beans', 'locations', 'socials'];
+                const support = ['support', 'team'];
+                document.querySelectorAll('.nav-item[data-section]').forEach(item => {
+                    const sec = item.getAttribute('data-section');
+                    if (sec === 'shift' && currentAdmin.role !== 'admin') {
+                        item.style.display = 'none';
+                    }
+                    if (restricted.includes(sec) && !['boss', 'owner', 'developer'].includes(currentAdmin.role)) {
+                        item.style.display = 'none';
+                    }
+                    if (support.includes(sec) && !['super', 'boss', 'owner', 'developer'].includes(currentAdmin.role)) {
+                        item.style.display = 'none';
+                    }
+                });
+                refreshData();
+            }
+
+            function logout() {
+                localStorage.removeItem('medelin_admin_token');
+                localStorage.removeItem('medelin_admin_user');
+                location.reload();
+            }
+
+            function resetLogin() {
+                if (verifyInterval) clearInterval(verifyInterval);
+                document.getElementById('login-form').style.display = 'block';
+                document.getElementById('verify-state').style.display = 'none';
             }
 
             async function apiFetch(endpoint, method = 'GET', body = null) {
-                const url = `/api/admin/${endpoint}?auth=${API_AUTH}`;
+                const url = `/api/admin/${endpoint}`;
                 const options = {
                     method,
-                    headers: {
-                        'Content-Type': 'application/json'
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionToken}`
                     }
                 };
                 if (body) options.body = JSON.stringify(body);
-
                 try {
                     const response = await fetch(url, options);
-                    if (!response.ok) throw new Error('API Error');
+                    if (response.status === 401) return logout();
+                    if (!response.ok) {
+                        let message = 'Сталася помилка. Адміни вже працюють над цим.';
+                        try {
+                            const err = await response.json();
+                            message = err.detail || message;
+                        } catch(e) {}
+                        throw new Error(message);
+                    }
                     return await response.json();
                 } catch (e) {
                     console.error(e);
-                    alert('Помилка API');
+                    reportClientError(e.message, `admin api: ${endpoint}`);
+                    alert(e.message || 'Сталася помилка. Адміни вже працюють над цим.');
                     return null;
                 }
             }
 
-            async function loadSupport() {
-                showLoader(true);
-                const chats = await apiFetch('support/chats');
-                const list = document.getElementById('items-list');
-                list.innerHTML = '<h3>Підтримка (Чати)</h3>';
-
-                if (!chats || chats.length === 0) {
-                    list.innerHTML += '<p style="text-align: center; color: #999; padding: 2rem;">Чати відсутні</p>';
-                } else {
-                    const chatList = document.createElement('div');
-                    chatList.style.marginTop = '1rem';
-                    list.appendChild(chatList);
-
-                    chats.forEach(chat => {
-                        const div = document.createElement('div');
-                        div.className = 'card';
-                        div.style.cursor = 'pointer';
-                        const unread = chat.unread_count > 0 ? `<span style="background:red; color:white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; margin-left: 10px;">${chat.unread_count}</span>` : '';
-                        div.innerHTML = `
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <strong>${chat._id.phone || 'Гість'}</strong> ${unread}
-                                    <div style="font-size: 0.85rem; color: #666; margin-top: 5px;">${chat.last_text}</div>
-                                </div>
-                                <div style="font-size: 0.8rem; color: #999;">${new Date(chat.last_time).toLocaleString('uk-UA')}</div>
-                            </div>
-                        `;
-                        div.onclick = () => openChat(chat._id.phone, chat._id.order_id);
-                        chatList.appendChild(div);
-                    });
-                }
-                showLoader(false);
+            async function apiUpload(file) {
+                if (!file || !file.name) return '';
+                const fd = new FormData();
+                fd.append('file', file);
+                const response = await fetch('/api/admin/uploads', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${sessionToken}` },
+                    body: fd
+                });
+                if (!response.ok) throw new Error('Upload error');
+                const data = await response.json();
+                return data.url || '';
             }
 
-            async function openChat(phone, orderId) {
-                showLoader(true);
-                const messages = await apiFetch(`support/messages?phone=${phone}&order_id=${orderId || ''}`);
-                const list = document.getElementById('items-list');
-                list.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                        <button class="btn btn--outline" onclick="loadSupport()"><i class="fas fa-arrow-left"></i></button>
-                        <h3>Чат з ${phone || 'гостем'}</h3>
+            function showLoader(show) { document.getElementById('loader').style.display = show ? 'flex' : 'none'; }
+            function esc(value) {
+                return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+            }
+            function reportClientError(message, context = '') {
+                try {
+                    fetch('/api/client-error', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            source: 'admin-panel',
+                            path: location.href,
+                            message: String(message || 'Client error'),
+                            context: String(context || '')
+                        })
+                    });
+                } catch(e) {}
+            }
+            function roleName(role) {
+                return ({ developer: 'Розробник', owner: 'Власник', boss: 'Власник', super: 'Супер-адмін', admin: 'Адмін', delivery_manager: 'Менеджер доставки' }[role] || role || '—');
+            }
+            function openAdminModal(title, body, onSave) {
+                const modal = document.getElementById('admin-modal');
+                modal.innerHTML = `<div class="admin-modal__panel">
+                    <div class="admin-modal__header">
+                        <h3 class="admin-modal__title">${esc(title)}</h3>
+                        <button class="btn btn--outline btn--sm" type="button" onclick="closeAdminModal()"><i class="fas fa-times"></i></button>
                     </div>
-                    <div id="chat-window" style="height: 400px; overflow-y: auto; border: 1px solid #eee; padding: 1rem; border-radius: 8px; background: #fdfdfd; display: flex; flex-direction: column; gap: 0.5rem;">
-                    </div>
-                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-                        <input type="text" id="reply-input" placeholder="Ваша відповідь..." style="flex: 1; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px;">
-                        <button class="btn btn--primary" id="send-reply-btn">Надіслати</button>
-                    </div>
-                `;
-
-                const win = document.getElementById('chat-window');
-                messages.forEach(msg => {
-                    const mDiv = document.createElement('div');
-                    const isAdmin = msg.source === 'admin';
-                    mDiv.style.alignSelf = isAdmin ? 'flex-end' : 'flex-start';
-                    mDiv.style.background = isAdmin ? 'var(--color-coffee)' : '#eee';
-                    mDiv.style.color = isAdmin ? 'white' : 'black';
-                    mDiv.style.padding = '0.6rem 1rem';
-                    mDiv.style.borderRadius = '12px';
-                    mDiv.style.maxWidth = '80%';
-                    mDiv.innerHTML = `
-                        <div>${msg.text}</div>
-                        <div style="font-size: 0.7rem; opacity: 0.7; text-align: right; margin-top: 3px;">${new Date(msg.created_at).toLocaleTimeString('uk-UA')}</div>
-                    `;
-                    win.appendChild(mDiv);
-                });
-                win.scrollTop = win.scrollHeight;
-
-                document.getElementById('send-reply-btn').onclick = async () => {
-                    const text = document.getElementById('reply-input').value;
-                    if (!text) return;
-                    if (await apiFetch('support/reply', 'POST', { phone, order_id: orderId, text })) {
-                        openChat(phone, orderId);
+                    <form id="admin-modal-form">${body}
+                        <div class="admin-modal__footer">
+                            <button class="btn btn--outline" type="button" onclick="closeAdminModal()">Скасувати</button>
+                            <button class="btn btn--primary" type="submit"><i class="fas fa-check"></i> Зберегти</button>
+                        </div>
+                    </form>
+                </div>`;
+                modal.classList.add('admin-modal--active');
+                document.getElementById('admin-modal-form').onsubmit = async (e) => {
+                    e.preventDefault();
+                    showLoader(true);
+                    try {
+                        await onSave(new FormData(e.currentTarget));
+                        closeAdminModal();
+                        refreshData();
+                    } finally {
+                        showLoader(false);
                     }
                 };
-                showLoader(false);
+            }
+            function closeAdminModal() {
+                const modal = document.getElementById('admin-modal');
+                modal.classList.remove('admin-modal--active');
+                modal.innerHTML = '';
+            }
+            function field(name, label, value = '', type = 'text', full = false) {
+                return `<div class="admin-field ${full ? 'admin-field--full' : ''}"><label>${label}</label><input name="${name}" type="${type}" value="${esc(value)}"></div>`;
+            }
+            function readonlyField(name, label, value = '', type = 'text') {
+                return `<div class="admin-field"><label>${label}</label><input name="${name}" type="${type}" value="${esc(value)}" readonly tabindex="-1"></div>`;
+            }
+            function fileField(name, label, full = true) {
+                return `<div class="admin-field ${full ? 'admin-field--full' : ''}"><label>${label}</label><input name="${name}" type="file" accept="image/*"></div>`;
+            }
+            function textareaField(name, label, value = '', full = true) {
+                return `<div class="admin-field ${full ? 'admin-field--full' : ''}"><label>${label}</label><textarea name="${name}">${esc(value)}</textarea></div>`;
+            }
+            async function payloadWithUpload(fd) {
+                const payload = Object.fromEntries(fd.entries());
+                const uploaded = await apiUpload(fd.get('image_file'));
+                if (uploaded) payload.image_url = uploaded;
+                delete payload.image_file;
+                return payload;
+            }
+            function toolbar(title, buttonText, action, extra = '') {
+                return `<div class="admin-toolbar"><h3>${title}</h3><div class="order-actions">${extra}<button class="btn btn--primary btn--sm" onclick="${action}"><i class="fas fa-plus"></i> ${buttonText}</button></div></div>`;
+            }
+            function calcBeanPrice(base, size) {
+                const n = Number(String(base || '').replace(',', '.'));
+                if (!Number.isFinite(n) || n <= 0) return '';
+                return Math.round(size === 500 ? n * 2 * 0.97 : n * 4 * 0.92);
+            }
+            function hydrateBeanPriceCalculator() {
+                const base = document.querySelector('#admin-modal-form input[name="price_250"]');
+                const p500 = document.querySelector('#admin-modal-form input[name="price_500"]');
+                const p1000 = document.querySelector('#admin-modal-form input[name="price_1000"]');
+                if (!base || !p500 || !p1000) return;
+                const update = () => {
+                    p500.value = calcBeanPrice(base.value, 500);
+                    p1000.value = calcBeanPrice(base.value, 1000);
+                };
+                base.addEventListener('input', update);
+                update();
             }
 
             async function loadOrders() {
@@ -397,31 +581,73 @@
                 const orders = await apiFetch('active-orders');
                 const list = document.getElementById('items-list');
                 list.innerHTML = '';
-
                 if (!orders || orders.length === 0) {
-                    list.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">Немає активних замовлень</p>';
+                    list.innerHTML = '<p style="text-align:center; padding:3rem; opacity:0.5;">Активних замовлень немає</p>';
                 } else {
-                    orders.forEach(order => {
+                    orders.forEach(o => {
                         const div = document.createElement('div');
                         div.className = 'order-item';
-                        div.innerHTML = `
-                            <div class="order-info">
-                                <div class="order-title">${order.fullname}</div>
-                                <div class="order-meta">
-                                    <span><i class="fas fa-phone"></i> ${order.phone}</span> | 
-                                    <span><i class="fas fa-clock"></i> ${new Date(order.created_at).toLocaleTimeString('uk-UA')}</span>
-                                </div>
-                                <div class="order-items">${order.items}</div>
-                            </div>
-                            <div class="order-actions">
-                                <button class="btn btn--success" onclick="completeOrder('${order._id}')">Готово</button>
-                                <button class="btn btn--danger" onclick="cancelOrder('${order._id}')">Скасувати</button>
-                            </div>
-                        `;
+                        const typeLabel = {
+                            in_house: 'В закладі',
+                            takeaway: 'З собою',
+                            order_with_booking: 'Бронь + замовлення',
+                            beans_booking: 'Зерно в закладі',
+                            beans_delivery: 'Нова Пошта',
+                            nova_poshta: 'Нова Пошта'
+                        }[o.order_type] || 'Замовлення';
+                        const table = o.table_number ? ` | <i class="fas fa-chair"></i> Столик: ${o.table_number}` : '';
+                        const payState = o.is_paid ? '<span style="color:#2e7d32; font-weight:800;">Оплачено</span>' : '<span style="color:#b26a00; font-weight:800;">Очікує оплату</span>';
+                        const payBtn = !o.is_paid && Number(o.total || 0) > 0
+                            ? `<a class="btn btn--outline btn--sm" href="/index.html?order_id=${o.order_id}" target="_blank">Оплатити</a>`
+                            : '';
+                        div.innerHTML = `<div class="order-info"><div class="order-title">#${String(o.order_id).slice(-6)} — ${o.fullname || 'Гість'}</div><div class="order-meta"><i class="fas fa-phone"></i> ${o.phone || '—'} | <i class="fas fa-map-marker-alt"></i> ${o.location_name || 'Сайт'}${table} | ${typeLabel} | ${payState}</div><div class="order-items">${o.cart || ''}</div></div><div class="order-actions">${payBtn}<button class="btn btn--success" onclick="completeOrder('${o.order_id}')">Готово</button><button class="btn btn--danger btn--sm" onclick="cancelOrder('${o.order_id}')">Скасувати</button></div>`;
                         list.appendChild(div);
                     });
                 }
                 showLoader(false);
+            }
+
+            async function completeOrder(oid) {
+                if (confirm('Завершити замовлення?')) {
+                    await apiFetch(`orders/${oid}/complete`, 'POST');
+                    loadOrders();
+                }
+            }
+
+            async function cancelOrder(oid) {
+                if (confirm('Скасувати замовлення?')) {
+                    await apiFetch(`orders/${oid}/cancel`, 'POST');
+                    loadOrders();
+                }
+            }
+
+            async function loadShift() {
+                showLoader(true);
+                currentProfile = await apiFetch('me');
+                currentLocations = await apiFetch('locations') || [];
+                const list = document.getElementById('items-list');
+                const activeLoc = currentLocations.find(l => String(l._id) === String(currentProfile?.is_on_shift));
+                const status = activeLoc ? `Активна зміна: <b>${esc(activeLoc.name)}</b>` : 'Зміна не розпочата';
+                const action = activeLoc
+                    ? '<button class="btn btn--danger" onclick="endShift()"><i class="fas fa-stop"></i> Завершити зміну</button>'
+                    : '<button class="btn btn--primary" onclick="openShiftModal()"><i class="fas fa-play"></i> Почати зміну</button>';
+                list.innerHTML = `<div class="admin-toolbar"><h3>Зміна бариста</h3><div class="order-actions">${action}</div></div>
+                    <div class="order-item"><div class="order-info"><div class="order-title">${status}</div><div class="order-meta">Активна зміна визначає, які замовлення закладу ви бачите та обробляєте.</div></div></div>`;
+                showLoader(false);
+            }
+
+            function openShiftModal() {
+                const options = currentLocations.map(l => `<option value="${esc(l._id)}">${esc(l.name)} — ${esc(l.address || '')}</option>`).join('');
+                openAdminModal('Почати зміну', `<div class="admin-grid"><div class="admin-field admin-field--full"><label>Заклад</label><select name="location_id">${options}</select></div></div>`, async fd => {
+                    await apiFetch('shift/start', 'POST', Object.fromEntries(fd.entries()));
+                });
+            }
+
+            async function endShift() {
+                if (confirm('Завершити поточну зміну?')) {
+                    await apiFetch('shift/end', 'POST');
+                    loadShift();
+                }
             }
 
             async function loadBookings() {
@@ -429,83 +655,97 @@
                 const bookings = await apiFetch('active-bookings');
                 const list = document.getElementById('items-list');
                 list.innerHTML = '';
-
                 if (!bookings || bookings.length === 0) {
-                    list.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">Немає активних бронювань</p>';
+                    list.innerHTML = '<p style="text-align:center; padding:3rem; opacity:0.5;">Активних бронювань немає</p>';
                 } else {
                     bookings.forEach(b => {
                         const div = document.createElement('div');
                         div.className = 'order-item';
-                        div.innerHTML = `
-                            <div class="order-info">
-                                <div class="order-title">${b.fullname}</div>
-                                <div class="order-meta">
-                                    <span><i class="fas fa-phone"></i> ${b.phone}</span> | 
-                                    <span><i class="fas fa-calendar"></i> ${b.date_time}</span> |
-                                    <span><i class="fas fa-users"></i> ${b.people_count} осіб</span>
-                                </div>
-                                <div style="margin-top:0.5rem;">${b.wishes || 'Без побажань'}</div>
-                            </div>
-                            <div class="order-actions">
-                                <button class="btn btn--danger" onclick="cancelBooking('${b._id}')">Видалити</button>
-                            </div>
-                        `;
+                        div.innerHTML = `<div class="order-info"><div class="order-title">${b.fullname} — ${b.date_time}</div><div class="order-meta"><i class="fas fa-phone"></i> ${b.phone} | <i class="fas fa-users"></i> Гостей: ${b.people_count}</div><div class="order-items">${b.wishes || 'Без побажань'}</div></div><div class="order-actions"><button class="btn btn--danger" onclick="deleteBooking('${b.booking_id}')">Видалити</button></div>`;
                         list.appendChild(div);
                     });
                 }
                 showLoader(false);
             }
 
-            async function cancelBooking(id) {
-                if (confirm('Видалити бронювання?') && await apiFetch(`bookings/${id}`, 'DELETE')) {
+            async function deleteBooking(id) {
+                if (confirm('Видалити бронювання?')) {
+                    await apiFetch(`bookings/${id}`, 'DELETE');
                     loadBookings();
                 }
             }
 
+            async function loadSupport() {
+                showLoader(true);
+                const chats = await apiFetch('support/chats');
+                const list = document.getElementById('items-list');
+                list.innerHTML = '<h3 style="margin-bottom:2rem;">Чати підтримки</h3>';
+                if (!chats || chats.length === 0) {
+                    list.innerHTML += '<p style="text-align:center; padding:3rem; opacity:0.5;">Повідомлень немає</p>';
+                } else {
+                    chats.forEach(chat => {
+                        const div = document.createElement('div');
+                        div.className = 'card';
+                        div.style.cursor = 'pointer';
+                        div.style.padding = '1.5rem';
+                        const unread = chat.unread_count > 0 ? `<span style="background:var(--color-coffee); color:white; padding: 4px 10px; border-radius: 50px; font-size: 0.8rem; margin-left: 10px;">${chat.unread_count} нових</span>` : '';
+                        div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;"><div><strong style="font-size:1.1rem; color:var(--color-dark-brown);">${chat._id.phone || 'Гість'}</strong> ${unread}<div style="margin-top:8px; color:#666;">${chat.last_text}</div></div><div style="font-size:0.85rem; color:#999;">${new Date(chat.last_time).toLocaleString('uk-UA')}</div></div>`;
+                        div.onclick = () => openChat(chat._id.phone, chat._id.order_id);
+                        list.appendChild(div);
+                    });
+                }
+                showLoader(false);
+            }
+
+            async function openChat(phone, orderId) {
+                showLoader(true);
+                const messages = await apiFetch(`support/messages?phone=${encodeURIComponent(phone || '')}&order_id=${encodeURIComponent(orderId || '')}`);
+                if (!messages) {
+                    showLoader(false);
+                    return;
+                }
+                const list = document.getElementById('items-list');
+                list.innerHTML = `<div style="display:flex; align-items:center; gap:1rem; margin-bottom:2rem; flex-wrap:wrap;"><button class="btn btn--outline" onclick="loadSupport()"><i class="fas fa-arrow-left"></i> Назад</button><h3 style="font-family:var(--font-accent); font-size:1.8rem; flex:1;">Чат: ${esc(phone)}</h3><button class="btn btn--danger btn--sm" onclick="clearSupportChat('${esc(phone)}','${esc(orderId || '')}')"><i class="fas fa-trash"></i> Очистити</button></div><div id="chat-window"></div><div style="margin-top:2rem; display:flex; gap:1rem; background:white; padding:1.5rem; border-radius:var(--radius); box-shadow:var(--shadow);"><input type="text" id="reply-input" placeholder="Напишіть відповідь..."><button class="btn btn--primary" id="send-btn"><i class="fas fa-paper-plane"></i> Відправити</button></div>`;
+                const win = document.getElementById('chat-window');
+                messages.forEach(msg => {
+                    const div = document.createElement('div');
+                    const isAdmin = msg.source === 'admin';
+                    div.className = `msg ${isAdmin ? 'msg--admin' : 'msg--guest'}`;
+                    div.innerHTML = `<div>${msg.text}</div><div style="font-size:0.7rem; opacity:0.6; margin-top:5px; text-align:right;">${new Date(msg.created_at).toLocaleTimeString('uk-UA')}</div>`;
+                    win.appendChild(div);
+                });
+                win.scrollTop = win.scrollHeight;
+                document.getElementById('send-btn').onclick = async () => {
+                    const text = document.getElementById('reply-input').value;
+                    if (!text) return;
+                    showLoader(true);
+                    if (await apiFetch('support/reply', 'POST', { phone, order_id: orderId, text })) { openChat(phone, orderId); }
+                };
+                showLoader(false);
+            }
+
+            async function clearSupportChat(phone, orderId) {
+                if (!confirm('Очистити цей чат?')) return;
+                showLoader(true);
+                await apiFetch(`support/messages?phone=${encodeURIComponent(phone)}&order_id=${encodeURIComponent(orderId || '')}`, 'DELETE');
+                await loadSupport();
+                showLoader(false);
+            }
+
             async function loadMenu() {
                 showLoader(true);
-                const items = await apiFetch('menu');
+                const menu = await apiFetch('menu');
+                currentMenu = menu || [];
                 const list = document.getElementById('items-list');
-                list.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3>Список страв та напоїв</h3>
-                        <button class="btn btn--success" onclick="openItemModal()"><i class="fas fa-plus"></i> Додати позицію</button>
-                    </div>
-                `;
-
-                if (!items || items.length === 0) {
-                    list.innerHTML += '<p style="text-align: center; color: #999; padding: 2rem;">Меню порожнє</p>';
+                list.innerHTML = toolbar('Керування меню', 'Додати позицію', 'editMenuItem()', '<button class="btn btn--outline btn--sm" onclick="editCategory()"><i class="fas fa-layer-group"></i> Категорія</button>');
+                if (!currentMenu.length) {
+                    list.innerHTML += '<p style="text-align:center; padding:3rem; opacity:0.5;">Меню порожнє</p>';
                 } else {
-                    const table = document.createElement('table');
-                    table.style.width = '100%';
-                    table.style.borderCollapse = 'collapse';
-                    table.innerHTML = `
-                        <thead>
-                            <tr style="text-align: left; border-bottom: 2px solid #eee;">
-                                <th style="padding: 10px;">Назва</th>
-                                <th style="padding: 10px;">Категорія</th>
-                                <th style="padding: 10px;">Ціна</th>
-                                <th style="padding: 10px;">Дії</th>
-                            </tr>
-                        </thead>
-                        <tbody id="menu-table-body"></tbody>
-                    `;
-                    list.appendChild(table);
-                    const tbody = document.getElementById('menu-table-body');
-
-                    items.forEach(item => {
-                        const tr = document.createElement('tr');
-                        tr.style.borderBottom = '1px solid #eee';
-                        tr.innerHTML = `
-                            <td style="padding: 10px;">${item.name}</td>
-                            <td style="padding: 10px;">${item.category}</td>
-                            <td style="padding: 10px;">${item.price} ₴</td>
-                            <td style="padding: 10px;">
-                                <button class="btn btn--primary" style="padding: 5px 10px;" onclick="openItemModal('${item.id}')"><i class="fas fa-edit"></i></button>
-                                <button class="btn btn--danger" style="padding: 5px 10px;" onclick="deleteMenuItem('${item.id}')"><i class="fas fa-trash"></i></button>
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
+                    currentMenu.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'order-item';
+                        div.innerHTML = `<div class="order-info"><div class="order-title">${esc(item.name)}</div><div class="order-meta">${esc(item.category)} | ${esc(item.price)} грн | ${esc(item.volume || '')}</div><div class="order-items">${esc(item.description || 'Без опису')}</div></div><div class="order-actions"><button class="btn btn--outline btn--sm" onclick="editMenuItem('${item.id}')">Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteMenuItem('${item.id}')">Видалити</button></div>`;
+                        list.appendChild(div);
                     });
                 }
                 showLoader(false);
@@ -514,91 +754,206 @@
             async function loadBeans() {
                 showLoader(true);
                 const beans = await apiFetch('beans');
+                currentBeans = beans || [];
                 const list = document.getElementById('items-list');
-                list.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3>Кава в зернах</h3>
-                        <button class="btn btn--success" onclick="openBeanModal()"><i class="fas fa-plus"></i> Додати сорт</button>
-                    </div>
-                `;
-
-                if (!beans || beans.length === 0) {
-                    list.innerHTML += '<p style="text-align: center; color: #999; padding: 2rem;">Сортів кави не знайдено</p>';
+                list.innerHTML = toolbar('Кава в зернах', 'Додати сорт', 'editBean()');
+                if (!currentBeans.length) {
+                    list.innerHTML += '<p style="text-align:center; padding:3rem; opacity:0.5;">Сортів не знайдено</p>';
                 } else {
-                    const grid = document.createElement('div');
-                    grid.style.display = 'grid';
-                    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(250px, 1fr))';
-                    grid.style.gap = '1.5rem';
-                    list.appendChild(grid);
-
-                    beans.forEach(bean => {
-                        const card = document.createElement('div');
-                        card.className = 'card';
-                        card.style.margin = '0';
-                        card.innerHTML = `
-                            <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem;">${bean.name}</div>
-                            <div style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">${bean.sort} | ${bean.roast}</div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span>${bean.price_250} ₴ (250г)</span>
-                                <div>
-                                    <button class="btn btn--primary" style="padding: 5px 10px;" onclick="openBeanModal('${bean._id}')"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn--danger" style="padding: 5px 10px;" onclick="deleteBean('${bean._id}')"><i class="fas fa-trash"></i></button>
-                                </div>
-                            </div>
-                        `;
-                        grid.appendChild(card);
+                    currentBeans.forEach(b => {
+                        const div = document.createElement('div');
+                        div.className = 'order-item';
+                        div.innerHTML = `<div class="order-info"><div class="order-title">${esc(b.name)}</div><div class="order-meta">${esc(b.sort || '')} | 250г: ${esc(b.price_250)} грн | 500г: ${esc(b.price_500)} грн | 1кг: ${esc(b.price_1000)} грн</div><div class="order-items">${esc(b.taste || b.description || 'Без опису')}</div></div><div class="order-actions"><button class="btn btn--outline btn--sm" onclick="editBean('${b._id}')">Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteBean('${b._id}')">Видалити</button></div>`;
+                        list.appendChild(div);
                     });
                 }
                 showLoader(false);
             }
 
-            async function deleteMenuItem(id) {
-                if (confirm('Видалити цей пункт меню?') && await apiFetch(`menu/${id}`, 'DELETE')) {
-                    loadMenu();
+            async function loadLocations() {
+                showLoader(true);
+                const locs = await apiFetch('locations');
+                currentLocations = locs || [];
+                const list = document.getElementById('items-list');
+                list.innerHTML = toolbar('Локації', 'Додати заклад', 'editLocation()');
+                if (!currentLocations.length) {
+                    list.innerHTML += '<p style="text-align:center; padding:3rem; opacity:0.5;">Локацій не знайдено</p>';
+                } else {
+                    currentLocations.forEach(l => {
+                        const div = document.createElement('div');
+                        div.className = 'order-item';
+                        div.innerHTML = `<div class="order-info"><div class="order-title">${esc(l.name)}</div><div class="order-meta">${esc(l.address)} | ${esc(l.schedule || '')} | столів: ${esc(l.max_tables || 10)}</div><div class="order-items">${esc(l.phone || '')} ${esc(l.email || '')}</div></div><div class="order-actions"><button class="btn btn--outline btn--sm" onclick="editLocation('${l._id}')">Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteLocation('${l._id}')">Видалити</button></div>`;
+                        list.appendChild(div);
+                    });
                 }
+                showLoader(false);
             }
 
-            async function deleteBean(id) {
-                if (confirm('Видалити цей сорт кави?') && await apiFetch(`beans/${id}`, 'DELETE')) {
-                    loadBeans();
+            async function loadSocials() {
+                showLoader(true);
+                currentSocials = await apiFetch('socials') || [];
+                const list = document.getElementById('items-list');
+                list.innerHTML = toolbar('Соцмережі', 'Додати посилання', 'editSocial()');
+                if (!currentSocials.length) {
+                    list.innerHTML += '<p style="text-align:center; padding:3rem; opacity:0.5;">Соцмереж немає</p>';
+                } else {
+                    currentSocials.forEach(s => {
+                        const div = document.createElement('div');
+                        div.className = 'order-item';
+                        div.innerHTML = `<div class="order-info"><div class="order-title">${esc(s.name)}</div><div class="order-meta">${esc(s.url)}</div></div><div class="order-actions"><button class="btn btn--outline btn--sm" onclick="editSocial('${s._id}')">Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s._id}')">Видалити</button></div>`;
+                        list.appendChild(div);
+                    });
                 }
+                showLoader(false);
             }
 
-            function openItemModal(id = null) {
-                // Simplified: just a prompt or a hidden form for now
-                // Ideally, a beautiful modal with multiple inputs
-                alert('Функція редагування в процесі реалізації UI');
+            async function loadTeam() {
+                showLoader(true);
+                currentTeam = await apiFetch('team') || [];
+                if (!currentLocations.length) currentLocations = await apiFetch('locations') || [];
+                const list = document.getElementById('items-list');
+                list.innerHTML = toolbar('Команда', 'Додати доступ', 'editTeamMember()');
+                if (!currentTeam.length) {
+                    list.innerHTML += '<p style="text-align:center; padding:3rem; opacity:0.5;">Команда порожня</p>';
+                } else {
+                    currentTeam.forEach(a => {
+                        const locs = (a.locations || []).length ? (a.locations || []).map(id => (currentLocations.find(l => l._id === id) || {}).name || id).join(', ') : 'Всі заклади';
+                        const div = document.createElement('div');
+                        div.className = 'order-item';
+                        div.innerHTML = `<div class="order-info"><div class="order-title">${esc(a.display_name || a.username || a.user_id)}</div><div class="order-meta">@${esc(a.username || '—')} | ID: ${esc(a.user_id)} | ${roleName(a.role)} | ${a.receive_notifications ? 'Сповіщення увімкнені' : 'Без сповіщень'}</div><div class="chip-list"><span class="chip">${esc(locs)}</span></div></div><div class="order-actions"><button class="btn btn--outline btn--sm" onclick="editTeamMember('${a.user_id}')">Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteTeamMember('${a.user_id}')">Видалити</button></div>`;
+                        list.appendChild(div);
+                    });
+                }
+                showLoader(false);
             }
 
-            function openBeanModal(id = null) {
-                alert('Функція редагування в процесі реалізації UI');
+            async function editMenuItem(id) {
+                const item = currentMenu.find(x => String(x.id) === String(id)) || {};
+                const categories = await apiFetch('menu/categories') || [];
+                const options = categories.map(c => `<option value="${esc(c)}" ${item.category === c ? 'selected' : ''}>${esc(c)}</option>`).join('');
+                openAdminModal(id ? 'Редагування позиції' : 'Нова позиція', `<div class="admin-grid">
+                    <div class="admin-field"><label>Категорія</label><select name="category">${options}<option value="">Нова категорія...</option></select></div>
+                    ${field('new_category', 'Нова категорія', '')}
+                    ${field('name', 'Назва', item.name || '')}
+                    ${field('price', 'Ціна', item.price || '', 'number')}
+                    ${field('volume', 'Обʼєм / вага', item.volume || '')}
+                    ${field('calories', 'Калорії', item.calories || '')}
+                    ${field('image_url', 'Фото URL', item.image_url || '', 'url', true)}
+                    ${fileField('image_file', 'Або завантажити фото')}
+                    ${textareaField('description', 'Опис', item.description || '')}
+                    ${textareaField('composition', 'Склад', item.composition || '')}
+                </div>`, async fd => {
+                    const payload = await payloadWithUpload(fd);
+                    payload.category = payload.category || payload.new_category;
+                    delete payload.new_category;
+                    if (id) payload.id = id;
+                    await apiFetch('menu', 'POST', payload);
+                });
             }
+            async function editCategory() {
+                const categories = await apiFetch('menu/categories') || [];
+                const options = categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+                openAdminModal('Категорія меню', `<div class="admin-grid"><div class="admin-field"><label>Редагувати існуючу</label><select name="old_name"><option value="">Створити нову</option>${options}</select></div>${field('name', 'Нова назва')}</div>`, async fd => {
+                    await apiFetch('menu/categories', 'POST', Object.fromEntries(fd.entries()));
+                });
+            }
+            function deleteMenuItem(id) { if(confirm('Видалити позицію?')) apiFetch(`menu/${id}`, 'DELETE').then(loadMenu); }
 
-            // Navigation
+            function editBean(id) {
+                const b = currentBeans.find(x => String(x._id) === String(id)) || {};
+                openAdminModal(id ? 'Редагування зерна' : 'Нове зерно', `<div class="admin-grid">
+                    ${field('name', 'Назва', b.name || '')}${field('price_250', 'Ціна 250г', b.price_250 || '', 'number')}${readonlyField('price_500', 'Ціна 500г', b.price_500 || '', 'number')}${readonlyField('price_1000', 'Ціна 1кг', b.price_1000 || '', 'number')}
+                    ${field('sort', 'Склад', b.sort || '')}${field('roast', 'Обсмаження', b.roast || '')}
+                    ${field('acidity', 'Кислинка 0-5', b.acidity || 0, 'number')}${field('bitterness', 'Гірчинка 0-5', b.bitterness || 0, 'number')}${field('body', 'Тіло 0-5', b.body || 0, 'number')}${field('image_url', 'Фото URL', b.image_url || '', 'url', true)}
+                    ${fileField('image_file', 'Або завантажити фото')}
+                    ${textareaField('taste', 'Смак', b.taste || '')}${textareaField('description', 'Опис', b.description || '')}
+                </div>`, async fd => {
+                    const payload = await payloadWithUpload(fd);
+                    if (id) payload._id = id;
+                    await apiFetch('beans', 'POST', payload);
+                });
+                hydrateBeanPriceCalculator();
+            }
+            function deleteBean(id) { if(confirm('Видалити зерно?')) apiFetch(`beans/${id}`, 'DELETE').then(loadBeans); }
+
+            function editLocation(id) {
+                const l = currentLocations.find(x => String(x._id) === String(id)) || {};
+                openAdminModal(id ? 'Редагування закладу' : 'Новий заклад', `<div class="admin-grid">
+                    ${field('name', 'Назва', l.name || '')}${field('address', 'Адреса', l.address || '')}${field('schedule', 'Графік', l.schedule || '')}${field('phone', 'Телефон', l.phone || '')}
+                    ${field('google_maps_url', 'Google Maps URL', l.google_maps_url || '', 'url', true)}${field('image_url', 'Фото URL', l.image_url || '', 'url', true)}
+                    ${fileField('image_file', 'Або завантажити фото')}
+                    ${textareaField('amenities', 'Зручності через кому', (l.amenities || []).join(', '))}${textareaField('atmosphere', 'Атмосфера', l.atmosphere || '')}
+                </div>`, async fd => {
+                    const payload = await payloadWithUpload(fd);
+                    if (id) payload._id = id;
+                    await apiFetch('locations', 'POST', payload);
+                });
+            }
+            function deleteLocation(id) { if(confirm('Видалити заклад?')) apiFetch(`locations/${id}`, 'DELETE').then(loadLocations); }
+
+            function editSocial(id) {
+                const s = currentSocials.find(x => String(x._id) === String(id)) || {};
+                openAdminModal(id ? 'Редагування соцмережі' : 'Нова соцмережа', `<div class="admin-grid">${field('name', 'Назва', s.name || '')}${field('url', 'Посилання', s.url || '', 'url', true)}</div>`, async fd => {
+                    const payload = Object.fromEntries(fd.entries());
+                    if (id) payload._id = id;
+                    await apiFetch('socials', 'POST', payload);
+                });
+            }
+            function deleteSocial(id) { if(confirm('Видалити соцмережу?')) apiFetch(`socials/${id}`, 'DELETE').then(loadSocials); }
+
+            function editTeamMember(userId) {
+                const a = currentTeam.find(x => String(x.user_id) === String(userId)) || { receive_notifications: true, locations: [] };
+                const allowedRoles = currentAdmin.role === 'developer'
+                    ? ['developer', 'owner', 'super', 'admin', 'delivery_manager']
+                    : (['owner', 'boss'].includes(currentAdmin.role)
+                        ? ['owner', 'super', 'admin', 'delivery_manager']
+                        : ['admin', 'delivery_manager']);
+                const roleOptions = allowedRoles.map(r => `<option value="${r}" ${a.role === r ? 'selected' : ''}>${roleName(r)}</option>`).join('');
+                const locChecks = currentLocations.map(l => `<label style="display:flex; gap:8px; align-items:center; font-weight:700;"><input type="checkbox" name="locations" value="${l._id}" ${(a.locations || []).includes(l._id) ? 'checked' : ''}> ${esc(l.name)}</label>`).join('');
+                openAdminModal(userId ? 'Редагування доступу' : 'Новий доступ', `<div class="admin-grid">
+                    ${field('user_id', 'Telegram ID', a.user_id || '', 'number')}${field('username', 'Username без @', a.username || '')}${field('display_name', 'Імʼя в адмінці', a.display_name || '')}
+                    <div class="admin-field"><label>Роль</label><select name="role">${roleOptions}</select></div>
+                    <div class="admin-field admin-field--full"><label style="display:flex; gap:8px; align-items:center;"><input type="checkbox" name="receive_notifications" value="1" ${a.receive_notifications !== false ? 'checked' : ''}> Отримувати сповіщення</label></div>
+                    <div class="admin-field admin-field--full"><label>Заклади. Якщо нічого не вибрано, доступ до всіх.</label><div class="chip-list">${locChecks}</div></div>
+                </div>`, async fd => {
+                    const payload = Object.fromEntries(fd.entries());
+                    payload.receive_notifications = fd.has('receive_notifications');
+                    payload.locations = fd.getAll('locations');
+                    await apiFetch('team', 'POST', payload);
+                });
+            }
+            function deleteTeamMember(userId) { if(confirm('Видалити доступ?')) apiFetch(`team/${userId}`, 'DELETE').then(loadTeam); }
+
             document.querySelectorAll('.nav-item').forEach(item => {
-                item.onclick = () => {
+                item.onclick = (e) => {
+                    const section = item.getAttribute('data-section');
+                    if (!section) return;
+                    e.preventDefault();
                     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('nav-item--active'));
                     item.classList.add('nav-item--active');
-                    currentSection = item.dataset.section;
+                    currentSection = section;
                     document.getElementById('section-title').textContent = item.textContent.trim();
-                    refreshContent();
+                    refreshData();
                 };
             });
 
-            function refreshContent() {
+            function refreshData() {
                 if (currentSection === 'orders') loadOrders();
+                else if (currentSection === 'shift') loadShift();
                 else if (currentSection === 'bookings') loadBookings();
+                else if (currentSection === 'support') loadSupport();
                 else if (currentSection === 'menu') loadMenu();
                 else if (currentSection === 'beans') loadBeans();
-                else {
-                    document.getElementById('items-list').innerHTML = `<p style="text-align: center; padding: 2rem;">Розділ ${currentSection} ще в розробці...</p>`;
-                }
+                else if (currentSection === 'locations') loadLocations();
+                else if (currentSection === 'socials') loadSocials();
+                else if (currentSection === 'team') loadTeam();
             }
 
-            document.getElementById('refresh-btn').onclick = refreshContent;
-
-            // Initial load
-            window.onload = refreshContent;
+            document.getElementById('refresh-btn').onclick = refreshData;
+            if (sessionToken && currentAdmin) {
+                document.getElementById('login-screen').style.display = 'none';
+                showPanel();
+            }
         </script>
     </body>
 </html>

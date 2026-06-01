@@ -294,22 +294,64 @@
     }
 
     #cart-modal-container .cart-modal__past-orders {
-        padding: 0 0 1.5rem !important;
-        margin-top: 1rem;
+        padding: 0 0 2rem !important;
+        margin-top: 1.25rem;
+        width: 100%;
+        flex-shrink: 0;
     }
 
     #cart-modal-container .cart-modal__past-orders-title {
-        font-size: 1.4rem !important;
-        text-align: center;
+        font-size: 1.25rem !important;
+        line-height: 1.2;
+        text-align: left;
+        margin-bottom: 0.85rem !important;
     }
 
-    #cart-modal-container .cart-modal__past-order-meta {
-        font-size: 1.05rem;
+    #cart-modal-container .cart-modal__past-orders-list {
+        gap: 12px;
     }
 
-    #cart-modal-container .cart-modal__past-order-btn {
-        padding: 10px 14px;
-        font-size: 1rem;
+    #cart-modal-container .past-order {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) 42px;
+        gap: 10px;
+        align-items: center;
+        padding: 1rem !important;
+        border-radius: 18px !important;
+        background: #fff !important;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    #cart-modal-container .past-order__meta {
+        min-width: 0;
+        font-size: 0.98rem;
+        line-height: 1.35;
+    }
+
+    #cart-modal-container .past-order__meta strong {
+        display: block;
+        font-size: 1rem !important;
+        line-height: 1.25;
+    }
+
+    #cart-modal-container .past-order__date {
+        font-size: 0.85rem;
+    }
+
+    #cart-modal-container .past-order__items {
+        font-size: 0.85rem;
+        line-height: 1.3;
+        -webkit-line-clamp: 3;
+    }
+
+    #cart-modal-container .past-order__btn {
+        display: none !important;
+    }
+
+    #cart-modal-container .past-order__add-icon {
+        justify-self: end;
+        width: 38px;
+        height: 38px;
     }
 
     .cart-modal__list li {

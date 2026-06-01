@@ -218,13 +218,18 @@ async function fetchMenu() {
 
     root.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Завантаження меню...</div>';
 
-    const cached = typeof window.getCachedData === 'function' ? window.getCachedData('menu') : null;
-    if (cached && Array.isArray(cached) && cached.length > 0) {
-        renderMenuData(cached);
-    }
-
     try {
-        const data = await window.fetchMedelinData('menu');
+        const data = await window.loadMedelinData('menu', (fresh) => {
+            fresh.sort((a, b) => {
+                let idxA = CAT_ORDER.indexOf(getCleanCatName(a.category));
+                let idxB = CAT_ORDER.indexOf(getCleanCatName(b.category));
+                if (idxA === -1) idxA = 99;
+                if (idxB === -1) idxB = 99;
+                return idxA - idxB;
+            });
+            renderMenuData(fresh);
+        });
+
         if (data && Array.isArray(data) && data.length > 0) {
             data.sort((a, b) => {
                 let idxA = CAT_ORDER.indexOf(getCleanCatName(a.category));
@@ -233,14 +238,13 @@ async function fetchMenu() {
                 if (idxB === -1) idxB = 99;
                 return idxA - idxB;
             });
-            window.setCachedData('menu', data);
             renderMenuData(data);
-        } else if (!cached) {
+        } else {
             root.innerHTML = `<div class="error-msg">Не вдалося знайти файл з меню. Перевірте папку assets/data/</div>`;
         }
     } catch (err) {
         console.error('[Medelin] Помилка у fetchMenu:', err);
-        if (!cached) root.innerHTML = '<div class="error-msg">Критична помилка завантаження. Дивіться консоль.</div>';
+        root.innerHTML = '<div class="error-msg">Критична помилка завантаження. Дивіться консоль.</div>';
     }
 }
 
@@ -326,6 +330,11 @@ function renderMenuData(menuData) {
             console.error('[Medelin] Помилка рендерингу секції:', e);
         }
     });
+
+    // Оновлюємо анімації після додавання нових елементів у DOM
+    if (typeof window.refreshAnimations === 'function') {
+        window.refreshAnimations();
+    }
 }
 
 if (document.readyState === 'loading') {

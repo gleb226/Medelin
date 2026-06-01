@@ -4,22 +4,18 @@ async function fetchCoffee() {
 
     root.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Завантаження кави...</div>';
 
-    const cached = typeof window.getCachedData === 'function' ? window.getCachedData('coffee') : null;
-    if (cached) {
-        renderCoffeeData(cached);
-    }
-
     try {
-        const data = await window.fetchMedelinData('coffee');
+        const data = await window.loadMedelinData('coffee', (fresh) => {
+            renderCoffeeData(fresh);
+        });
         if (data) {
-            window.setCachedData('coffee', data);
             renderCoffeeData(data);
-        } else if (!cached) {
+        } else {
             root.innerHTML = `<div class="error-msg">Помилка завантаження даних про каву. <br><button type="button" data-action="reload-page" class="btn btn--sm btn--mt-md">Оновити сторінку</button></div>`;
         }
     } catch (err) {
         console.error('fetchCoffee error:', err);
-        if (!cached) root.innerHTML = '<div class="error-msg">Критична помилка завантаження.</div>';
+        root.innerHTML = '<div class="error-msg">Критична помилка завантаження.</div>';
     }
 }
 

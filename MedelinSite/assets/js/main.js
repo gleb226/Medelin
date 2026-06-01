@@ -5,6 +5,7 @@ const isFileProto = _proto === 'file:';
 const isLocal = _host === 'localhost' || _host === '127.0.0.1' || _host === '';
 
 window.API_BASE_URL = '';
+const reportedClientErrors = new Set();
 
 if (isLocal && _port === '8000') {
     window.API_BASE_URL = 'http://localhost:8000';
@@ -14,25 +15,26 @@ window.fetchMedelinData = async function (key) {
     const fileName = `${key}.json`;
     const endpoints = [
         `${window.API_BASE_URL}/api/${key}`,
+        `/api/${key}`,
         `${window.API_BASE_URL}/assets/data/${fileName}`
     ];
     
     const isRoot = !window.location.pathname.includes('/pages/');
-    if (isRoot) {
-        endpoints.push(`./assets/data/${fileName}`);
-    } else {
-        endpoints.push(`../assets/data/${fileName}`);
-    }
-    
+    const dataPath = isRoot ? `./assets/data/${fileName}` : `../assets/data/${fileName}`;
+    endpoints.push(dataPath);
     endpoints.push(`/assets/data/${fileName}`);
 
     for (const url of endpoints) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            // Збільшуємо таймаут до 10 секунд для холодного старту на Render
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
             
             const finalUrl = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`;
-            const response = await fetch(finalUrl, { signal: controller.signal });
+            const response = await fetch(finalUrl, { 
+                signal: controller.signal,
+                headers: { 'Cache-Control': 'no-cache' }
+            });
             clearTimeout(timeoutId);
 
             if (response.ok) {
@@ -42,18 +44,44 @@ window.fetchMedelinData = async function (key) {
                 }
             }
         } catch (e) {
+            console.warn(`[Medelin] Failed to fetch from ${url}:`, e.message);
         }
     }
-    
+    window.reportClientError(`Failed to load ${key}`, `all data endpoints failed for ${key}`);
     return null;
 };
 
+window.reportClientError = function (message, context = '') {
+    try {
+        const signature = `${message}|${context}`.slice(0, 240);
+        if (reportedClientErrors.has(signature)) return;
+        reportedClientErrors.add(signature);
+        fetch(`${window.API_BASE_URL}/api/client-error`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                source: 'site',
+                path: window.location.href,
+                message: String(message || 'Client error'),
+                context: String(context || '')
+            })
+        });
+    } catch (e) {}
+};
+
 window.onerror = function(msg, url, lineNo, columnNo, error) {
+    window.reportClientError(msg || (error && error.message) || 'Window error', `${url || ''}:${lineNo || 0}:${columnNo || 0}`);
     if (window.showToast) {
-        window.showToast('Сталася помилка в роботі сайту.', 'error');
+        window.showToast('Сталася помилка. Адміни вже працюють над цим.', 'error');
     }
     return false;
 };
+
+window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason;
+    const message = reason && reason.message ? reason.message : String(reason || 'Unhandled promise rejection');
+    window.reportClientError(message, 'unhandledrejection');
+});
 
 window.showToast = function (message, type = 'success') {
     let container = document.querySelector('.toast-container');
@@ -87,6 +115,96 @@ window.setUserData = function (data) {
 
 window.getPastOrders = function () {
     return JSON.parse(localStorage.getItem('medelin_past_orders') || '[]');
+};
+
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function getCurrentOrderKind() {
+    return window.location.pathname.includes('beans.html') ? 'beans' : 'menu';
+}
+
+function normalizeOrderKind(type, itemsText = '') {
+    const t = String(type || '').toLowerCase();
+    if (['beans', 'bean', 'coffee', 'pickup', 'nova_poshta', 'beans_delivery'].includes(t)) return 'beans';
+    if (['menu', 'takeaway', 'in_house'].includes(t)) return 'menu';
+    return /\((250|500|1000)\s*(г|g)\)/i.test(String(itemsText || '')) ? 'beans' : 'menu';
+}
+
+function parsePastOrderItems(itemsText) {
+    return String(itemsText || '')
+        .split(/\r?\n/)
+        .map((line, idx) => {
+            const cleanLine = line.replace(/^\s*[-•]\s*/, '').trim();
+            if (!cleanLine) return null;
+            const match = cleanLine.match(/^(.*?)\s*\((\d+)\s*(?:грн|₴|uah)?\)\s*$/i);
+            const name = (match ? match[1] : cleanLine).trim();
+            const price = match ? parseInt(match[2], 10) : 0;
+            return {
+                id: `past:${Date.now()}:${idx}:${name}`,
+                name,
+                price: Number.isFinite(price) ? price : 0
+            };
+        })
+        .filter(Boolean);
+}
+
+function getPastOrderItems(order) {
+    if (order && Array.isArray(order.items) && order.items.length > 0) return order.items;
+    return parsePastOrderItems(order && order.items_text);
+}
+
+function getPastOrderSummary(order) {
+    const items = getPastOrderItems(order);
+    if (items.length > 0) return items.map((item) => item.name).join(', ');
+    return String((order && order.items_text) || 'Замовлення').replace(/\s+/g, ' ').trim();
+}
+
+window.syncPastOrders = async function(force = false) {
+    const userData = window.getUserData();
+    if (!userData || !userData.phone) return;
+    
+    // Якщо вже синхронізували нещодавно і не force, пропускаємо
+    const lastSync = localStorage.getItem('last_sync_time');
+    if (!force && lastSync && (Date.now() - parseInt(lastSync) < 300000)) { // 5 хв
+        return window.getPastOrders();
+    }
+    
+    try {
+        const resp = await fetch(`${window.API_BASE_URL}/api/past-orders?phone=${encodeURIComponent(userData.phone)}`);
+        if (resp.ok) {
+            const serverOrders = await resp.json();
+            if (Array.isArray(serverOrders)) {
+                // Мапимо серверний формат на локальний
+                const localOrders = serverOrders.map(o => ({
+                    items: parsePastOrderItems(o.items_text),
+                    items_text: o.items_text,
+                    total: o.total,
+                    timestamp: new Date(o.timestamp).getTime(),
+                    type: normalizeOrderKind(o.type, o.items_text),
+                    id: o.order_id
+                }));
+                localStorage.setItem('medelin_past_orders', JSON.stringify(localOrders.slice(0, 10)));
+                localStorage.setItem('last_sync_time', Date.now().toString());
+                
+                // Якщо кошик відкритий — оновлюємо його
+                const modal = document.getElementById('cart-modal-container');
+                if (modal && modal.classList.contains('cart-modal--active')) {
+                    window.openCartModal();
+                }
+                return localOrders;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to sync orders:', e);
+    }
+    return window.getPastOrders();
 };
 
 window.addPastOrder = function (order) {
@@ -127,9 +245,25 @@ window.setCachedData = function (key, data) {
     } catch (e) {}
 };
 
-window.loadMedelinData = async function (key) {
+window.loadMedelinData = async function (key, onUpdate = null) {
     const cached = typeof window.getCachedData === 'function' ? window.getCachedData(key) : null;
+    
+    // Якщо є кеш, повертаємо його відразу для швидкої ініціалізації
     if (cached && Array.isArray(cached) && cached.length > 0) {
+        // Запускаємо фонове оновлення
+        setTimeout(async () => {
+            try {
+                const fresh = await window.fetchMedelinData(key);
+                if (fresh && Array.isArray(fresh) && fresh.length > 0) {
+                    const isDifferent = JSON.stringify(fresh) !== JSON.stringify(cached);
+                    if (isDifferent) {
+                        window.setCachedData(key, fresh);
+                        if (typeof onUpdate === 'function') onUpdate(fresh);
+                    }
+                }
+            } catch (e) {}
+        }, 100);
+        
         return cached;
     }
 
@@ -319,6 +453,27 @@ function saveCart() {
     localStorage.setItem('cart_beans', JSON.stringify(cart_beans));
 }
 
+function clearCart() {
+    cart_menu.length = 0;
+    cart_beans.length = 0;
+    localStorage.removeItem('cart_menu');
+    localStorage.removeItem('cart_beans');
+    localStorage.removeItem('medelin_pending_order_id');
+    window.CURRENT_ORDER_ID = null;
+    updateCartBadge();
+}
+
+function clearPendingPayment() {
+    localStorage.removeItem('medelin_pending_order_id');
+    window.CURRENT_ORDER_ID = null;
+}
+
+function rememberPendingPayment(orderId) {
+    if (!orderId) return;
+    window.CURRENT_ORDER_ID = String(orderId);
+    localStorage.setItem('medelin_pending_order_id', String(orderId));
+}
+
 function updateCartBadge() {
     const badge = document.getElementById('cart-badge');
     if (!badge) return;
@@ -333,6 +488,7 @@ function updateCartBadge() {
 }
 
 window.addMenuToCart = function (id, name, price) {
+    clearPendingPayment();
     cart_menu.push({ id, name, price });
     saveCart();
     updateCartBadge();
@@ -340,6 +496,7 @@ window.addMenuToCart = function (id, name, price) {
 };
 
 window.addBeanToCart = function (id, name, weightName) {
+    clearPendingPayment();
     const r = document.querySelector(`input[name="${weightName}"]:checked`);
     if (!r) {
         alert('Будь ласка, оберіть вагу');
@@ -380,22 +537,34 @@ window.openCartModal = function () {
     }
 
     const pastOrders = window.getPastOrders();
+    const currentOrderKind = getCurrentOrderKind();
+    const visiblePastOrders = pastOrders
+        .map((order, index) => ({ order, index }))
+        .filter(({ order }) => normalizeOrderKind(order && order.type, order && order.items_text) === currentOrderKind);
+    const userData = window.getUserData();
     let pastOrdersHtml = '';
-    if (pastOrders.length > 0) {
+    if (visiblePastOrders.length > 0 || (userData && userData.phone)) {
         pastOrdersHtml += `<div class="cart-modal__past-orders">
-            <h4 class="cart-modal__past-orders-title">Минулі замовлення</h4>
+            <div class="cart-modal__past-orders-head">
+                <h4 class="cart-modal__past-orders-title" style="margin: 0;">Минулі замовлення</h4>
+            </div>
             <div class="cart-modal__past-orders-list">`;
 
-        pastOrders.slice(0, 3).forEach((order, idx) => {
-            const date = new Date(order.timestamp).toLocaleDateString('uk-UA');
-            pastOrdersHtml += `<div class="cart-modal__past-order">
-                <div class="cart-modal__past-order-meta">
-                    <strong>${order.items.length} тов. — ${order.total} ₴</strong>
-                    <div class="cart-modal__past-order-date">${date}</div>
-                </div>
-                <button class="btn cart-modal__past-order-btn" type="button" data-action="repeat-order" data-order-index="${idx}">Повторити</button>
-            </div>`;
-        });
+        if (visiblePastOrders.length > 0) {
+            visiblePastOrders.slice(0, 4).forEach(({ order, index }) => {
+                const date = new Date(order.timestamp).toLocaleDateString('uk-UA');
+                const summary = getPastOrderSummary(order);
+                pastOrdersHtml += `<button class="past-order" type="button" data-action="repeat-order" data-order-index="${index}">
+                    <div class="past-order__meta">
+                        <strong class="past-order__summary">${escapeHtml(summary)}</strong>
+                        <div class="past-order__date">${date} — ${order.total} ₴</div>
+                    </div>
+                    <span class="past-order__add-icon"><i class="fas fa-plus"></i></span>
+                </button>`;
+            });
+        } else {
+            pastOrdersHtml += `<div class="cart-modal__empty" style="padding: 10px 0;">Попередніх замовлень цього типу ще немає</div>`;
+        }
 
         pastOrdersHtml += `</div></div>`;
     }
@@ -430,11 +599,17 @@ window.repeatOrder = function (idx) {
     const pastOrders = window.getPastOrders();
     const order = pastOrders[idx];
     if (!order) return;
+    const items = getPastOrderItems(order);
+    if (!items.length) {
+        window.showToast('Не вдалося відновити склад замовлення', 'error');
+        return;
+    }
 
-    if (order.type === 'beans') {
-        cart_beans = [...cart_beans, ...order.items];
+    clearPendingPayment();
+    if (normalizeOrderKind(order.type, order.items_text) === 'beans') {
+        cart_beans = [...cart_beans, ...items];
     } else {
-        cart_menu = [...cart_menu, ...order.items];
+        cart_menu = [...cart_menu, ...items];
     }
     saveCart();
     updateCartBadge();
@@ -449,6 +624,7 @@ window.closeCartModal = function () {
 };
 
 window.removeFromCart = function (t, i) {
+    clearPendingPayment();
     if (t === 'menu') cart_menu.splice(i, 1);
     else cart_beans.splice(i, 1);
     saveCart();
@@ -513,10 +689,12 @@ window.openCheckoutModal = function () {
                             <label class="form-label">Ваше ім'я</label>
                             <input type="text" name="name" placeholder="Ваше ім'я" value="${userData.name || ''}" required>
                         </div>
+                        ${isBeans ? `
                         <div class="form-group">
                             <label class="form-label">Телефон</label>
                             <input type="tel" name="phone" placeholder="Телефон (+380...)" value="${userData.phone || ''}" required>
                         </div>
+                        ` : ''}
                         <div class="form-group">
                             <label class="form-label">Telegram (@username) — опційно</label>
                             <input type="text" name="tg" placeholder="Telegram (@username) — опційно" value="${userData.tg || ''}">
@@ -611,9 +789,6 @@ window.openCheckoutModal = function () {
                         </button>
                         <button class="payment-btn" type="button" data-action="submit-checkout" data-method="privatpay">
                             <i class="fas fa-university"></i> <span>PrivatPay</span>
-                        </button>
-                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="monobank">
-                            <i class="fas fa-wallet"></i> <span>MonoPay</span>
                         </button>
                     </div>
                     <div style="padding: 0 1.5rem 1.5rem;">
@@ -786,6 +961,7 @@ window.backToDetails = function () {
 
 window.submitCheckout = function (method) {
     const btn = window.event ? window.event.target.closest('button') : null;
+    const container = document.getElementById('checkout-modal-container');
     
     if (window.CURRENT_ORDER_ID) {
         if (btn) {
@@ -872,20 +1048,9 @@ window.submitCheckout = function (method) {
                     type: isBeans ? 'beans' : 'menu',
                 });
                 if (res.url) {
-                    cart_menu.length = 0;
-                    cart_beans.length = 0;
-                    localStorage.removeItem('cart_menu');
-                    localStorage.removeItem('cart_beans');
-                    updateCartBadge();
                     window.location.href = res.url;
                 }
                 else if (res.data && res.signature) {
-                    cart_menu.length = 0;
-                    cart_beans.length = 0;
-                    localStorage.removeItem('cart_menu');
-                    localStorage.removeItem('cart_beans');
-                    updateCartBadge();
-
                     const form = document.createElement('form');
                     form.method = 'POST';
                     form.action = 'https://www.liqpay.ua/api/3/checkout';
@@ -894,11 +1059,7 @@ window.submitCheckout = function (method) {
                     form.submit();
                 } else {
                     window.showToast('Замовлення прийнято!', 'success');
-                    cart_menu.length = 0;
-                    cart_beans.length = 0;
-                    localStorage.removeItem('cart_menu');
-                    localStorage.removeItem('cart_beans');
-                    updateCartBadge();
+                    clearCart();
                     window.closeCheckoutModal();
                 }
             } else {
@@ -1050,22 +1211,64 @@ window.closeBookingModal = function () {
 document.addEventListener('DOMContentLoaded', () => {
     updateCartBadge();
     if (window.setupMobileMenu) window.setupMobileMenu();
-    
-    const revealObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('revealable--active');
-            }
-        });
-    }, { threshold: 0.1 });
+    if (typeof window.syncPastOrders === 'function') window.syncPastOrders();
 
-    document.querySelectorAll('.revealable, .product-card, .promo-card, .category').forEach(el => {
-        if (!el.classList.contains('revealable')) el.classList.add('revealable');
-        revealObserver.observe(el);
-    });
+    // Додаємо клас .js-enabled для активації анімацій через CSS
+    document.body.classList.add('js-enabled');
+
+    // Перевірка успішної оплати через URL параметр
+    const paymentStatus = window.getURLParameter('payment');
+    if (paymentStatus === 'success') {
+        clearCart();
+        window.showToast('Оплату успішно проведено! Дякуємо за замовлення.', 'success');
+        // Очищаємо параметри з URL
+        const url = new URL(window.location);
+        url.searchParams.delete('payment');
+        url.searchParams.delete('order_id');
+        window.history.replaceState({}, document.title, url.pathname + url.search);
+    }
+    
+    // Ініціалізація анімацій появи
+    const initRevealAnimations = () => {
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('revealable--active');
+                    // Після активації можна припинити спостереження
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { 
+            threshold: 0.05, // Починаємо анімацію раніше
+            rootMargin: '0px 0px -50px 0px' 
+        });
+
+        const revealElements = document.querySelectorAll('.revealable, .product-card, .promo-card, .category, .menu-item');
+        revealElements.forEach(el => {
+            if (!el.classList.contains('revealable')) el.classList.add('revealable');
+            revealObserver.observe(el);
+        });
+
+        // Запасний механізм: активуємо всі елементи, що видимі при завантаженні
+        setTimeout(() => {
+            revealElements.forEach(el => {
+                const rect = el.getBoundingClientRect();
+                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                    el.classList.add('revealable--active');
+                }
+            });
+        }, 500);
+    };
+
+    initRevealAnimations();
+
+    // Повторна ініціалізація після динамічного завантаження даних
+    window.refreshAnimations = () => {
+        initRevealAnimations();
+    };
 
     const orderId = window.getURLParameter('order_id');
-    if (orderId) {
+    if (orderId && paymentStatus !== 'success') {
         window.CURRENT_ORDER_ID = orderId;
         const container = document.getElementById('checkout-modal-container');
         if (container) {
@@ -1102,18 +1305,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="payment-methods-grid">
                                     <button class="payment-btn" type="button" data-action="submit-checkout" data-method="card">
                                         <i class="fas fa-credit-card"></i> <span>Оплата картою</span>
-                                    </button>
-                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="applepay">
-                                        <i class="fab fa-apple-pay"></i> <span>Apple Pay</span>
-                                    </button>
-                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="googlepay">
-                                        <i class="fab fa-google-pay"></i> <span>Google Pay</span>
-                                    </button>
-                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="privatpay">
-                                        <i class="fas fa-university"></i> <span>PrivatPay</span>
-                                    </button>
-                                    <button class="payment-btn" type="button" data-action="submit-checkout" data-method="monobank">
-                                        <i class="fas fa-wallet"></i> <span>MonoPay</span>
                                     </button>
                                 </div>
                             </div>

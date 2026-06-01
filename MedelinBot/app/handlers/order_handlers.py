@@ -68,6 +68,7 @@ class OrderStates(StatesGroup):
     choosing_location = State()
 
     entering_table_number = State()
+    choosing_payment_mode = State()
     entering_pickup_time = State()
     entering_wishes = State()
     entering_phone = State()
@@ -198,19 +199,30 @@ async def order_table_entered(message: Message, state: FSMContext, bot: Bot):
 
     await state.update_data(table_number=val)
 
-    await ask_wishes_order(message, state)
+    kb_pay_mode = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='💳 Оплатити зараз', callback_data='order_pay_now')],
+        [InlineKeyboardButton(text='💵 Оплатити на касі', callback_data='order_pay_at_checkout')]
+    ])
+    await message.answer('💳 <b>ОБЕРІТЬ ОПЛАТУ:</b>', reply_markup=kb_pay_mode, parse_mode='HTML')
+    await state.set_state(OrderStates.choosing_payment_mode)
+
+@order_router.callback_query(F.data.startswith('order_pay_'), OrderStates.choosing_payment_mode)
+async def order_payment_mode_chosen(callback: CallbackQuery, state: FSMContext):
+    payment_mode = 'pay_at_checkout' if callback.data == 'order_pay_at_checkout' else 'pay_now'
+    await state.update_data(payment_mode=payment_mode)
+    await ask_wishes_order(callback, state)
 
 async def ask_phone_order(target, state: FSMContext):
 
-    text = '📞 <b>ВКАЖІТЬ ВАШ ТЕЛЕФОН (+380...):</b>'
+    text = '📞 <b>ВКАЖІТЬ ВАШ ТЕЛЕФОН (+380...):</b>\n\nНатисніть кнопку нижче або введіть вручну:'
 
     if isinstance(target, CallbackQuery):
 
-        await target.message.answer(text, parse_mode='HTML')
+        await target.message.answer(text, parse_mode='HTML', reply_markup=kb.get_phone_kb())
 
     else:
 
-        await target.answer(text, parse_mode='HTML')
+        await target.answer(text, parse_mode='HTML', reply_markup=kb.get_phone_kb())
 
     await state.set_state(OrderStates.entering_phone)
 
@@ -230,7 +242,7 @@ async def order_wishes_entered(message: Message, state: FSMContext, bot: Bot):
     
     async def _next_step():
         data = await state.get_data()
-        if data.get('order_type') == 'in_house':
+        if data.get('order_type') == 'in_house' and data.get('payment_mode') != 'pay_now':
             await process_order_final(message.from_user, message.chat.id, state, bot)
         else:
             await send_order_invoice(message.from_user, message.chat.id, state, bot)
@@ -247,6 +259,16 @@ async def _ensure_phone_and_run(target, state: FSMContext, user, action):
         return False
 
     data = await state.get_data()
+    
+    # Визначаємо, чи потрібен телефон. 
+    # Телефон потрібен для замовлення зерен (доставка) або бронювання.
+    # Для звичайного замовлення в закладі/на виніс — ні.
+    order_type = data.get('order_type', '')
+    needs_phone = order_type in ('beans_delivery', 'beans_booking', 'order_with_booking') or data.get('booking_mode')
+
+    if not needs_phone:
+        await action()
+        return True
 
     phone = data.get('phone')
 
@@ -290,7 +312,7 @@ async def order_phone_entered(message: Message, state: FSMContext, bot: Bot):
 
     data = await state.get_data()
 
-    if data.get('order_type') == 'in_house':
+    if data.get('order_type') == 'in_house' and data.get('payment_mode') != 'pay_now':
 
         await process_order_final(message.from_user, message.chat.id, state, bot)
 
@@ -299,6 +321,37 @@ async def order_phone_entered(message: Message, state: FSMContext, bot: Bot):
         await send_order_invoice(message.from_user, message.chat.id, state, bot)
 
 from app.common.bot_instance import bot
+
+async def _build_cart_text_and_total(cart):
+    cart_items_with_prices = []
+    total_uah = 0
+    for display_name in cart:
+        pure_name = display_name
+        embedded_price = None
+        if ' [' in display_name and display_name.endswith(']'):
+            parts = display_name.rsplit(' [', 1)
+            pure_name = parts[0]
+            try:
+                embedded_price = int(parts[1].replace(']', ''))
+            except Exception:
+                embedded_price = None
+
+        if embedded_price is None:
+            base_name = pure_name.split(' (')[0]
+            row = await menu_db.get_item_by_name(base_name)
+            embedded_price = _parse_menu_price(row) or 0
+            if embedded_price and '(' in pure_name:
+                opts = pure_name.split('(', 1)[1].replace(')', '').lower()
+                for opt in [o.strip() for o in opts.split(',')]:
+                    if opt in ['декаф', 'мед', 'молоко']:
+                        embedded_price += 10
+
+        if embedded_price:
+            total_uah += embedded_price
+            cart_items_with_prices.append(f"- {pure_name} ({embedded_price} грн)")
+        else:
+            cart_items_with_prices.append(f"- {pure_name}")
+    return total_uah, '\n'.join(cart_items_with_prices).upper()
 
 async def send_order_invoice(user, chat_id, state, bot_unused=None):
 
@@ -394,7 +447,7 @@ async def send_order_invoice(user, chat_id, state, bot_unused=None):
     order_type = 'order_with_booking' if data.get('booking_mode') else data.get('order_type', 'order')
     
     rid = await orders_db.add_order(
-        user.id, user.username, user.full_name, data['phone'], 
+        user.id, user.username, user.full_name, data.get('phone', '—'), 
         loc_id, time_info, data.get('people_count', '1'), 
         data.get('wishes', ''), cart_s, order_type, 
         table_number=data.get('table_number', ''),
@@ -444,7 +497,7 @@ async def send_beans_invoice(user, chat_id, state, bot):
         wishes_str += f"\nПОБАЖАННЯ: {wishes}"
 
     rid = await orders_db.add_order(
-        user.id, user.username, user.full_name, data['phone'], 
+        user.id, user.username, user.full_name, data.get('phone', '—'), 
         loc_id or "NP", time_info, '0', wishes_str, 
         f"ЗЕРНА: {name}", order_type,
         payment_mode='pay_now',
@@ -502,17 +555,38 @@ async def process_booking_order_final(user, chat_id, state, bot):
 
     is_admin = await admin_db.is_admin(user.id)
 
-    rid = await orders_db.add_order(user.id, user.username, user.full_name, data['phone'], loc_id, data.get('date_time'), data.get('people_count'), data.get('wishes'), ', '.join(data['cart']).upper(), 'order_with_booking')
+    rid = await orders_db.add_order(user.id, user.username, user.full_name, data.get('phone', '—'), loc_id, data.get('date_time'), data.get('people_count'), data.get('wishes'), ', '.join(data['cart']).upper(), 'order_with_booking')
 
     await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
 
-    await active_bookings_db.add_active_booking(rid, user.id, user.full_name, data['phone'], loc_id, data.get('date_time'), data.get('people_count'), data.get('wishes'))
+    await active_orders_db.add_active_order(
+        rid, user.id, user.full_name, data.get('phone', '—'), loc_id,
+        ', '.join(data['cart']).upper(), 'order_with_booking',
+        total=0, payment_mode='pay_now', wishes=data.get('wishes', '')
+    )
 
     loc = await location_db.get_location_by_id(loc_id)
 
     loc_name = loc['name'] if loc else '—'
 
-    msg = f"🌟 <b>БРОНЮВАННЯ ТА ЗАМОВЛЕННЯ</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data['phone']}</code>\n🏛 <b>ЗАКЛАД:</b> {loc_name}\n🕒 <b>ЧАС:</b> {data.get('date_time')}\n👥 <b>ГОСТЕЙ:</b> {data.get('people_count')}\n🥘 <b>МЕНЮ:</b> {', '.join(data['cart']).upper()}\n💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
+    phone = data.get('phone', '—')
+    msg = f"🌟 <b>БРОНЮВАННЯ ТА ЗАМОВЛЕННЯ</b>\n\n"
+    msg += f"👤 <b>КЛІЄНТ:</b> {user.full_name}\n"
+    if phone and phone != '—':
+        msg += f"📞 <b>ТЕЛЕФОН:</b> <code>{phone}</code>\n"
+    
+    msg += f"🏛 <b>ЗАКЛАД:</b> {loc_name}\n"
+    
+    dt = data.get('date_time')
+    if dt and str(dt).lower() not in ('none', '—', ''):
+        msg += f"🕒 <b>ЧАС:</b> {dt}\n"
+        
+    pc = data.get('people_count')
+    if pc and str(pc).lower() not in ('none', '—', '', '0'):
+        msg += f"👥 <b>ГОСТЕЙ:</b> {pc}\n"
+
+    msg += f"🥘 <b>МЕНЮ:</b> {', '.join(data['cart']).upper()}\n"
+    msg += f"💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
 
     targets = await admin_db.get_notification_targets(loc_id)
 
@@ -542,7 +616,7 @@ async def process_beans_final(user, chat_id, state, bot):
 
     is_np = data.get('delivery_type') == 'nova_poshta'
 
-    np_info = f"НП: {data.get('np_city_name')}, {data.get('np_warehouse')}" if is_np else "САМОВИВІЗ"
+    np_info = f"<b>📍 НП:</b> {data.get('np_city_name')}, {data.get('np_warehouse')}" if is_np else "<b>🏬 САМОВИВІЗ</b>"
 
     time_info = 'НОВА ПОШТА' if is_np else 'БРОНЬ 2 ДНІ'
 
@@ -553,25 +627,39 @@ async def process_beans_final(user, chat_id, state, bot):
     if wishes:
         wishes_str += f"\nПОБАЖАННЯ: {wishes}"
 
-    rid = await orders_db.add_order(user.id, user.username, user.full_name, data['phone'], loc_id or "NP", time_info, '0', wishes_str, f"ЗЕРНА: {data['bean_name']}", order_type)
+    phone = data.get('phone') or '—'
+    rid = await orders_db.add_order(user.id, user.username, user.full_name, phone, loc_id or "NP", time_info, '0', wishes_str, f"ЗЕРНА: {data['bean_name']}", order_type)
 
     await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
 
-    await active_orders_db.add_active_order(rid, user.id, user.full_name, data['phone'], loc_id or "NP", data['bean_name'], order_type)
+    await active_orders_db.add_active_order(rid, user.id, user.full_name, phone, loc_id or "NP", data['bean_name'], order_type)
 
     loc_name = "НОВА ПОШТА"
+    delivery_line = ""
 
-    if loc_id:
-
+    if is_np:
+        delivery_line = f"🏛 <b>ДОСТАВКА:</b> НП — {data.get('np_city_name')}, {data.get('np_warehouse')}\n"
+    elif loc_id:
         loc = await location_db.get_location_by_id(loc_id)
-
         loc_name = loc['name'] if loc else '—'
+        delivery_line = f"🏛 <b>ОТРИМАННЯ:</b> {loc_name}\n"
 
-    msg = f"🌟 <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data['phone']}</code>\n🏛 <b>ОТРИМАННЯ:</b> {loc_name}\n🚚 <b>ТИП:</b> {np_info}\n☕️ <b>СОРТ:</b> {data['bean_name']} ({data['weight']}г)"
+    msg = f"☕️ <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n"
+    msg += f"👤 <b>КЛІЄНТ:</b> {user.full_name}\n"
+    if phone and phone != '—':
+        msg += f"📞 <b>ТЕЛЕФОН:</b> <code>{phone}</code>\n"
+    
+    msg += delivery_line
+    msg += f"📦 <b>СОРТ:</b> {data['bean_name']} ({data['weight']}г)\n"
+    
     if wishes:
         import html
-        msg += f"\n💬 <b>ПОБАЖАННЯ:</b> {html.escape(wishes)}"
-    msg += f"\n💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
+        msg += f"💬 <b>ПОБАЖАННЯ:</b> {html.escape(wishes)}\n"
+        
+    msg += f"💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
+
+    targets = set()
+    # ... rest remains same ...
 
     targets = set()
 
@@ -617,30 +705,52 @@ async def process_order_final(user, chat_id, state, bot):
 
     loc_id = data['location_id']
 
-    cart_s = ', '.join(data['cart']).upper()
+    total_uah, cart_s = await _build_cart_text_and_total(data['cart'])
 
     time_info = data.get('pickup_time', 'ЗАРАЗ')
 
     wishes_val = data.get('wishes')
     wishes_str = f"МЕНЮ. {wishes_val}" if wishes_val else "МЕНЮ"
+    payment_mode = data.get('payment_mode') or ('pay_at_checkout' if is_house else 'pay_now')
 
-    rid = await orders_db.add_order(user.id, user.username, user.full_name, data['phone'], loc_id, time_info, '0', wishes_str, cart_s, data.get('order_type', 'order'), data.get('table_number', ''))
+    rid = await orders_db.add_order(
+        user.id, user.username, user.full_name, data.get('phone', '—'), loc_id,
+        time_info, '0', wishes_str, cart_s, data.get('order_type', 'order'),
+        payment_mode, data.get('table_number', ''), total_uah
+    )
 
-    if not is_house:
+    if not is_house or payment_mode == 'pay_now':
 
         await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
 
-    await active_orders_db.add_active_order(rid, user.id, user.full_name, data['phone'], loc_id, cart_s, data['order_type'], data.get('table_number'))
+    await active_orders_db.add_active_order(
+        rid, user.id, user.full_name, data.get('phone', '—'), loc_id, cart_s,
+        data['order_type'], data.get('table_number'), total_uah, payment_mode, wishes_str
+    )
 
     loc = await location_db.get_location_by_id(loc_id)
 
     loc_name = loc['name'] if loc else '—'
 
-    p_stat = '💰 <b>ОПЛАЧЕНО</b>' if not is_house else '⏳ <b>ОПЛАТА В ЗАКЛАДІ</b>'
+    p_stat = '💰 <b>ОПЛАЧЕНО</b>' if (not is_house or payment_mode == 'pay_now') else '⏳ <b>ОПЛАТА НА КАСІ</b>'
+    
+    phone = data.get('phone', '—')
 
-    t_line = f"🪑 <b>СТОЛИК:</b> {data.get('table_number')}\n" if is_house else f'🕒 <b>ЧАС:</b> {time_info}\n'
+    msg = f"🔔 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n"
+    msg += f"👤 <b>КЛІЄНТ:</b> {user.full_name}\n"
+    if phone and phone != '—':
+        msg += f"📞 <b>ТЕЛЕФОН:</b> <code>{phone}</code>\n"
+        
+    if loc_name and loc_name != '—':
+        msg += f"🏛 <b>ЗАКЛАД:</b> {loc_name}\n"
 
-    msg = f"🔔 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data['phone']}</code>\n🏛 <b>ЗАКЛАД:</b> {loc_name}\n{t_line}🥘 <b>ПОЗИЦІЇ:</b> {cart_s}"
+    if is_house:
+        msg += f"🪑 <b>СТОЛИК:</b> {data.get('table_number')}\n"
+    else:
+        if time_info and time_info not in ('ЗАРАЗ', 'ПО ГОТОВНОСТІ', '—', 'None', 'none'):
+            msg += f"🕒 <b>ЧАС:</b> {time_info}\n"
+
+    msg += f"🥘 <b>ПОЗИЦІЇ:</b> {cart_s}"
     if wishes_val:
         import html
         msg += f"\n💬 <b>ПОБАЖАННЯ:</b> {html.escape(wishes_val)}"
@@ -660,6 +770,11 @@ async def process_order_final(user, chat_id, state, bot):
 
             pass
 
-    await bot.send_message(chat_id, '✅ <b>ЗАМОВЛЕННЯ ПЕРЕДАНО АДМІНІСТРАТОРУ.</b>', reply_markup=kb.get_main_menu(is_admin), parse_mode='HTML')
+    reply_markup = kb.get_main_menu(is_admin)
+    user_text = '✅ <b>ЗАМОВЛЕННЯ ПЕРЕДАНО АДМІНІСТРАТОРУ.</b>'
+    if is_house and payment_mode == 'pay_at_checkout':
+        user_text += f'\n\nВаш столик: <b>{data.get("table_number")}</b>\nСума: <b>{total_uah} грн</b>\nОплата на касі.'
+
+    await bot.send_message(chat_id, user_text, reply_markup=reply_markup, parse_mode='HTML')
 
     await state.clear()

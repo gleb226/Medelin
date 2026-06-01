@@ -18,30 +18,38 @@ class ActiveOrdersDatabase:
         return
 
     async def add_order(self, order_id, fullname, location_id, order_type, cart):
-
         db = await get_db()
+        await db.active_orders.update_one(
+            {'order_id': str(order_id)},
+            {'$set': {
+                'fullname': fullname,
+                'location_id': str(location_id),
+                'cart': cart,
+                'order_type': order_type,
+                'created_at': datetime.utcnow()
+            }},
+            upsert=True
+        )
 
-        await db.active_orders.insert_one({
-
-            'order_id': str(order_id),
-
-            'fullname': fullname,
-
-            'location_id': str(location_id),
-
-            'cart': cart,
-
-            'order_type': order_type,
-
-            'created_at': datetime.utcnow()
-
-        })
-
-    async def add_active_order(self, order_id, user_id, fullname, phone, location_id, cart, order_type, table_number=''):
-
+    async def add_active_order(self, order_id, user_id, fullname, phone, location_id, cart, order_type, table_number='', total=0, payment_mode='', wishes=''):
         db = await get_db()
-
-        await db.active_orders.insert_one({'order_id': str(order_id), 'user_id': int(user_id) if user_id is not None else None, 'fullname': fullname, 'phone': phone, 'location_id': str(location_id), 'cart': cart, 'order_type': order_type, 'table_number': table_number, 'created_at': datetime.utcnow()})
+        await db.active_orders.update_one(
+            {'order_id': str(order_id)},
+            {'$set': {
+                'user_id': int(user_id) if user_id is not None else None,
+                'fullname': fullname,
+                'phone': phone,
+                'location_id': str(location_id),
+                'cart': cart,
+                'order_type': order_type,
+                'table_number': table_number,
+                'total': int(total or 0),
+                'payment_mode': payment_mode or '',
+                'wishes': wishes or '',
+                'created_at': datetime.utcnow()
+            }},
+            upsert=True
+        )
 
     async def get_active_orders(self, location_ids=None):
 

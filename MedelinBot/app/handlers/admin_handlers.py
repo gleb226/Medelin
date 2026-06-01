@@ -259,9 +259,9 @@ async def deliver_guest_message(bot: Bot, order: dict | None, text_html: str, si
     phone = order.get('phone')
     order_id = order.get('order_id') or order.get('_id')
 
-    # Не створюємо чат автоматично "з повітря": запис у support тільки якщо гість вже почав чат
-    if await guest_messages_db.has_guest_chat_started(phone, order_id=None):
-        await guest_messages_db.add_message(order_id=order_id, phone=phone, source='admin', text=site_text)
+    # Статусні повідомлення (Прийнято/Відхилено) не додаємо в базу чатів,
+    # щоб вони не створювали "пустих" діалогів в адмін-панелі.
+    # Залишаємо лише відправку в Telegram клієнту.
     return 'both' if telegram_target and telegram_ok else 'site'
 
 @admin_router.message(F.text == '📝 ПРИЙНЯТИ ЗАМОВЛЕННЯ')
@@ -367,6 +367,18 @@ async def admin_panel_enter(message: Message, state: FSMContext):
             shift_info = f"\nАктивна зміна: <b>{loc['name']}</b>"
 
     await message.answer(f'🔐 <b>ВХІД В АДМІНІСТРАТИВНУ ПАНЕЛЬ</b>\nВаша роль: <b>{role_name}</b>{shift_info}', reply_markup=akb.get_main_admin_menu(bool(is_on_shift), role), parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('admin_auth_confirm_'))
+async def admin_auth_confirm(callback: CallbackQuery):
+    user_id = int(callback.data.split('_')[-1])
+    await admin_db.confirm_auth_request(user_id)
+    await callback.message.edit_text("✅ Вхід в адмін-панель підтверджено.")
+    await callback.answer("Підтверджено")
+
+@admin_router.callback_query(F.data.startswith('admin_auth_reject_'))
+async def admin_auth_reject(callback: CallbackQuery):
+    await callback.message.edit_text("❌ Вхід відхилено.")
+    await callback.answer("Відхилено")
 
 @admin_router.message(F.text == '🟢 ПОЧАТИ ЗМІНУ')
 async def start_shift(message: Message, state: FSMContext):
@@ -474,11 +486,24 @@ async def show_new_bookings(message: Message, state: FSMContext):
 
     for b in bookings:
 
-        loc_name = locations_dict.get(b['location_id'], {}).get('name', '—')
+        if b.get('order_type') in ('nova_poshta', 'beans_delivery') or b.get('location_id') == 'NP':
+            loc_name = 'Нова Пошта'
+            wishes = b.get('wishes') or ''
+            if 'НП:' in wishes:
+                loc_name = f"Нова Пошта — {wishes.split('НП:', 1)[1].split('|', 1)[0].strip()}"
+        else:
+            loc_name = locations_dict.get(b['location_id'], {}).get('name', '—')
 
         order_id = b.get('order_id') or str(b['_id'])
 
-        t = f"📥 <b>НОВИЙ ЗАПИТ</b>\n\n👤 <b>Клієнт:</b> {b['fullname']}\n📞 <code>{b['phone']}</code>\n🏛 <b>Заклад:</b> {loc_name}\n🕔 <b>Час:</b> {b['date_time']}\n👥 <b>Гостей:</b> {b['people_count']}\n🥘 <b>Замовлення:</b> {b['cart']}"
+        t = f"📥 <b>НОВИЙ ЗАПИТ</b>\n\n👤 <b>Клієнт:</b> {b['fullname']}\n📞 <code>{b['phone']}</code>\n🏛 <b>Заклад:</b> {loc_name}\n"
+        date_time = b.get('date_time')
+        people_count = b.get('people_count')
+        if date_time and str(date_time).lower() not in ('none', '—', '', 'зараз', 'по готовності'):
+            t += f"🕔 <b>Час:</b> {date_time}\n"
+        if people_count and str(people_count).lower() not in ('none', '—', '', '0'):
+            t += f"👥 <b>Гостей:</b> {people_count}\n"
+        t += f"🥘 <b>Замовлення:</b> {b['cart']}"
 
         await message.answer(t, reply_markup=akb.get_booking_manage_kb(order_id, b.get('user_id')), parse_mode='HTML')
 
@@ -500,28 +525,7 @@ async def show_active_panel_cb(callback: CallbackQuery):
 
 async def list_active_bookings(callback: CallbackQuery):
 
-    role = await get_user_role(callback.from_user.id)
-
-    if role in ('super', 'boss', 'owner', 'developer'):
-        locs = None
-    elif role == 'delivery_manager':
-        locs = ['NP']
-    else:
-        shift_loc = await admin_db.is_on_shift(callback.from_user.id)
-        if isinstance(shift_loc, str) and shift_loc not in ("True", "1", "False", "0"):
-            locs = [shift_loc]
-        else:
-            locs = await admin_db.get_locations_for_admin(callback.from_user.id) or None
-
-    bookings = await active_bookings_db.get_active_bookings(locs)
-
-    if not bookings:
-
-        await callback.answer('Немає активних броней.')
-
-        return
-
-    await safe_edit_message(callback.message, '📅 <b>АКТИВНІ БРОНІ:</b>\nНатисніть для завершення:', reply_markup=akb.get_active_bookings_list_kb(bookings), parse_mode='HTML')
+    await list_active_orders(callback)
 
 @admin_router.callback_query(F.data == 'active_orders')
 
@@ -787,13 +791,16 @@ async def confirm_order_cb(callback: CallbackQuery, bot: Bot):
 
     if order.get('order_type') == 'booking':
 
-        await active_bookings_db.add_booking(oid, order['fullname'], order['location_id'], order['date_time'], order['people_count'])
-
         text = '✅ <b>ВАШЕ БРОНЮВАННЯ ПІДТВЕРДЖЕНО!</b>\n\nЧекаємо на вас у Medelin! ☕'
 
     else:
 
-        await active_orders_db.add_order(oid, order['fullname'], order['location_id'], order['order_type'], order['cart'])
+        await active_orders_db.add_active_order(
+            oid, order.get('user_id'), order['fullname'], order.get('phone', '—'),
+            order['location_id'], order['cart'], order['order_type'],
+            order.get('table_number', ''), order.get('total_amount', 0),
+            order.get('payment_mode', ''), order.get('wishes', '')
+        )
 
         text = '✅ <b>ВАШЕ ЗАМОВЛЕННЯ ПІДТВЕРДЖЕНО!</b>\n\nМи вже почали готувати. Смачного! ☕'
 
@@ -1107,42 +1114,33 @@ async def adm_remove_list(callback: CallbackQuery):
     await safe_edit_message(callback.message, "🗑 Оберіть кого видалити:", reply_markup=akb.get_admins_to_remove_kb(removable), parse_mode='HTML')
 
 @admin_router.callback_query(F.data.startswith('adm_delete_'))
-
 async def adm_remove_confirm_ask(callback: CallbackQuery):
-
     uid = int(callback.data.replace('adm_delete_', ''))
-
     if str(uid) in DEVELOPER_IDS:
-
-        await callback.answer("❌ Неможливо видалити власника!", show_alert=True)
-
+        await callback.answer("❌ Неможливо видалити розробника!", show_alert=True)
         return
-
     admin = await admin_db.get_admin_by_id(uid)
+    if not admin:
+        await callback.answer("❌ Цього адміністратора вже видалено або не знайдено.", show_alert=True)
+        await adm_remove_list(callback)
+        return
     name = admin.get('display_name') or admin.get('username') or str(uid)
-
     await safe_edit_message(callback.message, f"❓ Ви впевнені, що хочете видалити <b>{name}</b> з команди?", reply_markup=akb.get_yes_no_kb(f'adm_del_yes_{uid}', 'adm_remove'), parse_mode='HTML')
 
 @admin_router.callback_query(F.data.startswith('adm_del_yes_'))
-
 async def adm_remove_confirm_yes(callback: CallbackQuery):
-
     uid = int(callback.data.replace('adm_del_yes_', ''))
-
     caller_role = await get_user_role(callback.from_user.id)
-
     target_admin = await admin_db.get_admin_by_id(uid)
-
-    if not target_admin or not can_manage(caller_role, target_admin.get('role', 'admin')):
-
-        await callback.answer("❌ Недостатньо прав!", show_alert=True)
-
+    if not target_admin:
+        await callback.answer("❌ Адміністратора не знайдено.", show_alert=True)
+        await adm_remove_list(callback)
         return
-
+    if not can_manage(caller_role, target_admin.get('role', 'admin')):
+        await callback.answer("❌ Недостатньо прав!", show_alert=True)
+        return
     await admin_db.remove_admin(uid)
-
-    await callback.answer("Видалено!")
-
+    await callback.answer("Видалено!", show_alert=True)
     await adm_remove_list(callback)
 
 
