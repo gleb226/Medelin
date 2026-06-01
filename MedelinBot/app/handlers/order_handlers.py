@@ -591,7 +591,7 @@ async def process_beans_final(user, chat_id, state, bot):
     delivery_line = ""
 
     if is_np:
-        delivery_line = f"🚚 <b>ДОСТАВКА:</b> Нова Пошта — {data.get('np_city_name')}, {data.get('np_warehouse')}\n"
+        delivery_line = f"🏛 <b>ДОСТАВКА:</b> НП — {data.get('np_city_name')}, {data.get('np_warehouse')}\n"
     elif loc_id:
         loc = await location_db.get_location_by_id(loc_id)
         loc_name = loc['name'] if loc else '—'

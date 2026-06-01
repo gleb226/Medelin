@@ -305,23 +305,30 @@ async def get_np_warehouses(cityRef: str, cityName: str = None, search: str = No
                 logger.error(f"NP Exception (fetch_wh): {e}")
                 return []
 
+    # 1. Спробуємо через SettlementRef (найбільш точно для малих населених пунктів)
     props = {'SettlementRef': cityRef}
-    if search:
-        props['FindByString'] = search
+    if search: props['FindByString'] = search
     data = await fetch_wh(props)
     
+    # 2. Спробуємо через CityRef (для великих міст)
     if not data:
         props_city = {'CityRef': cityRef}
-        if search:
-            props_city['FindByString'] = search
+        if search: props_city['FindByString'] = search
         data = await fetch_wh(props_city)
         
+    # 3. Спробуємо через CityName (як крайній захід)
     if not data and cityName:
         clean_name = cityName.split(',')[0].replace('м. ', '').replace('місто ', '').strip()
         props_name = {'CityName': clean_name}
-        if search:
-            props_name['FindByString'] = search
+        if search: props_name['FindByString'] = search
         data = await fetch_wh(props_name)
+        
+    # 4. Якщо все ще немає, але є cityRef, який схожий на назву міста (не UUID)
+    if not data and cityRef and len(cityRef) > 2 and '-' not in cityRef:
+         props_name = {'CityName': cityRef.split(',')[0].replace('м. ', '').replace('місто ', '').strip()}
+         if search: props_name['FindByString'] = search
+         data = await fetch_wh(props_name)
+         
     return data
 
 @app.get('/api/orders/{order_id}')
