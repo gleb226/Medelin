@@ -1114,42 +1114,33 @@ async def adm_remove_list(callback: CallbackQuery):
     await safe_edit_message(callback.message, "🗑 Оберіть кого видалити:", reply_markup=akb.get_admins_to_remove_kb(removable), parse_mode='HTML')
 
 @admin_router.callback_query(F.data.startswith('adm_delete_'))
-
 async def adm_remove_confirm_ask(callback: CallbackQuery):
-
     uid = int(callback.data.replace('adm_delete_', ''))
-
     if str(uid) in DEVELOPER_IDS:
-
-        await callback.answer("❌ Неможливо видалити власника!", show_alert=True)
-
+        await callback.answer("❌ Неможливо видалити розробника!", show_alert=True)
         return
-
     admin = await admin_db.get_admin_by_id(uid)
+    if not admin:
+        await callback.answer("❌ Цього адміністратора вже видалено або не знайдено.", show_alert=True)
+        await adm_remove_list(callback)
+        return
     name = admin.get('display_name') or admin.get('username') or str(uid)
-
     await safe_edit_message(callback.message, f"❓ Ви впевнені, що хочете видалити <b>{name}</b> з команди?", reply_markup=akb.get_yes_no_kb(f'adm_del_yes_{uid}', 'adm_remove'), parse_mode='HTML')
 
 @admin_router.callback_query(F.data.startswith('adm_del_yes_'))
-
 async def adm_remove_confirm_yes(callback: CallbackQuery):
-
     uid = int(callback.data.replace('adm_del_yes_', ''))
-
     caller_role = await get_user_role(callback.from_user.id)
-
     target_admin = await admin_db.get_admin_by_id(uid)
-
-    if not target_admin or not can_manage(caller_role, target_admin.get('role', 'admin')):
-
-        await callback.answer("❌ Недостатньо прав!", show_alert=True)
-
+    if not target_admin:
+        await callback.answer("❌ Адміністратора не знайдено.", show_alert=True)
+        await adm_remove_list(callback)
         return
-
+    if not can_manage(caller_role, target_admin.get('role', 'admin')):
+        await callback.answer("❌ Недостатньо прав!", show_alert=True)
+        return
     await admin_db.remove_admin(uid)
-
-    await callback.answer("Видалено!")
-
+    await callback.answer("Видалено!", show_alert=True)
     await adm_remove_list(callback)
 
 
