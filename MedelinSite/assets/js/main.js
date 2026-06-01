@@ -581,10 +581,12 @@ window.openCheckoutModal = function () {
                             <label class="form-label">Ваше ім'я</label>
                             <input type="text" name="name" placeholder="Ваше ім'я" value="${userData.name || ''}" required>
                         </div>
+                        ${isBeans ? `
                         <div class="form-group">
-                            <label class="form-label">Телефон${isBeans ? '' : ' — опційно'}</label>
-                            <input type="tel" name="phone" placeholder="Телефон (+380...)${isBeans ? '' : ' — опційно'}" value="${userData.phone || ''}" ${isBeans ? 'required' : ''}>
+                            <label class="form-label">Телефон</label>
+                            <input type="tel" name="phone" placeholder="Телефон (+380...)" value="${userData.phone || ''}" required>
                         </div>
+                        ` : ''}
                         <div class="form-group">
                             <label class="form-label">Telegram (@username) — опційно</label>
                             <input type="text" name="tg" placeholder="Telegram (@username) — опційно" value="${userData.tg || ''}">

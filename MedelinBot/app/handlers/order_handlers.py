@@ -522,7 +522,24 @@ async def process_booking_order_final(user, chat_id, state, bot):
 
     loc_name = loc['name'] if loc else '—'
 
-    msg = f"🌟 <b>БРОНЮВАННЯ ТА ЗАМОВЛЕННЯ</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data.get('phone', '—')}</code>\n🏛 <b>ЗАКЛАД:</b> {loc_name}\n🕒 <b>ЧАС:</b> {data.get('date_time')}\n👥 <b>ГОСТЕЙ:</b> {data.get('people_count')}\n🥘 <b>МЕНЮ:</b> {', '.join(data['cart']).upper()}\n💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
+    phone = data.get('phone', '—')
+    msg = f"🌟 <b>БРОНЮВАННЯ ТА ЗАМОВЛЕННЯ</b>\n\n"
+    msg += f"👤 <b>КЛІЄНТ:</b> {user.full_name}\n"
+    if phone and phone != '—':
+        msg += f"📞 <b>ТЕЛЕФОН:</b> <code>{phone}</code>\n"
+    
+    msg += f"🏛 <b>ЗАКЛАД:</b> {loc_name}\n"
+    
+    dt = data.get('date_time')
+    if dt and str(dt).lower() not in ('none', '—', ''):
+        msg += f"🕒 <b>ЧАС:</b> {dt}\n"
+        
+    pc = data.get('people_count')
+    if pc and str(pc).lower() not in ('none', '—', '', '0'):
+        msg += f"👥 <b>ГОСТЕЙ:</b> {pc}\n"
+
+    msg += f"🥘 <b>МЕНЮ:</b> {', '.join(data['cart']).upper()}\n"
+    msg += f"💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
 
     targets = await admin_db.get_notification_targets(loc_id)
 
@@ -571,20 +588,21 @@ async def process_beans_final(user, chat_id, state, bot):
     await active_orders_db.add_active_order(rid, user.id, user.full_name, phone, loc_id or "NP", data['bean_name'], order_type)
 
     loc_name = "НОВА ПОШТА"
+    delivery_line = ""
 
-    if loc_id and not is_np:
+    if is_np:
+        delivery_line = f"🚚 <b>ДОСТАВКА:</b> Нова Пошта — {data.get('np_city_name')}, {data.get('np_warehouse')}\n"
+    elif loc_id:
         loc = await location_db.get_location_by_id(loc_id)
         loc_name = loc['name'] if loc else '—'
+        delivery_line = f"🏛 <b>ОТРИМАННЯ:</b> {loc_name}\n"
 
     msg = f"☕️ <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n"
     msg += f"👤 <b>КЛІЄНТ:</b> {user.full_name}\n"
-    msg += f"📞 <b>ТЕЛЕФОН:</b> <code>{phone}</code>\n"
+    if phone and phone != '—':
+        msg += f"📞 <b>ТЕЛЕФОН:</b> <code>{phone}</code>\n"
     
-    if is_np:
-        msg += f"🚚 <b>ДОСТАВКА:</b> {np_info}\n"
-    else:
-        msg += f"🏛 <b>ОТРИМАННЯ:</b> {loc_name}\n"
-
+    msg += delivery_line
     msg += f"📦 <b>СОРТ:</b> {data['bean_name']} ({data['weight']}г)\n"
     
     if wishes:
@@ -660,10 +678,24 @@ async def process_order_final(user, chat_id, state, bot):
     loc_name = loc['name'] if loc else '—'
 
     p_stat = '💰 <b>ОПЛАЧЕНО</b>' if not is_house else '⏳ <b>ОПЛАТА В ЗАКЛАДІ</b>'
+    
+    phone = data.get('phone', '—')
 
-    t_line = f"🪑 <b>СТОЛИК:</b> {data.get('table_number')}\n" if is_house else f'🕒 <b>ЧАС:</b> {time_info}\n'
+    msg = f"🔔 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n"
+    msg += f"👤 <b>КЛІЄНТ:</b> {user.full_name}\n"
+    if phone and phone != '—':
+        msg += f"📞 <b>ТЕЛЕФОН:</b> <code>{phone}</code>\n"
+        
+    if loc_name and loc_name != '—':
+        msg += f"🏛 <b>ЗАКЛАД:</b> {loc_name}\n"
 
-    msg = f"🔔 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data.get('phone', '—')}</code>\n🏛 <b>ЗАКЛАД:</b> {loc_name}\n{t_line}🥘 <b>ПОЗИЦІЇ:</b> {cart_s}"
+    if is_house:
+        msg += f"🪑 <b>СТОЛИК:</b> {data.get('table_number')}\n"
+    else:
+        if time_info and time_info not in ('ЗАРАЗ', 'ПО ГОТОВНОСТІ', '—', 'None', 'none'):
+            msg += f"🕒 <b>ЧАС:</b> {time_info}\n"
+
+    msg += f"🥘 <b>ПОЗИЦІЇ:</b> {cart_s}"
     if wishes_val:
         import html
         msg += f"\n💬 <b>ПОБАЖАННЯ:</b> {html.escape(wishes_val)}"

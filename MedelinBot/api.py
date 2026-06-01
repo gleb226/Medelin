@@ -389,30 +389,31 @@ async def notify_admins_about_order(order_id: str):
 
     msg = f'✅ <b>ОПЛАЧЕНЕ ЗАМОВЛЕННЯ</b>\n\n'
     msg += f"👤 Клієнт: {fullname}\n"
-    msg += f'📞 Телефон: <code>{phone}</code>\n'
+    if phone and phone != '—':
+        msg += f'📞 Телефон: <code>{phone}</code>\n'
     if tg_nick:
         msg += f"✈️ Telegram: {(tg_nick if tg_nick.startswith('@') else '@' + tg_nick)}\n"
     
     if order_type == 'nova_poshta' or order_type == 'beans_delivery':
-        msg += f'🚚 Доставка: <b>Нова Пошта</b>\n'
+        addr = '—'
         if wishes and 'НП:' in wishes:
             addr = wishes.split('НП:')[1].split('|')[0].strip()
-            msg += f"📍 Адреса: {addr}\n"
         elif wishes and 'ВАГА:' in wishes and 'НП:' in wishes:
              addr = wishes.split('НП:')[1].strip()
-             msg += f"📍 Адреса: {addr}\n"
+        
+        msg += f'🚚 Доставка: <b>Нова Пошта — {addr}</b>\n'
     elif order_type == 'beans_booking':
         msg += f'🏛 Заклад: {location_name}\n'
         msg += f'📦 Тип: Самовивіз зерен\n'
     elif order_type == 'order_with_booking':
         msg += f'🏛 Заклад: {location_name}\n'
-        if date_time and str(date_time) != 'None' and date_time != '—':
+        if date_time and str(date_time).lower() not in ('none', '—', ''):
             msg += f'🕒 Час: {date_time}\n'
-        if people_count and str(people_count) != 'None' and people_count != '—':
+        if people_count and str(people_count).lower() not in ('none', '—', '', '0'):
             msg += f'👥 Гостей: {people_count}\n'
         msg += f'📝 Тип: Бронювання + Замовлення\n'
     else:
-        if location_name and location_name != 'Замовлення з сайту':
+        if location_name and location_name not in ('Замовлення з сайту', '—'):
             msg += f'🏛 Заклад: {location_name}\n'
         
         if order_type == 'in_house':
@@ -420,7 +421,7 @@ async def notify_admins_about_order(order_id: str):
         else:
             msg += f'📦 Тип: З собою\n'
         
-        if date_time and date_time not in ('—', 'Сьогодні', 'None', '', 'ЗАРАЗ', 'ПО ГОТОВНОСТІ'):
+        if date_time and str(date_time).lower() not in ('none', '—', 'сьогодні', '', 'зараз', 'по готовності'):
             msg += f'🕒 Час: {date_time}\n'
 
     msg += f'💰 Сума: <b>{total} грн</b>\n'
