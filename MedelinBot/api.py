@@ -317,16 +317,10 @@ async def create_monobank_invoice(order_id: str, total: int | float) -> str:
     if not MONOBANK_TOKEN:
         raise HTTPException(status_code=503, detail="MonoPay token is not configured")
 
-    redirect_url = WEB_APP_URL
-    if '?' in redirect_url:
-        redirect_url += f"&payment=success&order_id={order_id}"
-    else:
-        redirect_url += f"?payment=success&order_id={order_id}"
-
     payload = {
         'amount': int(total * 100), 'ccy': 980,
-        'merchantPaymInfo': {'reference': str(order_id), 'destination': f'Замовлення #{order_id}'},
-        'redirectUrl': redirect_url, 'webhookUrl': f"{WEB_APP_URL}/api/payments/monobank-callback",
+        'merchantPaymInfo': {'reference': str(order_id), 'destination': f'Order #{order_id}'},
+        'redirectUrl': WEB_APP_URL, 'webhookUrl': f"{WEB_APP_URL}/api/payments/monobank-callback",
         'validity': 3600
     }
     async with aiohttp.ClientSession() as session:
@@ -337,11 +331,16 @@ async def create_monobank_invoice(order_id: str, total: int | float) -> str:
                 data = {'raw': await resp.text()}
             if resp.status == 200 and data.get('pageUrl'):
                 return data['pageUrl']
+            
+            error_hint = ""
+            if resp.status == 403:
+                error_hint = "\n\n💡 <i>Ймовірно, використовується особистий токен замість Merchant токена або еквайринг не активовано.</i>"
+            
             await send_developer_error(
                 f"💳 <b>MONOPAY INVOICE FAILED</b>\n\n"
                 f"<b>Order:</b> <code>{html.escape(str(order_id))}</code>\n"
                 f"<b>Status:</b> <code>{resp.status}</code>\n"
-                f"<b>Response:</b>\n<pre>{_safe_alert_text(data, 900)}</pre>"
+                f"<b>Response:</b>\n<pre>{_safe_alert_text(data, 900)}</pre>{error_hint}"
             )
             raise HTTPException(status_code=502, detail="MonoPay invoice was not created")
 
@@ -631,8 +630,12 @@ async def process_repay(req: RepayRequest):
 
     # Prioritize MonoPay if token is configured
     if MONOBANK_TOKEN and req.payment_method in ['monobank', 'applepay', 'googlepay', 'card']:
-        url = await create_monobank_invoice(oid, total)
-        return {'status': 'ok', 'url': url, 'provider': 'monobank'}
+        try:
+            url = await create_monobank_invoice(oid, total)
+            return {'status': 'ok', 'url': url, 'provider': 'monobank'}
+        except Exception as e:
+            logger.error(f"MonoPay failed, falling back to LiqPay: {e}")
+            # Continue to LiqPay fallback below
 
     if req.payment_method == '_disabled_monobank_legacy':
         payload = {
@@ -730,8 +733,12 @@ async def process_checkout(req: CheckoutRequest):
     # Prioritize MonoPay if token is configured
     method = data.get('payment_method')
     if MONOBANK_TOKEN and method in ['monobank', 'applepay', 'googlepay', 'card']:
-        url = await create_monobank_invoice(str(oid), total)
-        return {'status': 'ok', 'url': url, 'order_id': oid, 'provider': 'monobank'}
+        try:
+            url = await create_monobank_invoice(str(oid), total)
+            return {'status': 'ok', 'url': url, 'order_id': oid, 'provider': 'monobank'}
+        except Exception as e:
+            logger.error(f"MonoPay failed in checkout, falling back to LiqPay: {e}")
+            # Continue to LiqPay fallback below
 
     if data.get('payment_method') == '_disabled_monobank_legacy':
         payload = {
