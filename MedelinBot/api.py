@@ -137,14 +137,18 @@ async def admin_verify(user_id: int):
     admin = await admin_db.get_admin_by_id(user_id)
     # If it was a temporary dev admin not in DB, create basic info
     if not admin:
-        admin = {'display_name': 'Developer', 'role': 'developer'}
+        if str(user_id) in DEVELOPER_IDS:
+             admin = {'display_name': 'Developer', 'role': 'developer'}
+        else:
+             # Should not happen if verified
+             admin = {'display_name': f'Admin {user_id}', 'role': 'admin'}
 
     return {
         "status": "ok", 
         "token": token,
         "admin": {
-            "name": admin.get('display_name'),
-            "role": admin.get('role')
+            "name": admin.get('display_name') or admin.get('name') or 'Admin',
+            "role": admin.get('role') or 'admin'
         }
     }
 
