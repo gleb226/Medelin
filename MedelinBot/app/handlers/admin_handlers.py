@@ -57,13 +57,9 @@ ROLE_LEVELS = {
 
     'boss': 80,
 
-    'super': 60,
+    'delivery_manager': 40,
 
-    'admin': 40,
-
-    'courier': 20,
-
-    'delivery_manager': 20
+    'courier': 20
 
 }
 
@@ -73,13 +69,8 @@ def can_manage(caller_role: str, target_role: str) -> bool:
 
     if caller_role == 'developer': return True
     if target_role == 'developer': return False
-    if caller_role in ('owner', 'boss'): return True
-    if target_role in ('owner', 'boss'): return False
-    if target_role == 'super': return False
-
-    if caller_role == 'super':
-        # Супер-адмін може керувати ТІЛЬКИ адмінами та менеджерами доставки
-        return target_role in ('admin', 'delivery_manager')
+    if caller_role in ('owner', 'boss'): 
+        return target_role not in ('owner', 'boss', 'developer')
 
     return ROLE_LEVELS.get(caller_role, 0) > ROLE_LEVELS.get(target_role, 0)
 
@@ -349,7 +340,7 @@ async def admin_auth_reject(callback: CallbackQuery):
 async def start_shift(message: Message, state: FSMContext):
     if not await admin_db.is_admin(message.from_user.id): return
     role = await get_user_role(message.from_user.id)
-    if role != 'admin': return
+    if role not in ('boss', 'owner', 'developer'): return
     await state.clear()
     
     loc_ids = await admin_db.get_locations_for_admin(message.from_user.id)

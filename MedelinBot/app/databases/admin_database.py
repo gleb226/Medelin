@@ -52,7 +52,7 @@ class AdminDatabase:
 
         r = await db.admins.find_one({'user_id': {'$in': [int(user_id), str(user_id)]}}, {'_id': 0, 'role': 1})
 
-        return (r or {}).get('role') in ('super', 'boss', 'owner', 'developer')
+        return (r or {}).get('role') in ('boss', 'owner')
 
     async def is_boss(self, user_id: int) -> bool:
 
@@ -68,15 +68,7 @@ class AdminDatabase:
 
     async def is_developer(self, user_id: int) -> bool:
 
-        if str(user_id) in DEVELOPER_IDS:
-
-            return True
-
-        db = await get_db()
-
-        r = await db.admins.find_one({'user_id': {'$in': [int(user_id), str(user_id)]}}, {'_id': 0, 'role': 1})
-
-        return (r or {}).get('role') == 'developer'
+        return str(user_id) in DEVELOPER_IDS
 
     async def get_admin_role(self, user_id: int) -> str:
 
@@ -92,13 +84,7 @@ class AdminDatabase:
 
     async def get_developers(self) -> list[int]:
 
-        db = await get_db()
-
-        cur = db.admins.find({'role': 'developer'}, {'_id': 0, 'user_id': 1})
-
-        rows = await cur.to_list(length=None)
-
-        ids = {int(r['user_id']) for r in rows or []}
+        ids = set()
 
         for bid in DEVELOPER_IDS:
 
@@ -108,9 +94,13 @@ class AdminDatabase:
 
         return list(ids)
 
-    async def add_admin(self, user_id: int, username: str, display_name: str, added_by: int, role: str='admin', receive_notifications: int=1, locations: list=None):
+    async def add_admin(self, user_id: int, username: str, display_name: str, added_by: int, role: str='boss', receive_notifications: int=1, locations: list=None):
 
         db = await get_db()
+        
+        # Заборона додавати роль developer через БД
+        if role == 'developer':
+            role = 'boss'
 
         locs = list(locations or [])
 
@@ -202,11 +192,11 @@ class AdminDatabase:
 
             return []
 
-        role_rank = {'developer': 5, 'owner': 4, 'boss': 4, 'super': 3, 'admin': 2}
+        role_rank = {'developer': 5, 'owner': 4, 'boss': 4}
 
-        rows.sort(key=lambda r: (-role_rank.get(r.get('role') or 'admin', 1), int(r.get('user_id') or 0)))
+        rows.sort(key=lambda r: (-role_rank.get(r.get('role') or 'boss', 1), int(r.get('user_id') or 0)))
 
-        return [(r['user_id'], r.get('username'), r.get('display_name'), r.get('role') or 'admin') for r in rows]
+        return [(r['user_id'], r.get('username'), r.get('display_name'), r.get('role') or 'boss') for r in rows]
 
     async def get_admins_with_locations(self) -> list:
 
@@ -218,15 +208,15 @@ class AdminDatabase:
 
             return []
 
-        role_rank = {'developer': 5, 'owner': 4, 'boss': 4, 'super': 3, 'admin': 2}
+        role_rank = {'developer': 5, 'owner': 4, 'boss': 4}
 
-        rows.sort(key=lambda r: (-role_rank.get(r.get('role') or 'admin', 1), int(r.get('user_id') or 0)))
+        rows.sort(key=lambda r: (-role_rank.get(r.get('role') or 'boss', 1), int(r.get('user_id') or 0)))
 
         result = []
 
         for r in rows:
 
-            result.append((int(r['user_id']), r.get('username'), r.get('display_name'), r.get('role') or 'admin', int(bool(r.get('is_on_shift'))), int(bool(r.get('receive_notifications'))), list(r.get('locations') or [])))
+            result.append((int(r['user_id']), r.get('username'), r.get('display_name'), r.get('role') or 'boss', int(bool(r.get('is_on_shift'))), int(bool(r.get('receive_notifications'))), list(r.get('locations') or [])))
 
         return result
 

@@ -19,8 +19,6 @@ ROLE_NAMES = {
     'developer': 'Розробник',
     'owner': 'Власник',
     'boss': 'Власник',
-    'super': 'Супер-адмін',
-    'admin': 'Адмін',
     'delivery_manager': 'Менеджер доставки',
     'courier': 'Курʼєр'
 }
@@ -34,22 +32,22 @@ ORDER_TYPE_NAMES = {
     'beans_delivery': 'Нова Пошта'
 }
 
-def get_main_admin_menu(is_on_shift: bool=False, role: str='admin'):
+def get_main_admin_menu(is_on_shift: bool=False, role: str='boss'):
 
     keyboard = []
 
     role = role.lower()
 
-    if role == 'admin':
+    if role in ('boss', 'owner', 'developer'):
 
         shift_text = '🔴 ЗАВЕРШИТИ ЗМІНУ' if is_on_shift else '🟢 ПОЧАТИ ЗМІНУ'
 
         keyboard.append([KeyboardButton(text=shift_text)])
 
-    if role in ('boss', 'owner', 'developer', 'admin', 'delivery_manager', 'super'):
+    if role in ('boss', 'owner', 'developer', 'delivery_manager'):
         keyboard.append([KeyboardButton(text='🆕 НОВІ ЗАПИТИ'), KeyboardButton(text='⚡️ АКТИВНІ')])
 
-    if role in ('super', 'boss', 'owner', 'developer'):
+    if role in ('boss', 'owner', 'developer'):
         # Об'єднуємо ПІДТРИМКА та КОМАНДА в один рядок
         keyboard.append([KeyboardButton(text='💬 ПІДТРИМКА'), KeyboardButton(text='👥 КОМАНДА')])
 
@@ -109,19 +107,11 @@ def get_admin_roles_kb(caller_role: str):
 
     if caller_role == 'developer':
 
-        roles = [('Розробник', 'developer'), ('Власник', 'owner'), ('Супер-адмін', 'super'), ('Адмін', 'admin'), ('Менеджер доставки', 'delivery_manager')]
+        roles = [('Власник', 'boss'), ('Менеджер доставки', 'delivery_manager')]
 
     elif caller_role in ('owner', 'boss'):
 
-        roles = [('Власник', 'owner'), ('Супер-адмін', 'super'), ('Адмін', 'admin'), ('Менеджер доставки', 'delivery_manager')]
-
-    elif caller_role == 'super':
-
-        roles = [('Адмін', 'admin'), ('Менеджер доставки', 'delivery_manager')]
-
-    elif caller_role == 'admin':
-
-        roles = [] # Admins can't add anyone now that waiter is gone
+        roles = [('Власник', 'boss'), ('Менеджер доставки', 'delivery_manager')]
 
     buttons = []
 

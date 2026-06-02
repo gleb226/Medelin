@@ -98,8 +98,7 @@ function openCoffeePopup(item) {
         <div class="popup__weights-selection">
             <label class="weight-label weight-label--active" data-action="select-weight">
                 <input type="radio" name="bean_weight_${item.id}" value="250" data-price="${item.price_250}" checked style="display:none;">
-                <div class="weight-label__size">250г</div>
-                <div class="weight-label__price">${price250}₴</div>
+                <div class="weight-label__size">250г — ${price250}₴</div>
             </label>
         </div>
         <button class="btn btn--full-width" type="button" data-action="add-bean-to-cart" data-bean-id="${item.id}" data-bean-name="${String(item.name || '').replace(/[\"']/g, '')}" data-weight-name="bean_weight_${item.id}"><i class="fas fa-shopping-cart" style="margin-right:10px;"></i> Додати до кошика</button>
