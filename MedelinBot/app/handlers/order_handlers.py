@@ -111,9 +111,10 @@ async def send_beans_invoice(user, chat_id, state, bot):
     
     order_type = 'beans_delivery' if data.get('delivery_type') == 'nova_poshta' else 'beans_booking'
     rid = await orders_db.add_order(
-        user.id, user.username, user.full_name, data.get('phone', '—'), 
-        data.get('location_id') or "NP", 'НОВА ПОШТА', '0', f"ВАГА: 250г", 
-        f"ЗЕРНА: {data['bean_name']}", order_type,
+        user_id=user.id, username=user.username, fullname=user.full_name, phone=data.get('phone', '—'), 
+        location_id=data.get('location_id') or "NP", wishes=f"ВАГА: 250г", 
+        cart=f"ЗЕРНА: {data['bean_name']}", order_type=order_type,
+        date_time='НОВА ПОШТА', people_count='0',
         payment_mode='pay_now', total_amount=total
     )
 
@@ -131,9 +132,10 @@ async def process_beans_final(user, chat_id, state, bot):
     order_type = 'beans_delivery' if data.get('delivery_type') == 'nova_poshta' else 'beans_booking'
     
     rid = await orders_db.add_order(
-        user.id, user.username, user.full_name, data.get('phone', '—'), 
-        data.get('location_id') or "NP", 'НОВА ПОШТА', '0', f"ВАГА: 250г", 
-        f"ЗЕРНА: {data['bean_name']}", order_type,
+        user_id=user.id, username=user.username, fullname=user.full_name, phone=data.get('phone', '—'), 
+        location_id=data.get('location_id') or "NP", wishes=f"ВАГА: 250г", 
+        cart=f"ЗЕРНА: {data['bean_name']}", order_type=order_type,
+        date_time='НОВА ПОШТА', people_count='0',
         payment_mode='pay_on_delivery', total_amount=data.get('base_price', 0)
     )
 
