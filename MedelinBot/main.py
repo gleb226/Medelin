@@ -17,6 +17,10 @@ from app.common.bot_instance import bot
 
 from app.handlers.admin_handlers import admin_router
 
+from app.handlers.user_handlers import user_router
+
+from app.handlers.order_handlers import order_router
+
 from app.handlers.error_handler import error_router
 
 from app.utils.scheduler import start_scheduler
@@ -32,6 +36,10 @@ logger = logging.getLogger(__name__)
 dp = Dispatcher(storage=MemoryStorage())
 
 dp.include_router(admin_router)
+
+dp.include_router(user_router)
+
+dp.include_router(order_router)
 
 dp.include_router(error_router)
 

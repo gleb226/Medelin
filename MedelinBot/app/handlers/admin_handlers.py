@@ -9,12 +9,6 @@ from aiogram.fsm.context import FSMContext
 
 from aiogram.fsm.state import State, StatesGroup
 
-from app.keyboards import admin_keyboards as akb
-
-from app.keyboards import user_keyboards as kb
-
-from app.common.config import DEVELOPER_IDS
-
 from app.databases.orders_database import orders_db
 
 from app.databases.active_orders_database import active_orders_db
@@ -29,373 +23,67 @@ from app.databases.contacts_database import contacts_db
 
 from app.databases.coffee_beans_database import coffee_beans_db
 
-from app.utils.phone_utils import normalize_phone
+import app.keyboards.admin_keyboards as akb
 
 from app.utils.data_cache import public_data_cache
 
-from app.utils.photo_utils import process_photo
-
-from app.utils.payment_refunds import refund_telegram_payment
-
 from app.utils.message_utils import safe_edit_message
 
-import re, time, asyncio
+from app.common.config import DEVELOPER_IDS
 
-from aiogram.filters import CommandStart
+from app.databases.mongo_client import get_db
+
+import logging
+
+import html
+
+logger = logging.getLogger(__name__)
 
 admin_router = Router()
 
-ROLE_LEVELS = {
-
-    'developer': 100,
-
-    'owner': 80,
-
-    'boss': 80,
-
-    'delivery_manager': 40,
-
-    'courier': 20
-
-}
-
-def can_manage(caller_role: str, target_role: str) -> bool:
-    caller_role = (caller_role or '').strip().lower()
-    target_role = (target_role or '').strip().lower()
-
-    if caller_role == 'developer': return True
-    if target_role == 'developer': return False
-    if caller_role in ('owner', 'boss'): 
-        return target_role not in ('owner', 'boss', 'developer')
-    
-    return ROLE_LEVELS.get(caller_role, 0) > ROLE_LEVELS.get(target_role, 0)
-
-@admin_router.message(CommandStart())
-
-async def admin_start_cmd(message: Message, state: FSMContext):
-
-    await state.clear()
-
-    if await admin_db.is_admin(message.from_user.id):
-        await admin_panel_enter(message, state)
-    else:
-        await message.answer("🔒 <b>ДОСТУП ОБМЕЖЕНО</b>\nЦей бот призначений тільки для адміністрації.", parse_mode='HTML')
-
 class AdminStates(StatesGroup):
-
     adding_admin_id = State()
-
-    adding_admin_name = State()
-
     adding_admin_role = State()
+    choosing_admin_locations = State()
+    adding_bean_name = State()
+    adding_bean_price = State()
+    adding_bean_desc = State()
+    adding_location_name = State()
+    adding_location_address = State()
 
-    adding_admin_location = State()
+async def get_user_role(user_id: int) -> str:
+    if str(user_id) in DEVELOPER_IDS: return 'developer'
+    db = await get_db()
+    admin = await db.admins.find_one({'user_id': int(user_id)})
+    return admin.get('role', 'user') if admin else 'user'
 
-    adding_admin_confirm = State()
-
-class BeanStates(StatesGroup):
-    waiting_name = State()
-    waiting_country = State()
-    waiting_station = State()
-    waiting_processing = State()
-    waiting_descriptors = State()
-    waiting_species = State()
-    waiting_variety = State()
-    waiting_region = State()
-    waiting_altitude = State()
-    waiting_roast = State()
-    waiting_price = State()
-    waiting_image = State()
-
-class LocationStates(StatesGroup):
-
-    waiting_name = State()
-
-    waiting_address = State()
-
-    waiting_schedule = State()
-
-    waiting_phone = State()
-
-    waiting_email = State()
-
-    waiting_maps_url = State()
-
-    waiting_atmosphere = State()
-
-    waiting_amenities = State()
-
-    waiting_image = State()
-
-    waiting_max_tables = State()
-
-    waiting_confirm = State()
-
-    edit_select = State()
-
-    edit_field = State()
-
-    edit_value = State()
-
-class SocialStates(StatesGroup):
-
-    waiting_name = State()
-
-    waiting_url = State()
-
-    edit_select = State()
-
-    edit_field = State()
-
-    edit_value = State()
-
-async def get_user_role(user_id):
-    role = await admin_db.get_admin_role(user_id)
-    return (role or 'delivery_manager').strip().lower()
-
-async def restart_fsm_on_command(message: Message, state: FSMContext) -> bool:
-
-    text = (message.text or '').strip()
-
-    if not text.startswith('/'): return False
-
-    await state.clear()
-
-    if text.split()[0].lower() == '/start':
-
-        await admin_start_cmd(message, state)
-
-    return True
-
-async def deliver_guest_message(bot: Bot, order: dict | None, text_html: str, site_text: str, reply_callback_data: str | None=None) -> str:
-
-    if not order: return 'missing_order'
-
-    telegram_target = None
-
-    if order.get('user_id'):
-
-        try: telegram_target = int(order['user_id'])
-
-        except: telegram_target = None
-
-    if telegram_target is not None:
-
-        reply_markup = None
-        telegram_ok = False
-        try:
-            await bot.send_message(telegram_target, text_html, parse_mode='HTML', reply_markup=reply_markup)
-            telegram_ok = True
-        except:
-            telegram_ok = False
-
-    return 'both' if telegram_target and telegram_ok else 'site'
-
-@admin_router.callback_query(F.data.startswith('admin_auth_confirm_'))
-async def admin_auth_confirm(callback: CallbackQuery):
-    user_id = int(callback.data.replace('admin_auth_confirm_', ''))
-    if callback.from_user.id != user_id:
-        await callback.answer("❌ Це не ваш запит.", show_alert=True)
-        return
-    await admin_db.confirm_auth_request(user_id)
-    await callback.message.edit_text("✅ <b>ВХІД ПІДТВЕРДЖЕНО!</b>\nПоверніться у браузер.", parse_mode='HTML')
-    await callback.answer("Підтверджено!")
-
-@admin_router.callback_query(F.data.startswith('admin_auth_reject_'))
-async def admin_auth_reject(callback: CallbackQuery):
-    user_id = int(callback.data.replace('admin_auth_reject_', ''))
-    if callback.from_user.id != user_id:
-        await callback.answer("❌ Це не ваш запит.", show_alert=True)
-        return
-    await admin_db.remove_auth_request(user_id)
-    await callback.message.edit_text("❌ <b>ВХІД ВІДХИЛЕНО.</b>", parse_mode='HTML')
-    await callback.answer("Відхилено.")
-
-@admin_router.message(F.text == '↩️ НА ГОЛОВНУ')
-
-async def back_to_main_from_admin(message: Message, state: FSMContext):
-
-    await state.clear()
-
-    await admin_panel_enter(message, state)
-
-@admin_router.callback_query(F.data == 'back_main_menu_only')
-
-async def back_to_main_cb(callback: CallbackQuery, state: FSMContext):
-
-    await state.clear()
-
-    try: await callback.message.delete()
-
-    except: pass
-
-    await admin_panel_enter(callback.message, state)
-
-@admin_router.message(F.text == '🔄 СИНХРОНІЗУВАТИ САЙТ')
-async def sync_website_handler(message: Message, state: FSMContext):
-    if not await admin_db.is_admin(message.from_user.id): return
-    if await get_user_role(message.from_user.id) not in ('boss', 'owner', 'developer'): return
-    
-    await message.answer('⏳ <b>СИНХРОНІЗАЦІЯ З САЙТОМ РОЗПОЧАТА...</b>\nЦе може зайняти до 30 секунд.', parse_mode='HTML')
-    
-    try:
-        await public_data_cache.warm_all()
-        from pathlib import Path
-        import asyncio
-        root_dir = Path(__file__).resolve().parent.parent.parent.parent
-        
-        commands = [
-            ['git', 'add', 'MedelinSite/cache/*.json'],
-            ['git', 'commit', '-m', f"Manual sync from bot by {message.from_user.id}"],
-            ['git', 'push', 'origin', 'release']
-        ]
-        
-        results = []
-        for cmd in commands:
-            process = await asyncio.create_subprocess_exec(*cmd, cwd=str(root_dir), stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-            stdout, stderr = await process.communicate()
-            results.append(f"<code>{' '.join(cmd)}</code>: {'✅' if process.returncode == 0 else '⚠️'}")
-
-        await message.answer('✅ <b>СИНХРОНІЗАЦІЮ ЗАВЕРШЕНО!</b>\n\n' + '\n'.join(results), parse_mode='HTML')
-    except Exception as e:
-        await message.answer(f'❌ <b>ПОМИЛКА:</b>\n<code>{str(e)}</code>', parse_mode='HTML')
-
-@admin_router.message(F.text.in_([kb.BTN_ADMIN, '🔐 АДМІН-ПАНЕЛЬ', '🛰 АДМІН-ПАНЕЛЬ']))
-
-async def admin_panel_enter(message: Message, state: FSMContext):
-
-    if not await admin_db.is_admin(message.from_user.id): return
-
-    await state.clear()
-
+@admin_router.message(F.text == '🔐 АДМІН-ПАНЕЛЬ')
+async def show_admin_panel(message: Message):
     role = await get_user_role(message.from_user.id)
-    role_name = akb.ROLE_NAMES.get(role, role).upper()
+    if role == 'user': return
+    await message.answer(f'🔐 <b>АДМІН-ПАНЕЛЬ</b>\nВаша роль: <b>{role.upper()}</b>', reply_markup=akb.get_admin_main_kb(role), parse_mode='HTML')
 
-    is_on_shift = await admin_db.is_on_shift(message.from_user.id)
-    shift_info = ""
-    if is_on_shift == 'NP':
-        shift_info = f"\nАктивна зміна: <b>НОВА ПОШТА</b>"
-    elif isinstance(is_on_shift, str) and is_on_shift not in ("True", "1", "False", "0"):
-        loc = await location_db.get_location_by_id(is_on_shift)
-        if loc:
-            shift_info = f"\nАктивна зміна: <b>{loc['name']}</b>"
-
-    await message.answer(f'🔐 <b>ВХІД В АДМІНІСТРАТИВНУ ПАНЕЛЬ</b>\nВаша роль: <b>{role_name}</b>{shift_info}', reply_markup=akb.get_main_admin_menu(bool(is_on_shift), role), parse_mode='HTML')
-
-@admin_router.message(F.text == '🟢 ПОЧАТИ ЗМІНУ')
-async def start_shift(message: Message, state: FSMContext):
-    if not await admin_db.is_admin(message.from_user.id): return
-    role = await get_user_role(message.from_user.id)
-    if role != 'delivery_manager': return
-    await state.clear()
-    
-    await admin_db.set_shift_status(message.from_user.id, 'NP')
-    await message.answer('🟢 <b>ЗМІНУ РОЗПОЧАТО!</b>\nВи будете отримувати замовлення з Нової Пошти.', reply_markup=akb.get_main_admin_menu(True, role), parse_mode='HTML')
-
-@admin_router.message(F.text == '🔴 ЗАВЕРШИТИ ЗМІНУ')
-async def end_shift(message: Message, state: FSMContext):
-    if not await admin_db.is_admin(message.from_user.id): return
-    role = await get_user_role(message.from_user.id)
-    await admin_db.set_shift_status(message.from_user.id, False)
-    await message.answer('🔴 <b>ЗМІНУ ЗАВЕРШЕНО!</b>', reply_markup=akb.get_main_admin_menu(False, role), parse_mode='HTML')
-
-@admin_router.message(F.text == '🆕 НОВІ ЗАПИТИ')
-
-async def show_new_bookings(message: Message, state: FSMContext):
-
-    if not await admin_db.is_admin(message.from_user.id): return
-
-    await state.clear()
-
-    role = await get_user_role(message.from_user.id)
-
-    if role in ('boss', 'owner', 'developer'):
-        bookings = await orders_db.get_new_orders()
-    elif role == 'delivery_manager':
-        all_orders = await orders_db.get_new_orders()
-        bookings = [o for o in all_orders if o.get('order_type') in ('nova_poshta', 'beans_delivery') or o.get('location_id') == 'NP']
-    else:
-        shift_loc = await admin_db.is_on_shift(message.from_user.id)
-        if isinstance(shift_loc, str) and shift_loc not in ("True", "1", "False", "0"):
-            bookings = await orders_db.get_new_orders_by_locations([shift_loc])
-        else:
-            loc_ids = await admin_db.get_locations_for_admin(message.from_user.id)
-            bookings = await orders_db.get_new_orders_by_locations(loc_ids) if loc_ids else await orders_db.get_new_orders()
-
-    if not bookings:
-
-        await message.answer('📭 <b>Наразі немає нових запитів.</b>', parse_mode='HTML')
-
-        return
-
-    locations_dict = await location_db.get_locations_dict()
-
-    for b in bookings:
-
-        if b.get('order_type') in ('nova_poshta', 'beans_delivery') or b.get('location_id') == 'NP':
-            loc_name = 'Нова Пошта'
-            wishes = b.get('wishes') or ''
-            if 'НП:' in wishes:
-                loc_name = f"Нова Пошта — {wishes.split('НП:', 1)[1].split('|', 1)[0].strip()}"
-        else:
-            loc_name = locations_dict.get(b['location_id'], {}).get('name', '—')
-
-        order_id = b.get('order_id') or str(b['_id'])
-
-        t = f"📥 <b>НОВИЙ ЗАПИТ</b>\n\n👤 <b>КЛІЄНТ:</b> {b['fullname']}\n📞 <code>{b['phone']}</code>\n🏛 <b>Заклад:</b> {loc_name}\n"
-        date_time = b.get('date_time')
-        people_count = b.get('people_count')
-        if date_time and str(date_time).lower() not in ('none', '—', '', 'зараз', 'по готовності'):
-            t += f"🕔 <b>Час:</b> {date_time}\n"
-        if people_count and str(people_count).lower() not in ('none', '—', '', '0'):
-            t += f"👥 <b>Гостей:</b> {people_count}\n"
-        t += f"🥘 <b>Замовлення:</b> {b['cart']}"
-
-        await message.answer(t, reply_markup=akb.get_booking_manage_kb(order_id, b.get('user_id')), parse_mode='HTML')
-
-@admin_router.message(F.text == '⚡️ АКТИВНІ')
-
-async def show_active_panel(message: Message, state: FSMContext):
-
-    if not await admin_db.is_admin(message.from_user.id): return
-
-    await message.answer('⚡️ <b>АКТИВНІ ЗАПИСИ</b>\nОберіть розділ:', reply_markup=akb.get_active_types_kb(), parse_mode='HTML')
+@admin_router.callback_query(F.data == 'admin_panel_back')
+async def back_to_admin_main(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
+    await safe_edit_message(callback.message, f'🔐 <b>АДМІН-ПАНЕЛЬ</b>\nВаша роль: <b>{role.upper()}</b>', reply_markup=akb.get_admin_main_kb(role), parse_mode='HTML')
 
 @admin_router.callback_query(F.data == 'active_panel')
-
-async def show_active_panel_cb(callback: CallbackQuery):
-
-    await safe_edit_message(callback.message, '⚡️ <b>АКТИВНІ ЗАПИСИ</b>\nОберіть розділ:', reply_markup=akb.get_active_types_kb(), parse_mode='HTML')
-
-@admin_router.callback_query(F.data == 'active_bookings')
-async def list_active_bookings(callback: CallbackQuery):
-    await list_active_orders(callback)
+async def show_active_panel(callback: CallbackQuery):
+    await safe_edit_message(callback.message, '🛍 <b>КЕРУВАННЯ ЗАМОВЛЕННЯМИ:</b>', reply_markup=akb.get_active_types_kb(), parse_mode='HTML')
 
 @admin_router.callback_query(F.data == 'active_orders')
 async def list_active_orders(callback: CallbackQuery):
     role = await get_user_role(callback.from_user.id)
-    if role in ('boss', 'owner', 'developer'):
-        locs = None
-    elif role == 'delivery_manager':
-        locs = ['NP']
-    else:
-        shift_loc = await admin_db.is_on_shift(callback.from_user.id)
-        if isinstance(shift_loc, str) and shift_loc not in ("True", "1", "False", "0"):
-            locs = [shift_loc]
-        else:
-            loc_ids = await admin_db.get_locations_for_admin(callback.from_user.id) or None
-            locs = loc_ids
-
+    locs = None
+    if role not in ('boss', 'owner', 'developer'):
+        locs = await admin_db.get_locations_for_admin(callback.from_user.id)
+    
     orders = await active_orders_db.get_active_orders(locs)
     if not orders:
         await callback.answer('Немає активних замовлень.')
         return
     await safe_edit_message(callback.message, '🛍 <b>АКТИВНІ ЗАМОВЛЕННЯ:</b>\nНатисніть для завершення:', reply_markup=akb.get_active_orders_list_kb(orders), parse_mode='HTML')
-
-@admin_router.callback_query(F.data.startswith('finish_book_'))
-async def finish_booking(callback: CallbackQuery):
-    await callback.answer('Бронь завершена!')
-    await list_active_bookings(callback)
 
 @admin_router.callback_query(F.data.startswith('finish_order_'))
 async def finish_order(callback: CallbackQuery):
@@ -404,346 +92,58 @@ async def finish_order(callback: CallbackQuery):
     await callback.answer('Замовлення виконано!')
     await list_active_orders(callback)
 
-@admin_router.message(F.text == '☕ ЗЕРНО')
-
-async def show_beans_panel(message: Message, state: FSMContext):
-
-    if not await admin_db.is_admin(message.from_user.id): return
-
-    if await get_user_role(message.from_user.id) not in ('boss', 'owner', 'developer'): return
-
-    await state.clear()
-
-    await message.answer('☕ <b>КЕРУВАННЯ ЗЕРНОМ</b>', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
-
-@admin_router.message(F.text == '📍 ЛОКАЦІЇ')
-
-async def show_locs_panel(message: Message, state: FSMContext):
-
-    if not await admin_db.is_admin(message.from_user.id): return
-
-    if await get_user_role(message.from_user.id) not in ('boss', 'owner', 'developer'): return
-
-    await state.clear()
-
-    await message.answer('📍 <b>КЕРУВАННЯ ЛОКАЦІЯМИ</b>', reply_markup=akb.get_locations_manage_kb(), parse_mode='HTML')
-
-@admin_router.message(F.text == '📱 КОНТАКТИ')
-
-async def show_socs_panel(message: Message, state: FSMContext):
-
-    if not await admin_db.is_admin(message.from_user.id): return
-
-    if await get_user_role(message.from_user.id) not in ('boss', 'owner', 'developer'): return
-
-    await state.clear()
-
-    await message.answer('📱 <b>КЕРУВАННЯ КОНТАКТАМИ</b>', reply_markup=akb.get_socials_manage_kb(), parse_mode='HTML')
-
-@admin_router.message(F.text == '👥 КОМАНДА')
-
-async def show_team_panel(message: Message, state: FSMContext):
-
-    if not await admin_db.is_admin(message.from_user.id): return
-
-    await state.clear()
-
-    role = await get_user_role(message.from_user.id)
-
-    is_privileged = role in ('boss', 'owner', 'developer')
-
-    await message.answer('👥 <b>КЕРУВАННЯ КОМАНДОЮ</b>', reply_markup=akb.get_admin_management_kb(is_privileged), parse_mode='HTML')
-
-@admin_router.callback_query(F.data == 'admin_panel_back')
-
-async def admin_panel_back(callback: CallbackQuery, state: FSMContext):
-
-    await state.clear()
-
-    role = await get_user_role(callback.from_user.id)
-    role_name = akb.ROLE_NAMES.get(role, role).upper()
-
-    is_on_shift = await admin_db.is_on_shift(callback.from_user.id)
-
-    try: await callback.message.delete()
-
-    except: pass
-
-    await callback.message.answer(f'🔐 <b>ВХІД В АДМІНІСТРАТИВНУ ПАНЕЛЬ</b>\nВаша роль: <b>{role_name}</b>', reply_markup=akb.get_main_admin_menu(is_on_shift, role), parse_mode='HTML')
-
-@admin_router.callback_query(F.data.startswith('adm2_confirm_'))
-
-async def confirm_order_cb(callback: CallbackQuery, bot: Bot):
-
-    oid = callback.data.replace('adm2_confirm_', '')
-
-    order = await orders_db.get_order_by_id(oid)
-
-    if not order:
-
-        await callback.answer('Замовлення не знайдено.')
-
-        return
-
-    await orders_db.update_status(oid, 'confirmed')
-
-    await active_orders_db.add_active_order(
-        oid, order.get('user_id'), order['fullname'], order.get('phone', '—'),
-        order['location_id'], order['cart'], order['order_type'],
-        order.get('table_number', ''), order.get('total_amount', 0),
-        order.get('payment_mode', ''), order.get('wishes', '')
-    )
-
-    text = '✅ <b>ВАШЕ ЗАМОВЛЕННЯ ПІДТВЕРДЖЕНО!</b>\n\nМи вже почали готувати. Смачного! ☕'
-
-    await deliver_guest_message(bot, order, text, text)
-
-    await safe_edit_message(callback.message, callback.message.text + '\n\n✅ <b>ПІДТВЕРДЖЕНО</b>', parse_mode='HTML')
-
-    await callback.answer('Підтверджено!')
-
-@admin_router.callback_query(F.data.startswith('adm2_cancel_'))
-
-async def cancel_order_cb(callback: CallbackQuery, bot: Bot):
-
-    oid = callback.data.replace('adm2_cancel_', '')
-
-    order = await orders_db.get_order_by_id(oid)
-
-    if not order:
-
-        await callback.answer('Замовлення не знайдено.')
-
-        return
-
-    await orders_db.update_status(oid, 'cancelled')
-
-    text = '❌ <b>НА ЖАЛЬ, ЗАМОВЛЕННЯ ВІДХИЛЕНО</b>\n\nВибачте за незручності. Спробуйте іншу локацію або час.'
-
-    await deliver_guest_message(bot, order, text, text)
-
-    from app.utils.message_utils import fade_out_message
-
-    await fade_out_message(callback.message, '❌ <b>ВІДХИЛЕНО</b>')
-
-    await callback.answer('Відхилено.')
-
-@admin_router.callback_query(F.data == 'adm_add_new')
-
-async def adm_add_start(callback: CallbackQuery, state: FSMContext):
-
-    await state.set_state(AdminStates.adding_admin_id)
-
-    help_text = "🆔 <b>ВВЕДІТЬ ДАНІ НОВОГО СПІВРОБІТНИКА:</b>\n\nTelegram ID, Username або Телефон."
-
-    await callback.message.answer(help_text, reply_markup=akb.get_admin_management_kb(True), parse_mode='HTML')
-
-    await callback.answer()
-
-@admin_router.message(AdminStates.adding_admin_id)
-
-async def adm_add_identity(message: Message, state: FSMContext):
-
-    val = message.text.strip()
-
-    target_uid = None
-
-    target_username = "N/A"
-
-    if val.isdigit(): target_uid = int(val)
-
-    elif val.startswith('@'):
-
-        u = await user_db.get_user_by_username(val.replace('@', ''))
-
-        if u: target_uid, target_username = int(u[0]), val
-
-    elif val.startswith('+') or (val.startswith('380') and len(val) == 12):
-
-        phone = normalize_phone(val)
-
-        u = await user_db.get_user_by_phone(phone)
-
-        if u: target_uid, target_username = int(u[0]), (f"@{u[1]}" if u[1] else "N/A")
-
-    if not target_uid:
-
-        await message.answer("❌ Користувача не знайдено.")
-
-        return
-
-    await state.update_data(new_adm_id=target_uid, new_adm_username=target_username)
-
-    await message.answer(f"👤 Знайдено: <code>{target_uid}</code>\nВведіть Ім'я:", parse_mode='HTML')
-
-    await state.set_state(AdminStates.adding_admin_name)
-
-@admin_router.message(AdminStates.adding_admin_name)
-
-async def adm_add_name(message: Message, state: FSMContext):
-
-    await state.update_data(new_adm_name=message.text)
-
-    caller_role = await get_user_role(message.from_user.id)
-
-    await message.answer("🎭 Оберіть роль:", reply_markup=akb.get_admin_roles_kb(caller_role))
-
-    await state.set_state(AdminStates.adding_admin_role)
-
-@admin_router.callback_query(F.data.startswith('set_role_'), AdminStates.adding_admin_role)
-
-async def adm_add_role(callback: CallbackQuery, state: FSMContext):
-
-    role = callback.data.replace('set_role_', '')
-
-    data = await state.get_data()
-
-    await admin_db.add_admin(data['new_adm_id'], data.get('new_adm_username', 'N/A'), data['new_adm_name'], callback.from_user.id, role, locations=[])
-
-    await safe_edit_message(callback.message, f"✅ Додано!", reply_markup=akb.get_admin_management_kb(True), parse_mode='HTML')
-
-    await state.clear()
-
-    await callback.answer()
-
-@admin_router.callback_query(F.data == 'adm_list')
-
-async def adm_list(callback: CallbackQuery):
-
-    admins = await admin_db.get_admins_with_locations()
-
-    text = "👥 <b>КОМАНДА MEDELIN:</b>\n\n"
-
-    for aid, user, name, role, on_shift, notif, locs in admins:
-        role_name = akb.ROLE_NAMES.get(role, role)
-        text += f"{'🟢' if on_shift else '🔴'} <b>{name}</b> (@{user or '—'})\nРоль: {role_name}\n\n"
-
-    await safe_edit_message(callback.message, text, reply_markup=akb.get_admin_management_kb(True), parse_mode='HTML')
-
-@admin_router.callback_query(F.data == 'adm_remove')
-
-async def adm_remove_list(callback: CallbackQuery):
-
-    caller_role = await get_user_role(callback.from_user.id)
-
-    all_admins = await admin_db.get_admins_basic()
-
-    removable = [(u, un, d, r) for u, un, d, r in all_admins if can_manage(caller_role, r) and int(u) != int(callback.from_user.id)]
-
-    if not removable:
-
-        await callback.answer("Немає прав.", show_alert=True)
-
-        return
-
-    await safe_edit_message(callback.message, "🗑 Оберіть кого видалити:", reply_markup=akb.get_admins_to_remove_kb(removable), parse_mode='HTML')
-
-@admin_router.callback_query(F.data.startswith('adm_del_yes_'))
-
-async def adm_remove_confirm_yes(callback: CallbackQuery):
-
-    uid = int(callback.data.replace('adm_del_yes_', ''))
-
-    await admin_db.remove_admin(uid)
-
-    await callback.answer("Видалено!", show_alert=True)
-
-    await adm_remove_list(callback)
+@admin_router.callback_query(F.data == 'beans_manage')
+async def manage_beans(callback: CallbackQuery):
+    await safe_edit_message(callback.message, '☕️ <b>КЕРУВАННЯ ЗЕРНАМИ:</b>', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
 
 @admin_router.callback_query(F.data == 'bean_add')
-async def bean_add_start(callback: CallbackQuery, state: FSMContext):
-    await callback.message.answer('🏷 Назва кави:')
-    await state.set_state(BeanStates.waiting_name)
-    await callback.answer()
+async def add_bean_start(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer('Вкажіть назву нового сорту:')
+    await state.set_state(AdminStates.adding_bean_name)
 
-@admin_router.message(BeanStates.waiting_name)
-async def bean_add_name(message: Message, state: FSMContext):
+@admin_router.message(AdminStates.adding_bean_name)
+async def add_bean_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
-    await message.answer('🌍 Країна:')
-    await state.set_state(BeanStates.waiting_country)
+    await message.answer('Вкажіть ціну за 250г:')
+    await state.set_state(AdminStates.adding_bean_price)
 
-@admin_router.message(BeanStates.waiting_country)
-async def bean_add_country(message: Message, state: FSMContext):
-    await state.update_data(country=message.text)
-    await message.answer('🏭 Назва (станція обробки):')
-    await state.set_state(BeanStates.waiting_station)
-
-@admin_router.message(BeanStates.waiting_station)
-async def bean_add_station(message: Message, state: FSMContext):
-    await state.update_data(station=message.text)
-    await message.answer('🧪 Спосіб обробки (Natural, Washed...):')
-    await state.set_state(BeanStates.waiting_processing)
-
-@admin_router.message(BeanStates.waiting_processing)
-async def bean_add_processing(message: Message, state: FSMContext):
-    await state.update_data(processing=message.text)
-    await message.answer('📝 Дескриптори:')
-    await state.set_state(BeanStates.waiting_descriptors)
-
-@admin_router.message(BeanStates.waiting_descriptors)
-async def bean_add_descriptors(message: Message, state: FSMContext):
-    await state.update_data(descriptors=message.text)
-    await message.answer('🌿 Ботанічний вид (Арабіка, Робуста...):')
-    await state.set_state(BeanStates.waiting_species)
-
-@admin_router.message(BeanStates.waiting_species)
-async def bean_add_species(message: Message, state: FSMContext):
-    await state.update_data(species=message.text)
-    await message.answer('🧬 Різновид (Сорт):')
-    await state.set_state(BeanStates.waiting_variety)
-
-@admin_router.message(BeanStates.waiting_variety)
-async def bean_add_variety(message: Message, state: FSMContext):
-    await state.update_data(variety=message.text)
-    await message.answer('🏔 Регіон зростання:')
-    await state.set_state(BeanStates.waiting_region)
-
-@admin_router.message(BeanStates.waiting_region)
-async def bean_add_region(message: Message, state: FSMContext):
-    await state.update_data(region=message.text)
-    await message.answer('📏 Висота зростання:')
-    await state.set_state(BeanStates.waiting_altitude)
-
-@admin_router.message(BeanStates.waiting_altitude)
-async def bean_add_altitude(message: Message, state: FSMContext):
-    await state.update_data(altitude=message.text)
-    await message.answer('🔥 Спосіб приготування / Обсмаження:')
-    await state.set_state(BeanStates.waiting_roast)
-
-@admin_router.message(BeanStates.waiting_roast)
-async def bean_add_roast(message: Message, state: FSMContext):
-    await state.update_data(roast=message.text)
-    await message.answer('💰 Ціна (за 250г):')
-    await state.set_state(BeanStates.waiting_price)
-
-@admin_router.message(BeanStates.waiting_price)
-async def bean_add_price(message: Message, state: FSMContext):
+@admin_router.message(AdminStates.adding_bean_price)
+async def add_bean_price(message: Message, state: FSMContext):
     try:
-        price = float(message.text.replace(',', '.'))
+        price = int(message.text)
         await state.update_data(price_250=price)
-        await message.answer('🖼 Надішліть фото (або напишіть "ні"):')
-        await state.set_state(BeanStates.waiting_image)
-    except: await message.answer('❌ Введіть число.')
+        await coffee_beans_db.add_bean(name=(await state.get_data())['name'], price_250=price)
+        await message.answer('✅ Сорт додано!', reply_markup=akb.get_beans_manage_kb())
+        await state.clear()
+    except:
+        await message.answer('Помилка. Вкажіть число ціною:')
 
-@admin_router.message(BeanStates.waiting_image)
-async def bean_add_image(message: Message, state: FSMContext, bot: Bot):
-    img = await process_photo(message, bot) if message.photo else ''
-    await state.update_data(image_url=img)
-    data = await state.get_data()
-    await coffee_beans_db.add_bean(
-        name=data['name'], 
-        price_250=data['price_250'], 
-        image_url=data.get('image_url', ''),
-        country=data.get('country', ''),
-        station=data.get('station', ''),
-        processing=data.get('processing', ''),
-        descriptors=data.get('descriptors', ''),
-        species=data.get('species', ''),
-        variety=data.get('variety', ''),
-        region=data.get('region', ''),
-        altitude=data.get('altitude', ''),
-        roast=data.get('roast', '')
-    )
-    await public_data_cache.refresh_coffee()
-    await message.answer('✅ Сорт додано!', reply_markup=akb.get_beans_manage_kb())
-    await state.clear()
+@admin_router.callback_query(F.data.startswith('admin_auth_confirm_'))
+async def confirm_admin_login(callback: CallbackQuery, bot: Bot):
+    uid = int(callback.data.replace('admin_auth_confirm_', ''))
+    code = f"LOGIN_{uid}_{int(time.time())}"
+    await admin_db.create_auth_request(uid, code)
+    try:
+        await bot.send_message(uid, f"✅ <b>ВХІД ПІДТВЕРДЖЕНО!</b>\n\nВаш код для сайту: <code>{code}</code>", parse_mode='HTML')
+        await callback.answer('Підтверджено!')
+        await callback.message.delete()
+    except:
+        await callback.answer('Помилка відправки повідомлення.', show_alert=True)
+
+@admin_router.callback_query(F.data.startswith('admin_auth_reject_'))
+async def reject_admin_login(callback: CallbackQuery, bot: Bot):
+    uid = int(callback.data.replace('admin_auth_reject_', ''))
+    try:
+        await bot.send_message(uid, "❌ <b>ВХІД ВІДХИЛЕНО.</b>", parse_mode='HTML')
+        await callback.answer('Відхилено.')
+        await callback.message.delete()
+    except:
+        await callback.answer('Помилка.')
+
+async def deliver_guest_message(bot: Bot, order: dict, user_text: str, admin_text: str):
+    uid = order.get('user_id')
+    if uid:
+        try: await bot.send_message(uid, user_text, parse_mode='HTML')
+        except: pass
+    else:
+        logger.info(f"No user_id for order {order.get('_id')}, skipping user notification")
