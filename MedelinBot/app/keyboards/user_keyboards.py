@@ -22,8 +22,6 @@ BTN_BEANS = '☕️ КАВА В ЗЕРНАХ'
 
 BTN_LOCATIONS = '📍 НАШІ ЗАКЛАДИ'
 
-BTN_CONTACTS = '☎️ КОНТАКТИ'
-
 BTN_ADMIN = '🔐 АДМІН-ПАНЕЛЬ'
 
 def _clamp_hour(hour: int, *, allow_24: bool=False) -> int:
@@ -49,7 +47,7 @@ def cat_key(category: str) -> str:
 def get_main_menu(is_admin: bool=False):
     keyboard = [
         [KeyboardButton(text=BTN_MENU), KeyboardButton(text=BTN_BEANS)],
-        [KeyboardButton(text=BTN_LOCATIONS), KeyboardButton(text=BTN_CONTACTS)]
+        [KeyboardButton(text=BTN_LOCATIONS)]
     ]
     if is_admin:
         keyboard.append([KeyboardButton(text=BTN_ADMIN)])

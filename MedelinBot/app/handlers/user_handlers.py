@@ -445,11 +445,11 @@ async def menu_back_to_items(callback: CallbackQuery, state: FSMContext):
 
     await safe_edit_message(callback.message, f'🍽️ <b>{cat}</b>\n\nОберіть позицію:', reply_markup=kb.get_items_kb(items, cat, cart_count=len(cart)), parse_mode='HTML')
 
-@user_router.message(F.text.in_([kb.BTN_LOCATIONS, '🏢 НАШІ ЗАКЛАДИ']))
+@user_router.message(F.text.in_([kb.BTN_LOCATIONS, '🏢 НАШІ ЗАКЛАДИ', '📍 НАШІ ЗАКЛАДИ']))
 
-async def show_locations(message: Message, state: FSMContext):
+async def show_locations_menu(message: Message, state: FSMContext):
 
-    await message.answer('📍 <b>НАШІ ЗАКЛАДИ</b>\n\nОберіть заклад:', reply_markup=await kb.get_locations_info_kb(), parse_mode='HTML')
+    await message.answer('📍 <b>НАШІ ЗАКЛАДИ</b>\n\nОберіть дію:', reply_markup=await kb.get_contact_kb(), parse_mode='HTML')
 
 @user_router.callback_query(F.data.startswith('locinfo_'))
 
