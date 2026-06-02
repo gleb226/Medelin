@@ -1,23 +1,27 @@
 
 from datetime import datetime
+import logging
 
-from app.databases.mongo_client import get_db
+# Configure standard logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger_stdout = logging.getLogger('activity')
 
 class Logger:
 
     async def connect(self):
-
-        await get_db()
+        pass
 
     async def close(self):
-
         return
 
     async def log_activity(self, user_id: int, username: str, action: str, details: str=''):
-
-        db = await get_db()
-
-        await db.activity_logs.insert_one({'user_id': int(user_id), 'username': username, 'action': action, 'details': details, 'timestamp': datetime.utcnow()})
+        timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        log_msg = f"[{timestamp}] User: {user_id} (@{username or '—'}) | Action: {action} | Details: {details}"
+        print(log_msg)
+        logger_stdout.info(log_msg)
 
 logger = Logger()
 

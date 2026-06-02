@@ -17,8 +17,6 @@ from app.common.config import DEVELOPER_IDS
 
 from app.databases.orders_database import orders_db
 
-from app.databases.active_bookings_database import active_bookings_db
-
 from app.databases.active_orders_database import active_orders_db
 
 from app.databases.admin_database import admin_db
@@ -27,9 +25,7 @@ from app.databases.user_database import user_db
 
 from app.databases.location_database import location_db
 
-from app.databases.socials_database import socials_db
-
-from app.databases.guest_messages_database import guest_messages_db
+from app.databases.contacts_database import contacts_db
 
 from app.databases.coffee_beans_database import coffee_beans_db
 
@@ -98,18 +94,18 @@ class AdminStates(StatesGroup):
     adding_admin_confirm = State()
 
 class BeanStates(StatesGroup):
-
     waiting_name = State()
-
+    waiting_country = State()
+    waiting_station = State()
+    waiting_processing = State()
+    waiting_descriptors = State()
+    waiting_species = State()
+    waiting_variety = State()
+    waiting_region = State()
+    waiting_altitude = State()
+    waiting_roast = State()
     waiting_price = State()
-
-    waiting_desc = State()
-
-    waiting_volume = State()
-
     waiting_image = State()
-
-    edit_waiting_value = State()
 
 class LocationStates(StatesGroup):
 
@@ -153,24 +149,6 @@ class SocialStates(StatesGroup):
 
     edit_value = State()
 
-def extract_coords_from_maps(url: str) -> tuple[float, float] | None:
-
-    if not url: return None
-
-    m = re.search('@(-?\\d+\\.\\d+),(-?\\d+\\.\\d+)', url)
-
-    if m: return (float(m.group(1)), float(m.group(2)))
-
-    m = re.search('!3d(-?\\d+\\.\\d+)!4d(-?\\d+\\.\\d+)', url)
-
-    if m: return (float(m.group(1)), float(m.group(2)))
-
-    m = re.search('q=(-?\\d+\\.\\d+),(-?\\d+\\.\\d+)', url)
-
-    if m: return (float(m.group(1)), float(m.group(2)))
-
-    return None
-
 async def get_user_role(user_id):
     role = await admin_db.get_admin_role(user_id)
     return (role or 'delivery_manager').strip().lower()
@@ -201,20 +179,9 @@ async def deliver_guest_message(bot: Bot, order: dict | None, text_html: str, si
 
         except: telegram_target = None
 
-    if telegram_target is None and order.get('username'):
-
-        tg_username = str(order.get('username') or '').lstrip('@').strip()
-
-        found_user = await user_db.get_user_by_username(tg_username) if tg_username else None
-
-        if found_user: telegram_target = int(found_user[0])
-
     if telegram_target is not None:
 
         reply_markup = None
-        # Повідомлення від адміна гостю прибрали (підтримка вимкнена)
-        # але ми залишаємо цей метод для сервісних сповіщень (Прийнято/Відхилено)
-
         telegram_ok = False
         try:
             await bot.send_message(telegram_target, text_html, parse_mode='HTML', reply_markup=reply_markup)
@@ -276,13 +243,7 @@ async def sync_website_handler(message: Message, state: FSMContext):
         from pathlib import Path
         import asyncio
         root_dir = Path(__file__).resolve().parent.parent.parent.parent
-        try:
-            proc_git = await asyncio.create_subprocess_exec('git', '--version', stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-            await proc_git.wait()
-        except Exception:
-            await message.answer('❌ <b>ПОМИЛКА:</b> Git не встановлений.', parse_mode='HTML')
-            return
-
+        
         commands = [
             ['git', 'add', 'MedelinSite/cache/*.json'],
             ['git', 'commit', '-m', f"Manual sync from bot by {message.from_user.id}"],
@@ -407,17 +368,12 @@ async def show_active_panel_cb(callback: CallbackQuery):
     await safe_edit_message(callback.message, '⚡️ <b>АКТИВНІ ЗАПИСИ</b>\nОберіть розділ:', reply_markup=akb.get_active_types_kb(), parse_mode='HTML')
 
 @admin_router.callback_query(F.data == 'active_bookings')
-
 async def list_active_bookings(callback: CallbackQuery):
-
     await list_active_orders(callback)
 
 @admin_router.callback_query(F.data == 'active_orders')
-
 async def list_active_orders(callback: CallbackQuery):
-
     role = await get_user_role(callback.from_user.id)
-
     if role in ('boss', 'owner', 'developer'):
         locs = None
     elif role == 'delivery_manager':
@@ -427,40 +383,25 @@ async def list_active_orders(callback: CallbackQuery):
         if isinstance(shift_loc, str) and shift_loc not in ("True", "1", "False", "0"):
             locs = [shift_loc]
         else:
-            locs = await admin_db.get_locations_for_admin(callback.from_user.id) or None
+            loc_ids = await admin_db.get_locations_for_admin(callback.from_user.id) or None
+            locs = loc_ids
 
     orders = await active_orders_db.get_active_orders(locs)
-
     if not orders:
-
         await callback.answer('Немає активних замовлень.')
-
         return
-
     await safe_edit_message(callback.message, '🛍 <b>АКТИВНІ ЗАМОВЛЕННЯ:</b>\nНатисніть для завершення:', reply_markup=akb.get_active_orders_list_kb(orders), parse_mode='HTML')
 
 @admin_router.callback_query(F.data.startswith('finish_book_'))
-
 async def finish_booking(callback: CallbackQuery):
-
-    bid = callback.data.replace('finish_book_', '')
-
-    await active_bookings_db.remove_booking(bid)
-
     await callback.answer('Бронь завершена!')
-
     await list_active_bookings(callback)
 
 @admin_router.callback_query(F.data.startswith('finish_order_'))
-
 async def finish_order(callback: CallbackQuery):
-
     oid = callback.data.replace('finish_order_', '')
-
     await active_orders_db.remove_order(oid)
-
     await callback.answer('Замовлення виконано!')
-
     await list_active_orders(callback)
 
 @admin_router.message(F.text == '☕ ЗЕРНО')
@@ -487,7 +428,7 @@ async def show_locs_panel(message: Message, state: FSMContext):
 
     await message.answer('📍 <b>КЕРУВАННЯ ЛОКАЦІЯМИ</b>', reply_markup=akb.get_locations_manage_kb(), parse_mode='HTML')
 
-@admin_router.message(F.text == '📱 СОЦМЕРЕЖІ')
+@admin_router.message(F.text == '📱 КОНТАКТИ')
 
 async def show_socs_panel(message: Message, state: FSMContext):
 
@@ -497,7 +438,7 @@ async def show_socs_panel(message: Message, state: FSMContext):
 
     await state.clear()
 
-    await message.answer('📱 <b>КЕРУВАННЯ СОЦМЕРЕЖАМИ</b>', reply_markup=akb.get_socials_manage_kb(), parse_mode='HTML')
+    await message.answer('📱 <b>КЕРУВАННЯ КОНТАКТАМИ</b>', reply_markup=akb.get_socials_manage_kb(), parse_mode='HTML')
 
 @admin_router.message(F.text == '👥 КОМАНДА')
 
@@ -546,20 +487,14 @@ async def confirm_order_cb(callback: CallbackQuery, bot: Bot):
 
     await orders_db.update_status(oid, 'confirmed')
 
-    if order.get('order_type') == 'booking':
+    await active_orders_db.add_active_order(
+        oid, order.get('user_id'), order['fullname'], order.get('phone', '—'),
+        order['location_id'], order['cart'], order['order_type'],
+        order.get('table_number', ''), order.get('total_amount', 0),
+        order.get('payment_mode', ''), order.get('wishes', '')
+    )
 
-        text = '✅ <b>ВАШЕ БРОНЮВАННЯ ПІДТВЕРДЖЕНО!</b>\n\nЧекаємо на вас у Medelin! ☕'
-
-    else:
-
-        await active_orders_db.add_active_order(
-            oid, order.get('user_id'), order['fullname'], order.get('phone', '—'),
-            order['location_id'], order['cart'], order['order_type'],
-            order.get('table_number', ''), order.get('total_amount', 0),
-            order.get('payment_mode', ''), order.get('wishes', '')
-        )
-
-        text = '✅ <b>ВАШЕ ЗАМОВЛЕННЯ ПІДТВЕРДЖЕНО!</b>\n\nМи вже почали готувати. Смачного! ☕'
+    text = '✅ <b>ВАШЕ ЗАМОВЛЕННЯ ПІДТВЕРДЖЕНО!</b>\n\nМи вже почали готувати. Смачного! ☕'
 
     await deliver_guest_message(bot, order, text, text)
 
@@ -715,33 +650,100 @@ async def adm_remove_confirm_yes(callback: CallbackQuery):
 
     await adm_remove_list(callback)
 
+@admin_router.callback_query(F.data == 'bean_add')
+async def bean_add_start(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer('🏷 Назва кави:')
+    await state.set_state(BeanStates.waiting_name)
+    await callback.answer()
+
 @admin_router.message(BeanStates.waiting_name)
 async def bean_add_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
-    await message.answer('💰 Ціна за 250г:')
+    await message.answer('🌍 Країна:')
+    await state.set_state(BeanStates.waiting_country)
+
+@admin_router.message(BeanStates.waiting_country)
+async def bean_add_country(message: Message, state: FSMContext):
+    await state.update_data(country=message.text)
+    await message.answer('🏭 Назва (станція обробки):')
+    await state.set_state(BeanStates.waiting_station)
+
+@admin_router.message(BeanStates.waiting_station)
+async def bean_add_station(message: Message, state: FSMContext):
+    await state.update_data(station=message.text)
+    await message.answer('🧪 Спосіб обробки (Natural, Washed...):')
+    await state.set_state(BeanStates.waiting_processing)
+
+@admin_router.message(BeanStates.waiting_processing)
+async def bean_add_processing(message: Message, state: FSMContext):
+    await state.update_data(processing=message.text)
+    await message.answer('📝 Дескриптори:')
+    await state.set_state(BeanStates.waiting_descriptors)
+
+@admin_router.message(BeanStates.waiting_descriptors)
+async def bean_add_descriptors(message: Message, state: FSMContext):
+    await state.update_data(descriptors=message.text)
+    await message.answer('🌿 Ботанічний вид (Арабіка, Робуста...):')
+    await state.set_state(BeanStates.waiting_species)
+
+@admin_router.message(BeanStates.waiting_species)
+async def bean_add_species(message: Message, state: FSMContext):
+    await state.update_data(species=message.text)
+    await message.answer('🧬 Різновид (Сорт):')
+    await state.set_state(BeanStates.waiting_variety)
+
+@admin_router.message(BeanStates.waiting_variety)
+async def bean_add_variety(message: Message, state: FSMContext):
+    await state.update_data(variety=message.text)
+    await message.answer('🏔 Регіон зростання:')
+    await state.set_state(BeanStates.waiting_region)
+
+@admin_router.message(BeanStates.waiting_region)
+async def bean_add_region(message: Message, state: FSMContext):
+    await state.update_data(region=message.text)
+    await message.answer('📏 Висота зростання:')
+    await state.set_state(BeanStates.waiting_altitude)
+
+@admin_router.message(BeanStates.waiting_altitude)
+async def bean_add_altitude(message: Message, state: FSMContext):
+    await state.update_data(altitude=message.text)
+    await message.answer('🔥 Спосіб приготування / Обсмаження:')
+    await state.set_state(BeanStates.waiting_roast)
+
+@admin_router.message(BeanStates.waiting_roast)
+async def bean_add_roast(message: Message, state: FSMContext):
+    await state.update_data(roast=message.text)
+    await message.answer('💰 Ціна (за 250г):')
     await state.set_state(BeanStates.waiting_price)
 
 @admin_router.message(BeanStates.waiting_price)
 async def bean_add_price(message: Message, state: FSMContext):
     try:
         price = float(message.text.replace(',', '.'))
-        await state.update_data(price=price)
-        await message.answer('📜 Опис:')
-        await state.set_state(BeanStates.waiting_desc)
+        await state.update_data(price_250=price)
+        await message.answer('🖼 Надішліть фото (або напишіть "ні"):')
+        await state.set_state(BeanStates.waiting_image)
     except: await message.answer('❌ Введіть число.')
-
-@admin_router.message(BeanStates.waiting_desc)
-async def bean_add_desc(message: Message, state: FSMContext):
-    await state.update_data(description=message.text)
-    await message.answer('🖼 Фото або "ні":')
-    await state.set_state(BeanStates.waiting_image)
 
 @admin_router.message(BeanStates.waiting_image)
 async def bean_add_image(message: Message, state: FSMContext, bot: Bot):
     img = await process_photo(message, bot) if message.photo else ''
     await state.update_data(image_url=img)
     data = await state.get_data()
-    await coffee_beans_db.add_bean(data['name'], data['price'], data.get('description', ''), '', '', '', image_url=data.get('image_url', ''), acidity=0, bitterness=0, body=0)
-    await public_data_cache.refresh('coffee')
-    await message.answer('✅ Додано!', reply_markup=akb.get_beans_manage_kb())
+    await coffee_beans_db.add_bean(
+        name=data['name'], 
+        price_250=data['price_250'], 
+        image_url=data.get('image_url', ''),
+        country=data.get('country', ''),
+        station=data.get('station', ''),
+        processing=data.get('processing', ''),
+        descriptors=data.get('descriptors', ''),
+        species=data.get('species', ''),
+        variety=data.get('variety', ''),
+        region=data.get('region', ''),
+        altitude=data.get('altitude', ''),
+        roast=data.get('roast', '')
+    )
+    await public_data_cache.refresh_coffee()
+    await message.answer('✅ Сорт додано!', reply_markup=akb.get_beans_manage_kb())
     await state.clear()

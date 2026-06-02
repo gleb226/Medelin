@@ -23,8 +23,6 @@ from app.databases.user_database import user_db
 
 from app.databases.orders_database import orders_db
 
-from app.databases.active_bookings_database import active_bookings_db
-
 from app.databases.active_orders_database import active_orders_db
 
 from app.databases.admin_database import admin_db
@@ -33,7 +31,7 @@ from app.databases.location_database import location_db
 
 from app.databases.coffee_beans_database import coffee_beans_db
 
-from app.databases.socials_database import socials_db
+from app.databases.contacts_database import contacts_db
 
 from app.handlers.order_handlers import send_beans_invoice, send_order_invoice
 

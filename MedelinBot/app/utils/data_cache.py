@@ -106,7 +106,28 @@ class PublicDataCache:
 
         for i in items:
 
-            formatted.append({'id': str(i.get('_id')), 'name': i.get('name', ''), 'description': i.get('description', ''), 'price_250': i.get('price_250', 0), 'price_500': i.get('price_500', 0), 'price_1000': i.get('price_1000', 0), 'image_url': i.get('image_url', ''), 'altitude': i.get('altitude', ''), 'sort': i.get('sort', ''), 'processing': i.get('processing', ''), 'roast': i.get('roast', ''), 'variety': i.get('variety', ''), 'cup_score': i.get('cup_score', ''), 'harvest': i.get('harvest', ''), 'taste': i.get('taste', ''), 'acidity': i.get('acidity', 0), 'bitterness': i.get('bitterness', 0), 'body': i.get('body', 0)})
+            formatted.append({
+                'id': str(i.get('_id')),
+                'name': i.get('name', ''),
+                'description': i.get('description', ''),
+                'price_250': i.get('price_250', 0),
+                'image_url': i.get('image_url', ''),
+                'altitude': i.get('altitude', ''),
+                'sort': i.get('sort', ''),
+                'processing': i.get('processing', ''),
+                'roast': i.get('roast', ''),
+                'variety': i.get('variety', ''),
+                'cup_score': i.get('cup_score', ''),
+                'harvest': i.get('harvest', ''),
+                'taste': i.get('taste', ''),
+                'country': i.get('country', ''),
+                'region': i.get('region', ''),
+                'station': i.get('station', ''),
+                'recommendation': i.get('recommendation', ''),
+                'acidity': i.get('acidity', 0),
+                'bitterness': i.get('bitterness', 0),
+                'body': i.get('body', 0)
+            })
 
         return self.set('coffee', formatted)
 
@@ -331,9 +352,9 @@ class PublicDataCache:
 
     async def refresh_socials(self) -> list[dict[str, Any]]:
 
-        from app.databases.socials_database import socials_db
+        from app.databases.contacts_database import contacts_db
 
-        socs = await socials_db.get_all_socials()
+        socs = await contacts_db.get_all_contacts()
 
         formatted = [{'id': str(s.get('_id') or s.get('id')), 'name': s.get('name', ''), 'url': s.get('url', '')} for s in socs]
 

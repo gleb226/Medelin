@@ -226,29 +226,25 @@ class AdminDatabase:
 
     async def find_admin_by_identifier(self, identifier: str):
         db = await get_db()
-        clean_id = str(identifier).strip().replace('@', '').lower()
+        clean_id = str(identifier).strip().replace('@', '')
         
-        # 1. Спробуємо знайти в колекції admins (по username, phone або user_id)
-        # По username
+        # 1. Search in admins collection
+        if identifier.isdigit():
+            res = await db.admins.find_one({'user_id': int(identifier)}, projection_without_mongo_id())
+            if res: return res
+            
         res = await db.admins.find_one({'username': {'$regex': f'^{re.escape(clean_id)}$', '$options': 'i'}}, projection_without_mongo_id())
         if res: return res
         
-        # По phone (нормалізованому)
         from app.utils.phone_utils import normalize_phone
         norm = normalize_phone(identifier)
         if norm and len(norm) >= 10:
             res = await db.admins.find_one({'$or': [{'phone_digits': norm}, {'phone': {'$regex': re.escape(norm)}}]}, projection_without_mongo_id())
             if res: return res
-            
-        # По user_id
-        if identifier.isdigit():
-            res = await db.admins.find_one({'user_id': int(identifier)}, projection_without_mongo_id())
-            if res: return res
-            
-        # 2. Якщо не знайдено в admins, перевіримо чи це розробник (DEVELOPER_IDS)
+
+        # 2. Search in users table and check if developer
         from app.databases.user_database import user_db
         user_info = None
-        
         if identifier.isdigit():
             target_id = int(identifier)
             if str(target_id) in DEVELOPER_IDS:
@@ -257,12 +253,10 @@ class AdminDatabase:
                     uid, name, uname, uphone = user_info
                     return {'user_id': uid, 'display_name': name or 'Developer', 'role': 'developer', 'username': uname}
                 return {'user_id': target_id, 'display_name': 'Developer', 'role': 'developer'}
-        
-        # Спробуємо знайти в users по телефону, а потім звірити з DEVELOPER_IDS
+
         if norm and len(norm) >= 10:
             user_info = await user_db.get_user_by_phone(norm)
             
-        # Потім по username
         if not user_info:
             user_info = await user_db.get_user_by_username(clean_id)
             

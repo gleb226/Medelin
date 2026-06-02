@@ -5,7 +5,7 @@ from app.common.config import WORK_START_HOUR, WORK_END_HOUR
 
 from app.databases.location_database import location_db
 
-from app.databases.socials_database import socials_db
+from app.databases.contacts_database import contacts_db
 
 import datetime
 
@@ -14,13 +14,13 @@ import hashlib
 def truncate(text, length):
     return text[:length] + '..' if len(text) > length else text
 
-BTN_BOOK_TABLE = '📅 ЗАБРОНЮВАТИ СТОЛИК'
-
 BTN_MENU = '🍽️ МЕНЮ / ЗАМОВЛЕННЯ'
 
 BTN_BEANS = '☕️ КАВА В ЗЕРНАХ'
 
 BTN_LOCATIONS = '📍 НАШІ ЗАКЛАДИ'
+
+BTN_CONTACTS = '📞 КОНТАКТИ'
 
 BTN_ADMIN = '🔐 АДМІН-ПАНЕЛЬ'
 
@@ -52,80 +52,6 @@ def get_main_menu(is_admin: bool=False):
     if is_admin:
         keyboard.append([KeyboardButton(text=BTN_ADMIN)])
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
-
-def get_date_kb():
-
-    today = datetime.date.today()
-
-    tomorrow = today + datetime.timedelta(days=1)
-
-    day_after = today + datetime.timedelta(days=2)
-
-    keyboard = [[InlineKeyboardButton(text=f"🗓 Сьогодні, {today.strftime('%d.%m')}", callback_data=f'book_date_{today.isoformat()}')], [InlineKeyboardButton(text=f"🗓 Завтра, {tomorrow.strftime('%d.%m')}", callback_data=f'book_date_{tomorrow.isoformat()}')], [InlineKeyboardButton(text=f"🗓 Післязавтра, {day_after.strftime('%d.%m')}", callback_data=f'book_date_{day_after.isoformat()}')]]
-
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
-
-def get_time_kb(selected_date: datetime.date | None=None):
-
-    times = []
-
-    now = datetime.datetime.now()
-
-    selected_date = selected_date or now.date()
-
-    start_hour = _clamp_hour(WORK_START_HOUR)
-
-    end_hour_raw = _clamp_hour(WORK_END_HOUR, allow_24=True)
-
-    t = datetime.datetime.combine(selected_date, datetime.time(hour=start_hour, minute=0))
-
-    if selected_date == now.date():
-
-        t = max(t, _ceil_to_next_half_hour(now))
-
-    if end_hour_raw == 24:
-
-        closing = datetime.datetime.combine(selected_date, datetime.time(hour=0, minute=0)) + datetime.timedelta(days=1)
-
-    else:
-
-        closing = datetime.datetime.combine(selected_date, datetime.time(hour=_clamp_hour(end_hour_raw), minute=0))
-
-    end = (closing - datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
-
-    while t <= end:
-
-        times.append(t.strftime('%H:%M'))
-
-        t += datetime.timedelta(minutes=30)
-
-    keyboard = []
-
-    cols = 3
-
-    for i in range(0, len(times), cols):
-
-        row = [InlineKeyboardButton(text=tm, callback_data=f'book_time_{tm}') for tm in times[i:i + cols]]
-
-        keyboard.append(row)
-
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
-
-def _ceil_to_next_half_hour(dt: datetime.datetime) -> datetime.datetime:
-
-    dt = dt.replace(second=0, microsecond=0)
-
-    minute = dt.minute
-
-    if minute == 0 or minute == 30:
-
-        return dt
-
-    if minute < 30:
-
-        return dt.replace(minute=30)
-
-    return (dt + datetime.timedelta(hours=1)).replace(minute=0)
 
 async def get_locations_kb():
 
@@ -373,7 +299,7 @@ def get_phone_kb():
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
 
 async def get_contact_kb():
-    socials = await socials_db.get_all_socials()
+    socials = await contacts_db.get_all_contacts()
     keyboard = []
     row = []
 

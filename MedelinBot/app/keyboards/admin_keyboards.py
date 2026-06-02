@@ -38,7 +38,6 @@ def get_main_admin_menu(is_on_shift: bool=False, role: str='delivery_manager'):
 
     role = role.lower()
 
-    # Почати зміну тільки для менеджерів доставки
     if role == 'delivery_manager':
 
         shift_text = '🔴 ЗАВЕРШИТИ ЗМІНУ' if is_on_shift else '🟢 ПОЧАТИ ЗМІНУ'
@@ -50,32 +49,17 @@ def get_main_admin_menu(is_on_shift: bool=False, role: str='delivery_manager'):
 
 
     if role in ('boss', 'owner', 'developer'):
-        # Тільки КОМАНДА (ПІДТРИМКУ прибрали)
-        keyboard.append([KeyboardButton(text='👥 КОМАНДА')])
+        keyboard.append([KeyboardButton(text='👥 КОМАНДА'), KeyboardButton(text='☕ ЗЕРНО')])
 
     if role in ('boss', 'owner', 'developer'):
 
-        keyboard.append([KeyboardButton(text='☕ ЗЕРНО')])
-
-        keyboard.append([KeyboardButton(text='📍 ЛОКАЦІЇ'), KeyboardButton(text='📱 СОЦМЕРЕЖІ')])
+        keyboard.append([KeyboardButton(text='📍 ЛОКАЦІЇ'), KeyboardButton(text='📱 КОНТАКТИ')])
 
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
 def get_active_types_kb():
 
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='🛍 АКТИВНІ ЗАМОВЛЕННЯ', callback_data='active_orders')], [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')]])
-
-def get_active_bookings_list_kb(bookings):
-
-    buttons = []
-
-    for b in bookings:
-
-        buttons.append([InlineKeyboardButton(text=f"✅ {b['fullname']} ({b['date_time_str']})", callback_data=f"finish_book_{b['_id']}")])
-
-    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='active_panel')])
-
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_active_orders_list_kb(orders):
 
@@ -155,7 +139,7 @@ def get_locations_manage_kb():
 
 def get_socials_manage_kb():
 
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='➕ ДОДАТИ СОЦМЕРЕЖУ', callback_data='soc_add')], [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')]])
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='➕ ДОДАТИ КОНТАКТ', callback_data='soc_add')], [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')]])
 
 def get_admin_login_confirm_kb(user_id: int):
 

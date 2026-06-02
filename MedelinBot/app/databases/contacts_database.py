@@ -3,7 +3,7 @@ from bson import ObjectId
 
 from app.databases.mongo_client import get_db
 
-class SocialsDatabase:
+class ContactsDatabase:
 
     async def connect(self):
 
@@ -13,61 +13,61 @@ class SocialsDatabase:
 
         return
 
-    async def clear_socials(self):
+    async def clear_contacts(self):
 
         db = await get_db()
 
-        await db.socials.delete_many({})
+        await db.contacts.delete_many({})
 
         from app.utils.data_cache import public_data_cache
 
         await public_data_cache.refresh_socials()
 
-    async def add_social(self, name, url):
+    async def add_contact(self, name, url):
 
         db = await get_db()
 
-        await db.socials.update_one({'name': name}, {'$set': {'url': url}}, upsert=True)
+        await db.contacts.update_one({'name': name}, {'$set': {'url': url}}, upsert=True)
 
         from app.utils.data_cache import public_data_cache
 
         await public_data_cache.refresh_socials()
 
-    async def get_all_socials(self):
+    async def get_all_contacts(self):
 
         db = await get_db()
 
-        cursor = db.socials.find({})
+        cursor = db.contacts.find({})
 
-        socials = await cursor.to_list(length=None)
+        contacts = await cursor.to_list(length=None)
 
-        for s in socials:
+        for s in contacts:
 
             if '_id' in s:
 
                 s['_id'] = str(s['_id'])
 
-        return socials
+        return contacts
 
-    async def get_social_by_id(self, social_id):
+    async def get_contact_by_id(self, contact_id):
 
         db = await get_db()
 
         try:
 
-            return await db.socials.find_one({'_id': ObjectId(social_id)})
+            return await db.contacts.find_one({'_id': ObjectId(contact_id)})
 
         except:
 
             return None
 
-    async def update_social(self, social_id: str, update: dict) -> bool:
+    async def update_contact(self, contact_id: str, update: dict) -> bool:
 
         db = await get_db()
 
         try:
 
-            oid = ObjectId(social_id)
+            oid = ObjectId(contact_id)
 
         except Exception:
 
@@ -81,7 +81,7 @@ class SocialsDatabase:
 
             return False
 
-        res = await db.socials.update_one({'_id': oid}, {'$set': update})
+        res = await db.contacts.update_one({'_id': oid}, {'$set': update})
 
         success = bool(res.matched_count)
 
@@ -93,13 +93,13 @@ class SocialsDatabase:
 
         return success
 
-    async def delete_social(self, social_id):
+    async def delete_contact(self, contact_id):
 
         db = await get_db()
 
         try:
 
-            res = await db.socials.delete_one({'_id': ObjectId(social_id)})
+            res = await db.contacts.delete_one({'_id': ObjectId(contact_id)})
 
             success = bool(res.deleted_count)
 
@@ -115,4 +115,4 @@ class SocialsDatabase:
 
             return False
 
-socials_db = SocialsDatabase()
+contacts_db = ContactsDatabase()

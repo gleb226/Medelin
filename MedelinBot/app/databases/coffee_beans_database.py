@@ -11,26 +11,33 @@ class CoffeeBeansDatabase:
 
         await get_db()
 
-    def calculate_prices(self, price_250: float, *, price_500: float | None=None, price_1000: float | None=None) -> dict:
-
-        p500 = price_250 * 2 * 0.97
-
-        p1000 = price_250 * 4 * 0.92
-
-        return {'250': round(price_250), '500': round(price_500) if price_500 is not None else round(p500), '1000': round(price_1000) if price_1000 is not None else round(p1000)}
-
-    async def add_bean(self, name, price_250, description, sort, taste, roast, image_url='', country='', altitude='', processing='', recommendation='', variety='', cup_score='', harvest='', acidity=0, bitterness=0, body=0, *, price_500: float | None=None, price_1000: float | None=None, **extra):
+    async def add_bean(self, name, price_250=0, image_url='', country='', station='', processing='', descriptors='', sort='', variety='', region='', altitude='', roast='', taste='', description='', cup_score='', harvest='', recommendation='', acidity=0, bitterness=0, body=0, **extra):
 
         db = await get_db()
 
-        try:
-            p_250 = float(str(price_250).replace(',', '.'))
-        except:
-            p_250 = 0.0
-
-        prices = self.calculate_prices(p_250, price_500=price_500, price_1000=price_1000)
-
-        res = await db.coffee_beans.insert_one({'name': name, 'price_250': prices['250'], 'price_500': prices['500'], 'price_1000': prices['1000'], 'description': description or '', 'sort': sort or '', 'taste': taste or '', 'roast': roast or '', 'image_url': image_url or '', 'country': country or '', 'altitude': altitude or '', 'processing': processing or '', 'recommendation': recommendation or '', 'variety': variety or '', 'cup_score': cup_score or '', 'harvest': harvest or '', 'acidity': int(acidity or 0), 'bitterness': int(bitterness or 0), 'body': int(body or 0), 'extra': extra or {}})
+        res = await db.coffee_beans.insert_one({
+            'name': name,
+            'image_url': image_url or '',
+            'country': country or '',
+            'station': station or '',
+            'processing': processing or '',
+            'descriptors': descriptors or '',
+            'sort': sort or '',
+            'variety': variety or '',
+            'region': region or '',
+            'altitude': altitude or '',
+            'roast': roast or '',
+            'taste': taste or '',
+            'description': description or '',
+            'cup_score': cup_score or '',
+            'harvest': harvest or '',
+            'recommendation': recommendation or '',
+            'acidity': acidity or 0,
+            'bitterness': bitterness or 0,
+            'body': body or 0,
+            'price_250': price_250 or 0,
+            'extra': extra or {}
+        })
 
         inserted_id = str(res.inserted_id)
 

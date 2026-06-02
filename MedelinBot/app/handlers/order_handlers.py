@@ -11,8 +11,6 @@ from app.common.config import PAYMENT_TOKEN
 
 from app.databases.orders_database import orders_db
 
-from app.databases.active_bookings_database import active_bookings_db
-
 from app.databases.active_orders_database import active_orders_db
 
 from app.databases.user_database import user_db
@@ -97,159 +95,6 @@ async def order_start(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(OrderStates.choosing_order_type)
 
-@order_router.callback_query(F.data == 'checkout_booking')
-
-async def booking_checkout(callback: CallbackQuery, state: FSMContext, bot: Bot):
-
-    if not is_working_hours():
-
-        await callback.message.answer(get_closed_message(), parse_mode='HTML')
-
-        return
-
-    data = await state.get_data()
-
-    if not data.get('booking_mode'):
-
-        await callback.answer('Немає активної броні.')
-
-        return
-
-    if not data.get('cart'):
-
-        await callback.answer('🛒 Спочатку додайте позиції з меню.')
-
-        return
-
-    await callback.answer()
-
-    async def _send_invoice():
-
-        await send_order_invoice(callback.from_user, callback.message.chat.id, state, bot)
-
-    if not await _ensure_phone_and_run(callback, state, callback.from_user, _send_invoice):
-
-        return
-
-@order_router.callback_query(F.data.startswith('order_type_'), OrderStates.choosing_order_type)
-
-async def order_type_chosen(callback: CallbackQuery, state: FSMContext):
-
-    await state.update_data(order_type=callback.data.replace('order_type_', ''))
-
-    await safe_edit_message(callback.message, '📍 <b>ОБЕРІТЬ ЗАКЛАД:</b>', reply_markup=await kb.get_locations_kb(), parse_mode='HTML')
-
-    await state.set_state(OrderStates.choosing_location)
-
-@order_router.callback_query(F.data.startswith('loc_'), OrderStates.choosing_location)
-
-async def order_loc_chosen(callback: CallbackQuery, state: FSMContext, bot: Bot):
-
-    loc_id = callback.data.split('_')[1]
-
-    await state.update_data(location_id=loc_id)
-
-    data = await state.get_data()
-
-    if data.get('order_type') == 'in_house':
-
-        loc = await location_db.get_location_by_id(loc_id)
-
-        max_t = loc.get('max_tables', 10) if loc else 10
-
-        await safe_edit_message(callback.message, f'🔢 <b>ВКАЖІТЬ НОМЕР ВАШОГО СТОЛИКА:</b>\n<i>(Доступно: 1 - {max_t})</i>', parse_mode='HTML')
-
-        await state.set_state(OrderStates.entering_table_number)
-
-    else:
-
-        await state.update_data(pickup_time='ПО ГОТОВНОСТІ')
-
-        await ask_wishes_order(callback, state)
-
-@order_router.callback_query(F.data.startswith('pickup_time_'))
-
-async def order_pickup_time_chosen(callback: CallbackQuery, state: FSMContext, bot: Bot):
-
-    time_str = callback.data.replace('pickup_time_', '')
-
-    await state.update_data(pickup_time=time_str)
-
-    await ask_wishes_order(callback, state)
-
-@order_router.message(OrderStates.entering_table_number)
-
-async def order_table_entered(message: Message, state: FSMContext, bot: Bot):
-
-    val = (message.text or '').strip()
-
-    data = await state.get_data()
-
-    loc_id = data.get('location_id')
-
-    loc = await location_db.get_location_by_id(loc_id)
-
-    max_t = loc.get('max_tables', 10) if loc else 10
-
-    if not val or not val.isdigit() or (not 1 <= int(val) <= max_t):
-
-        await message.answer(f'❌ <b>НЕВІРНИЙ НОМЕР.</b> Вкажіть число від 1 до {max_t}:', parse_mode='HTML')
-
-        return
-
-    await state.update_data(table_number=val)
-
-    kb_pay_mode = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='💳 Оплатити зараз', callback_data='order_pay_now')],
-        [InlineKeyboardButton(text='💵 Оплатити на касі', callback_data='order_pay_at_checkout')]
-    ])
-    await message.answer('💳 <b>ОБЕРІТЬ ОПЛАТУ:</b>', reply_markup=kb_pay_mode, parse_mode='HTML')
-    await state.set_state(OrderStates.choosing_payment_mode)
-
-@order_router.callback_query(F.data.startswith('order_pay_'), OrderStates.choosing_payment_mode)
-async def order_payment_mode_chosen(callback: CallbackQuery, state: FSMContext):
-    payment_mode = 'pay_at_checkout' if callback.data == 'order_pay_at_checkout' else 'pay_now'
-    await state.update_data(payment_mode=payment_mode)
-    await ask_wishes_order(callback, state)
-
-async def ask_phone_order(target, state: FSMContext):
-
-    text = '📞 <b>ВКАЖІТЬ ВАШ ТЕЛЕФОН (+380...):</b>\n\nНатисніть кнопку нижче або введіть вручну:'
-
-    if isinstance(target, CallbackQuery):
-
-        await target.message.answer(text, parse_mode='HTML', reply_markup=kb.get_phone_kb())
-
-    else:
-
-        await target.answer(text, parse_mode='HTML', reply_markup=kb.get_phone_kb())
-
-    await state.set_state(OrderStates.entering_phone)
-
-async def ask_wishes_order(target, state: FSMContext):
-    text = '💬 <b>ПОБАЖАННЯ АБО УТОЧНЕННЯ ДО ЗАМОВЛЕННЯ (або "ні"):</b>'
-    if isinstance(target, CallbackQuery):
-        await target.message.answer(text, parse_mode='HTML')
-    else:
-        await target.answer(text, parse_mode='HTML')
-    await state.set_state(OrderStates.entering_wishes)
-
-@order_router.message(OrderStates.entering_wishes)
-async def order_wishes_entered(message: Message, state: FSMContext, bot: Bot):
-    wishes_raw = (message.text or '').strip()
-    wishes = '' if wishes_raw.lower() in ('ні', 'нет', 'no', '-', '—') else wishes_raw
-    await state.update_data(wishes=wishes)
-    
-    async def _next_step():
-        data = await state.get_data()
-        if data.get('order_type') == 'in_house' and data.get('payment_mode') != 'pay_now':
-            await process_order_final(message.from_user, message.chat.id, state, bot)
-        else:
-            await send_order_invoice(message.from_user, message.chat.id, state, bot)
-            
-    if not await _ensure_phone_and_run(message, state, message.from_user, _next_step):
-        return
-
 async def _ensure_phone_and_run(target, state: FSMContext, user, action):
 
     current_state = await state.get_state()
@@ -261,7 +106,7 @@ async def _ensure_phone_and_run(target, state: FSMContext, user, action):
     data = await state.get_data()
     
     order_type = data.get('order_type', '')
-    needs_phone = order_type in ('beans_delivery', 'beans_booking', 'order_with_booking') or data.get('booking_mode')
+    needs_phone = order_type in ('beans_delivery', 'beans_booking')
 
     if not needs_phone:
         await action()
@@ -398,8 +243,7 @@ async def send_order_invoice(user, chat_id, state, bot_unused=None):
 
         return
 
-    p_type = 'bookpay' if data.get('booking_mode') else 'pay'
-    pay_id = f'{p_type}_{user.id}_{int(time.time())}'
+    pay_id = f'pay_{user.id}_{int(time.time())}'
     await state.update_data(pay_id=pay_id)
     
     loc_id = data['location_id']
@@ -438,7 +282,7 @@ async def send_order_invoice(user, chat_id, state, bot_unused=None):
 
     cart_s = '\n'.join(cart_items_with_prices).upper()
     time_info = data.get('pickup_time', 'ЗАРАЗ')
-    order_type = 'order_with_booking' if data.get('booking_mode') else data.get('order_type', 'order')
+    order_type = data.get('order_type', 'order')
     
     rid = await orders_db.add_order(
         user.id, user.username, user.full_name, data.get('phone', '—'), 
@@ -452,7 +296,7 @@ async def send_order_invoice(user, chat_id, state, bot_unused=None):
     from app.common.config import WEB_APP_URL
     payment_url = f"{WEB_APP_URL}/index.html?order_id={rid}"
     
-    title = '💳 ОПЛАТА БРОНІ + ЗАМОВЛЕННЯ' if data.get('booking_mode') else '💳 ОПЛАТА ЗАМОВЛЕННЯ'
+    title = '💳 ОПЛАТА ЗАМОВЛЕННЯ'
     
     kb_pay = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='💳 ПЕРЕЙТИ ДО ОПЛАТИ', url=payment_url)],
@@ -534,54 +378,158 @@ async def pay_ok(message: Message, state: FSMContext, bot: Bot):
 
         await process_beans_final(message.from_user, message.chat.id, state, bot)
 
-    elif 'bookpay' in p.invoice_payload:
-
-        await process_booking_order_final(message.from_user, message.chat.id, state, bot)
-
     else:
 
         await process_order_final(message.from_user, message.chat.id, state, bot)
 
-async def process_booking_order_final(user, chat_id, state, bot):
+async def process_beans_final(user, chat_id, state, bot, order_id=None):
 
     data = await state.get_data()
 
+    is_admin = await admin_db.is_admin(user.id)
+
     loc_id = data.get('location_id')
+
+    is_np = data.get('delivery_type') == 'nova_poshta'
+
+    np_info = f"<b>📍 НП:</b> {data.get('np_city_name')}, {data.get('np_warehouse')}" if is_np else "<b>🏬 САМОВИВІЗ</b>"
+
+    time_info = 'НОВА ПОШТА' if is_np else 'БРОНЬ 2 ДНІ'
+
+    order_type = 'beans_delivery' if is_np else 'beans_booking'
+    
+    wishes = data.get('wishes', '')
+    wishes_str = f"ВАГА: {data['weight']}г | {np_info}"
+    if wishes:
+        wishes_str += f"\nПОБАЖАННЯ: {wishes}"
+
+    phone = data.get('phone') or '—'
+    fullname = data.get('fullname') or user.full_name
+    
+    pay_method = data.get('payment_method', 'card')
+
+    if order_id:
+        rid = order_id
+    else:
+        rid = await orders_db.add_order(user.id, user.username, fullname, phone, loc_id or "NP", time_info, '0', wishes_str, f"ЗЕРНА: {data['bean_name']}", order_type)
+
+    if pay_method == 'card':
+        await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
+
+    await active_orders_db.add_active_order(
+        rid, user.id, fullname, phone, loc_id or "NP", 
+        data['bean_name'], order_type, 
+        total=data.get('total_amount', 0), 
+        payment_mode='pay_now' if pay_method == 'card' else 'pay_on_delivery', 
+        wishes=wishes_str
+    )
+
+    loc_name = "НОВА ПОШТА"
+    delivery_line = ""
+
+    if is_np:
+        delivery_line = f"🏛 <b>ДОСТАВКА:</b> НП — {data.get('np_city_name')}, {data.get('np_warehouse')}\n"
+    elif loc_id:
+        loc = await location_db.get_location_by_id(loc_id)
+        loc_name = loc['name'] if loc else '—'
+        delivery_line = f"🏛 <b>ОТРИМАННЯ:</b> {loc_name}\n"
+
+    msg = f"☕️ <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n"
+    msg += f"👤 <b>КЛІЄНТ:</b> {fullname}\n"
+    if phone and phone != '—':
+        msg += f"📞 <b>ТЕЛЕФОН:</b> <code>{phone}</code>\n"
+    
+    msg += delivery_line
+    msg += f"📦 <b>СОРТ:</b> {data['bean_name']} ({data['weight']}г)\n"
+    
+    if wishes:
+        import html
+        msg += f"💬 <b>ПОБАЖАННЯ:</b> {html.escape(wishes)}\n"
+        
+    p_status = '💰 <b>СТАТУС:</b> ОПЛАЧЕНО' if pay_method == 'card' else '📦 <b>ОПЛАТА:</b> НАКЛАДЕНИЙ ПЛАТІЖ'
+    msg += f"\n{p_status}"
+
+    targets = set()
+    if is_np:
+        db = await get_db()
+        cur = db.admins.find({'role': {'$in': ['delivery_manager', 'boss', 'owner', 'developer']}})
+        rows = await cur.to_list(length=None)
+        targets.update([int(r['user_id']) for r in rows])
+    else:
+        targets.update(await admin_db.get_notification_targets(loc_id))
+
+    for aid in targets:
+        try:
+            await bot.send_message(aid, msg, reply_markup=akb.get_booking_manage_kb(rid), parse_mode='HTML')
+            await orders_db.mark_admin_notified(rid, aid)
+        except: pass
+
+    success_text = f'✅ <b>ДЯКУЄМО!</b> Ваше замовлення прийнято. Ми відправимо каву у м. {data.get("np_city_name")} найближчим часом.' if is_np else f'✅ <b>ДЯКУЄМО!</b> Кава чекатиме на вас у <b>{loc_name}</b> протягом 2 днів.'
+
+    await bot.send_message(chat_id, success_text, reply_markup=kb.get_main_menu(is_admin), parse_mode='HTML')
+
+    await state.clear()
+
+async def process_order_final(user, chat_id, state, bot):
+
+    data = await state.get_data()
+
+    is_house = data.get('order_type') == 'in_house'
 
     is_admin = await admin_db.is_admin(user.id)
 
-    rid = await orders_db.add_order(user.id, user.username, user.full_name, data.get('phone', '—'), loc_id, data.get('date_time'), data.get('people_count'), data.get('wishes'), ', '.join(data['cart']).upper(), 'order_with_booking')
+    loc_id = data['location_id']
 
-    await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
+    total_uah, cart_s = await _build_cart_text_and_total(data['cart'])
+
+    time_info = data.get('pickup_time', 'ЗАРАЗ')
+
+    wishes_val = data.get('wishes')
+    wishes_str = f"МЕНЮ. {wishes_val}" if wishes_val else "МЕНЮ"
+    payment_mode = data.get('payment_mode') or ('pay_at_checkout' if is_house else 'pay_now')
+
+    rid = await orders_db.add_order(
+        user.id, user.username, user.full_name, data.get('phone', '—'), loc_id,
+        time_info, '0', wishes_str, cart_s, data.get('order_type', 'order'),
+        payment_mode, data.get('table_number', ''), total_uah
+    )
+
+    if not is_house or payment_mode == 'pay_now':
+
+        await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
 
     await active_orders_db.add_active_order(
-        rid, user.id, user.full_name, data.get('phone', '—'), loc_id,
-        ', '.join(data['cart']).upper(), 'order_with_booking',
-        total=0, payment_mode='pay_now', wishes=data.get('wishes', '')
+        rid, user.id, user.full_name, data.get('phone', '—'), loc_id, cart_s,
+        data['order_type'], data.get('table_number'), total_uah, payment_mode, wishes_str
     )
 
     loc = await location_db.get_location_by_id(loc_id)
 
     loc_name = loc['name'] if loc else '—'
 
+    p_stat = '💰 <b>ОПЛАЧЕНО</b>' if (not is_house or payment_mode == 'pay_now') else '⏳ <b>ОПЛАТА НА КАСІ</b>'
+    
     phone = data.get('phone', '—')
-    msg = f"🌟 <b>БРОНЮВАННЯ ТА ЗАМОВЛЕННЯ</b>\n\n"
+
+    msg = f"🔔 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n"
     msg += f"👤 <b>КЛІЄНТ:</b> {user.full_name}\n"
     if phone and phone != '—':
         msg += f"📞 <b>ТЕЛЕФОН:</b> <code>{phone}</code>\n"
-    
-    msg += f"🏛 <b>ЗАКЛАД:</b> {loc_name}\n"
-    
-    dt = data.get('date_time')
-    if dt and str(dt).lower() not in ('none', '—', ''):
-        msg += f"🕒 <b>ЧАС:</b> {dt}\n"
         
-    pc = data.get('people_count')
-    if pc and str(pc).lower() not in ('none', '—', '', '0'):
-        msg += f"👥 <b>ГОСТЕЙ:</b> {pc}\n"
+    if loc_name and loc_name != '—':
+        msg += f"🏛 <b>ЗАКЛАД:</b> {loc_name}\n"
 
-    msg += f"🥘 <b>МЕНЮ:</b> {', '.join(data['cart']).upper()}\n"
-    msg += f"💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
+    if is_house:
+        msg += f"🪑 <b>СТОЛИК:</b> {data.get('table_number')}\n"
+    else:
+        if time_info and time_info not in ('ЗАРАЗ', 'ПО ГОТОВНОСТІ', '—', 'None', 'none'):
+            msg += f"🕒 <b>ЧАС:</b> {time_info}\n"
+
+    msg += f"🥘 <b>ПОЗИЦІЇ:</b> {cart_s}"
+    if wishes_val:
+        import html
+        msg += f"\n💬 <b>ПОБАЖАННЯ:</b> {html.escape(wishes_val)}"
+    msg += f"\n{p_stat}"
 
     targets = await admin_db.get_notification_targets(loc_id)
 
@@ -597,7 +545,12 @@ async def process_booking_order_final(user, chat_id, state, bot):
 
             pass
 
-    await bot.send_message(chat_id, f'✅ <b>ДЯКУЄМО! ЗАПИТ ПЕРЕДАНО АДМІНІСТРАТОРУ.</b>\n\nМи чекаємо на вас у <b>{loc_name}</b>.' if targets else '🕓 <b>ЗАПИТ ЗБЕРЕЖЕНО.</b>\n\nНаразі немає доступних адміністраторів на зміні.', reply_markup=kb.get_main_menu(is_admin), parse_mode='HTML')
+    reply_markup = kb.get_main_menu(is_admin)
+    user_text = '✅ <b>ЗАМОВЛЕННЯ ПЕРЕДАНО АДМІНІСТРАТОРУ.</b>'
+    if is_house and payment_mode == 'pay_at_checkout':
+        user_text += f'\n\nВаш столик: <b>{data.get("table_number")}</b>\nСума: <b>{total_uah} грн</b>\nОплата на касі.'
+
+    await bot.send_message(chat_id, user_text, reply_markup=reply_markup, parse_mode='HTML')
 
     await state.clear()
 

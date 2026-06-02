@@ -39,7 +39,7 @@ window.fetchMedelinData = async function (key) {
 
             if (response.ok) {
                 const data = await response.json();
-                if (Array.isArray(data) && data.length > 0) {
+                if (Array.isArray(data)) {
                     return data;
                 }
             }
@@ -330,16 +330,6 @@ window.closePopup = closePopup;
         if (action === 'close-checkout-modal') {
             stop();
             if (typeof window.closeCheckoutModal === 'function') window.closeCheckoutModal();
-            return;
-        }
-        if (action === 'close-booking-modal') {
-            stop();
-            if (typeof window.closeBookingModal === 'function') window.closeBookingModal();
-            return;
-        }
-        if (action === 'open-booking-wizard') {
-            stop();
-            if (typeof window.openBookingWizard === 'function') window.openBookingWizard(event);
             return;
         }
         if (action === 'close-popup') {
@@ -1071,131 +1061,6 @@ window.submitCheckout = function (method) {
                 btn.textContent = 'Спробувати ще раз';
             }
         });
-};
-
-window.openBookingWizard = function (e) {
-    if (e) e.preventDefault();
-    let container = document.getElementById('booking-modal-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'booking-modal-container';
-        document.body.appendChild(container);
-    }
-    const userData = window.getUserData();
-    container.innerHTML = `
-    <div class="booking-modal__overlay" data-action="close-booking-modal"></div>
-    <div class="booking-modal__content checkout-modal">
-        <button class="booking-modal__close" type="button" data-action="close-booking-modal"><i class="fas fa-times"></i></button>
-        <h3 class="checkout-modal__title">Бронювання столика</h3>
-        <form id="booking-form" class="booking-modal__form">
-            <div class="form-group">
-                <label class="form-label">Ваше ім'я</label>
-                <input type="text" name="name" placeholder="Як до вас звертатися?" value="${userData.name || ''}" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Телефон</label>
-                <input type="tel" name="phone" placeholder="+380..." value="${userData.phone || ''}" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Telegram (@username) — опційно</label>
-                <input type="text" name="tg" placeholder="Telegram (@username)" value="${userData.tg || ''}">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Оберіть локацію</label>
-                <select name="location_id" id="book_loc" required>
-                    <option value="" disabled selected>Завантаження...</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Дата візиту</label>
-                <input type="date" name="date" required min="${new Date().toISOString().split('T')[0]}">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Час</label>
-                <input type="time" name="time" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Кількість гостей</label>
-                <input type="number" name="guests" min="1" max="20" value="2" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Побажання (опційно)</label>
-                <textarea name="wishes" placeholder="Наприклад: біля вікна" rows="2"></textarea>
-            </div>
-            <button type="submit" class="btn--checkout" style="margin-top: 1rem;">Забронювати</button>
-        </form>
-    </div>`;
-    container.classList.add('booking-modal--active');
-    document.body.classList.add('body--scroll-locked');
-    (async () => {
-        const locs = await window.loadMedelinData('locations');
-        const sel = document.getElementById('book_loc');
-        const submitBtn = document.querySelector('#booking-form button[type="submit"]');
-        if (!sel) return;
-
-        if (locs.length > 0) {
-            sel.innerHTML = `<option value="" disabled selected>Оберіть кав'ярню…</option>${locs
-                .map((l) => `<option value="${l._id}">${l.name}</option>`)
-                .join('')}`;
-            sel.disabled = false;
-            if (submitBtn) submitBtn.disabled = false;
-        } else {
-            sel.innerHTML = '<option value="" disabled selected>Локації недоступні</option>';
-            sel.disabled = true;
-            if (submitBtn) submitBtn.disabled = true;
-        }
-    })();
-    document.getElementById('booking-form').onsubmit = function (ev) {
-        ev.preventDefault();
-        const fd = new FormData(this);
-        const btn = this.querySelector('button[type="submit"]');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обробка...';
-        const data = {
-            location: fd.get('location_id'),
-            date: fd.get('date'),
-            time: fd.get('time'),
-            guests: String(fd.get('guests')),
-            name: fd.get('name'),
-            phone: fd.get('phone'),
-            tg: fd.get('tg'),
-            wishes: fd.get('wishes'),
-        };
-        window.setUserData({ name: data.name, phone: data.phone, tg: data.tg });
-        fetch(`${window.API_BASE_URL}/api/booking`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        })
-            .then((r) => r.json())
-            .then((res) => {
-                if (res.status === 'ok') {
-                    window.showToast('Бронювання прийнято!', 'success');
-                    window.closeBookingModal();
-                } else {
-                    let errorMsg = res.detail;
-                    if (typeof errorMsg === 'object') {
-                        errorMsg = JSON.stringify(errorMsg);
-                    }
-                    window.showToast('Помилка: ' + (errorMsg || 'невідома помилка'), 'error');
-                    btn.disabled = false;
-                    btn.textContent = 'Забронювати';
-                }
-            })
-            .catch(() => {
-                window.showToast("Помилка з'єднання", 'error');
-                btn.disabled = false;
-                btn.textContent = 'Забронювати';
-            });
-    };
-};
-
-window.closeBookingModal = function () {
-    const c = document.getElementById('booking-modal-container');
-    if (c) {
-        c.classList.remove('booking-modal--active');
-        document.body.classList.remove('body--scroll-locked');
-    }
 };
 
 document.addEventListener('DOMContentLoaded', () => {

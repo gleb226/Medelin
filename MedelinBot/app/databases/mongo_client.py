@@ -49,9 +49,7 @@ async def ensure_indexes(db: AsyncIOMotorDatabase):
         await db.admins.create_index('user_id', unique=True)
         await db.orders.create_index('order_id', unique=True)
         await db.orders.create_index('created_at')
-        await db.active_bookings.create_index('order_id', unique=True)
         await db.active_orders.create_index('order_id', unique=True)
-        await db.guest_messages.create_index([('phone_digits', 1), ('created_at', -1)])
     except Exception as e:
         logger.error(f'Error ensuring indexes: {e}')
 
