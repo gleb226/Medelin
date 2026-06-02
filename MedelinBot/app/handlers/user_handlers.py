@@ -62,7 +62,13 @@ class CoffeeBeanStates(StatesGroup):
     entering_np_city = State()
 
     entering_np_warehouse = State()
+    
+    choosing_payment_method = State()
+
     entering_wishes = State()
+
+    entering_fullname = State()
+
     entering_phone = State()
 
 @user_router.message(F.text == '🏠 НА ГОЛОВНУ')
@@ -650,376 +656,172 @@ async def beans_back(callback: CallbackQuery, state: FSMContext):
     await state.set_state(CoffeeBeanStates.choosing_beans)
 
 @user_router.callback_query(F.data.startswith('bean_w_'), CoffeeBeanStates.choosing_weight)
-
 async def beans_weight(callback: CallbackQuery, state: FSMContext):
-
     weight = callback.data.replace('bean_w_', '', 1)
-
-    await state.update_data(weight=weight)
-
-    await safe_edit_message(callback.message, '🚚 <b>ОБЕРІТЬ СПОСІБ ОТРИМАННЯ:</b>', reply_markup=kb.get_beans_delivery_kb(), parse_mode='HTML')
-
-    await state.set_state(CoffeeBeanStates.choosing_delivery_type)
-
-@user_router.callback_query(F.data == 'bean_del_pickup', CoffeeBeanStates.choosing_delivery_type)
-
-async def beans_del_pickup(callback: CallbackQuery, state: FSMContext):
-
-    await state.update_data(delivery_type='pickup')
-
-    text = '📍 <b>ОБЕРІТЬ ЗАКЛАД ДЛЯ САМОВИВОЗУ:</b>'
-
-    reply_markup = await kb.get_locations_kb()
-
-    await safe_edit_message(callback.message, text, reply_markup=reply_markup, parse_mode='HTML')
-
-    await state.set_state(CoffeeBeanStates.choosing_location)
+    await state.update_data(weight=weight, delivery_type='nova_poshta')
+    
+    text = (
+        "🏙 <b>ВВЕДІТЬ НАЗВУ МІСТА</b>\n"
+        "Або надішліть вашу <b>геолокацію</b> 📍 за допомогою кнопки нижче, щоб знайти найближчі до вас відділення:"
+    )
+    await safe_edit_message(callback.message, text, parse_mode='HTML')
+    await callback.message.answer("Оберіть дію:", reply_markup=kb.get_location_request_kb())
+    await state.set_state(CoffeeBeanStates.entering_np_city)
 
 @user_router.callback_query(F.data == 'bean_del_np', CoffeeBeanStates.choosing_delivery_type)
-
 @user_router.callback_query(F.data == 'bean_del_np', CoffeeBeanStates.entering_np_city)
-
 @user_router.callback_query(F.data == 'bean_del_np', CoffeeBeanStates.entering_np_warehouse)
-
 async def beans_del_np(callback: CallbackQuery, state: FSMContext):
-
     await state.update_data(delivery_type='nova_poshta')
-
     text = (
-
         "🏙 <b>ВВЕДІТЬ НАЗВУ МІСТА</b>\n"
-
         "Або надішліть вашу <b>геолокацію</b> 📍 за допомогою кнопки нижче, щоб знайти найближчі до вас відділення:"
-
     )
-
     await safe_edit_message(callback.message, text, parse_mode='HTML')
-
     await callback.message.answer("Оберіть дію:", reply_markup=kb.get_location_request_kb())
-
     await state.set_state(CoffeeBeanStates.entering_np_city)
 
 @user_router.message(F.location, CoffeeBeanStates.entering_np_city)
-
 async def beans_np_location_received(message: Message, state: FSMContext):
-
     lat, lon = message.location.latitude, message.location.longitude
-
     await message.answer("🔍 Пошук найближчих відділень...", reply_markup=kb.get_main_menu(await admin_db.is_admin(message.from_user.id)))
-
     from api import get_np_cities, get_np_warehouses
-
     async def get_city_name(la, lo):
-
         import aiohttp
-
         try:
-
             url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={la}&lon={lo}&zoom=10&accept-language=uk"
-
             headers = {'User-Agent': 'MedelinBot/1.0'}
-
             async with aiohttp.ClientSession() as session:
-
                 async with session.get(url, headers=headers, timeout=5) as resp:
-
                     if resp.status == 200:
-
                         d = await resp.json()
-
                         addr = d.get('address', {})
-
                         return addr.get('city') or addr.get('town') or addr.get('village') or addr.get('suburb') or addr.get('county')
-
         except: pass
-
         return None
 
     city_name_raw = await get_city_name(lat, lon)
-
     if not city_name_raw:
-
         await message.answer("❌ Не вдалося автоматично визначити місто. Будь ласка, введіть назву міста вручну:")
-
         return
 
     city_name = city_name_raw.split(',')[0].replace('місто ', '').replace('м. ', '').strip()
-
     cities = await get_np_cities(city_name)
-
     if not cities:
-
         await message.answer(f"❌ Місто '{city_name}' не знайдено у базі Нової Пошти. Введіть назву вручну:")
-
         return
 
     city = cities[0]
-
     city_ref = city.get('Ref', '') or city.get('DeliveryCity', '')
-
     city_present = city.get('Present', city_name)
-
     await state.update_data(np_city_ref=city_ref, np_city_name=city_present)
-
     warehouses = await get_np_warehouses(city_ref, None, None)
-
     if not warehouses:
-
         await message.answer(f"❌ У місті {city_present} не знайдено відділень.")
-
         return
 
     import math
-
     def dist(la1, lo1, la2, lo2):
-
         try:
-
             la1, lo1, la2, lo2 = float(la1), float(lo1), float(la2), float(lo2)
-
             return math.sqrt((la1-la2)**2 + (lo1-lo2)**2)
-
         except: return 999999
 
     valid_warehouses = [w for w in warehouses if w.get('Latitude') and w.get('Longitude')]
-
     other_warehouses = [w for w in warehouses if not (w.get('Latitude') and w.get('Longitude'))]
-
     valid_warehouses.sort(key=lambda w: dist(lat, lon, w.get('Latitude', 0), w.get('Longitude', 0)))
-
     sorted_warehouses = valid_warehouses + other_warehouses
-
     await state.update_data(np_warehouses_cache=sorted_warehouses[:50])
-
     text = f"🏢 <b>НАЙБЛИЖЧІ ВІДДІЛЕННЯ У МІСТІ {city_present.upper()}:</b>\nОберіть потрібне зі списку:"
-
     markup = kb.get_np_warehouses_kb(sorted_warehouses, page=0)
-
     await message.answer(text, reply_markup=markup, parse_mode='HTML')
-
     await state.set_state(CoffeeBeanStates.entering_np_warehouse)
 
 @user_router.message(CoffeeBeanStates.entering_np_city)
-
 async def beans_np_city_search(message: Message, state: FSMContext):
-
     city_query = message.text.strip()
-
     if len(city_query) < 2:
-
         await message.answer('Мінімальна довжина запиту — 2 символи.')
-
         return
-
     from api import get_np_cities
-
     cities = await get_np_cities(city_query)
-
     if not cities:
-
         await message.answer('❌ Місто не знайдено. Спробуйте іншу назву:')
-
         return
-
     if len(cities) == 1:
-
         city = cities[0]
-
         city_ref = city.get('DeliveryCity') or city.get('Ref')
-
         city_name = city.get('Present') or city.get('MainDescription')
-
         await state.update_data(np_city_ref=city_ref, np_city_name=city_name)
-
         await _show_np_warehouses(message, state, city_ref, city_name)
-
     else:
-
         await message.answer('🏙 <b>Оберіть місто зі списку:</b>', reply_markup=kb.get_np_cities_kb(cities), parse_mode='HTML')
 
 @user_router.callback_query(F.data.startswith('np_city_'), CoffeeBeanStates.entering_np_city)
-
 async def beans_np_city_selected(callback: CallbackQuery, state: FSMContext):
-
     city_ref = callback.data.replace('np_city_', '')
-
     city_name = "Обране місто"
-
     for row in callback.message.reply_markup.inline_keyboard:
-
         for button in row:
-
             if button.callback_data == callback.data:
-
                 city_name = button.text
-
                 break
-
     await state.update_data(np_city_ref=city_ref, np_city_name=city_name)
-
     await _show_np_warehouses(callback, state, city_ref, city_name)
 
 async def _show_np_warehouses(target, state: FSMContext, city_ref: str, city_name: str, page: int = 0):
-
     from api import get_np_warehouses
-
     warehouses = await get_np_warehouses(city_ref)
-
     if not warehouses:
-
         text = f"❌ У місті {city_name} не знайдено відділень. Спробуйте інше місто."
-
         if isinstance(target, CallbackQuery):
-
             await safe_edit_message(target.message, text, reply_markup=kb.get_beans_delivery_kb(), parse_mode='HTML')
-
         else:
-
             await target.answer(text, reply_markup=kb.get_beans_delivery_kb(), parse_mode='HTML')
-
         await state.set_state(CoffeeBeanStates.choosing_delivery_type)
-
         return
-
     await state.update_data(np_warehouses_cache=warehouses)
-
     text = f"🏢 <b>ОБЕРІТЬ ВІДДІЛЕННЯ У МІСТІ {city_name.upper()}:</b>"
-
     markup = kb.get_np_warehouses_kb(warehouses, page=page)
-
     if isinstance(target, CallbackQuery):
-
         await safe_edit_message(target.message, text, reply_markup=markup, parse_mode='HTML')
-
     else:
-
         await target.answer(text, reply_markup=markup, parse_mode='HTML')
-
     await state.set_state(CoffeeBeanStates.entering_np_warehouse)
 
 @user_router.message(CoffeeBeanStates.entering_np_warehouse)
-
-async def beans_np_warehouse_text(message: Message, state: FSMContext, bot: Bot):
-
-    query = message.text.strip()
-
-    data = await state.get_data()
-
-    city_ref = data.get('np_city_ref')
-
-    city_name = data.get('np_city_name', 'місті')
-
-    if query == '🏠 НА ГОЛОВНУ':
-
-        await back_to_main(message, state)
-
-        return
-
-    from api import get_np_warehouses
-
-    warehouses = await get_np_warehouses(city_ref, None, query)
-
-    if not warehouses:
-
-        await message.answer(f"❌ За запитом '{query}' нічого не знайдено у {city_name}. Спробуйте ще раз або оберіть зі списку:")
-
-        return
-
-    await state.update_data(np_warehouses_cache=warehouses)
-
-    text = f"🔎 <b>РЕЗУЛЬТАТИ ПОШУКУ У {city_name.upper()}:</b>\nЗнайдено: {len(warehouses)}"
-
-    markup = kb.get_np_warehouses_kb(warehouses, page=0)
-
-    await message.answer(text, reply_markup=markup, parse_mode='HTML')
-
-@user_router.callback_query(F.data.startswith('np_wh_page_'), CoffeeBeanStates.entering_np_warehouse)
-
-async def beans_np_wh_pagination(callback: CallbackQuery, state: FSMContext):
-
-    page = int(callback.data.replace('np_wh_page_', ''))
-
-    data = await state.get_data()
-
-    warehouses = data.get('np_warehouses_cache', [])
-
-    city_name = data.get('np_city_name', 'місті')
-
-    markup = kb.get_np_warehouses_kb(warehouses, page=page)
-
-    await safe_edit_message(callback.message, f"🏢 <b>ОБЕРІТЬ ВІДДІЛЕННЯ У МІСТІ {city_name.upper()}:</b>", reply_markup=markup, parse_mode='HTML')
+async def beans_np_warehouse_text(message: Message, state: FSMContext):
+    warehouse = message.text.strip()
+    await state.update_data(np_warehouse=warehouse)
+    await ask_payment_beans(message, state)
 
 @user_router.callback_query(F.data.startswith('np_wh_'), CoffeeBeanStates.entering_np_warehouse)
-
-async def beans_np_warehouse_selected(callback: CallbackQuery, state: FSMContext, bot: Bot):
-
+async def beans_np_warehouse_selected(callback: CallbackQuery, state: FSMContext):
     wh_ref = callback.data.replace('np_wh_', '')
-
     data = await state.get_data()
-
     warehouses = data.get('np_warehouses_cache', [])
-
     warehouse_name = "Обране відділення"
-
     for wh in warehouses:
-
         if wh.get('Ref') == wh_ref:
-
             warehouse_name = wh.get('Description')
-
             break
-
     await state.update_data(np_warehouse=warehouse_name)
+    await ask_payment_beans(callback, state)
 
+async def ask_payment_beans(target, state: FSMContext):
+    text = '💳 <b>ОБЕРІТЬ СПОСІБ ОПЛАТИ:</b>'
+    reply_markup = kb.get_beans_payment_kb()
+    if isinstance(target, CallbackQuery):
+        await safe_edit_message(target.message, text, reply_markup=reply_markup, parse_mode='HTML')
+    else:
+        await target.answer(text, reply_markup=reply_markup, parse_mode='HTML')
+    await state.set_state(CoffeeBeanStates.choosing_payment_method)
+
+@user_router.callback_query(F.data.startswith('bean_pay_'), CoffeeBeanStates.choosing_payment_method)
+async def beans_payment_selected(callback: CallbackQuery, state: FSMContext):
+    pay_method = callback.data.replace('bean_pay_', '')
+    await state.update_data(payment_method=pay_method)
     await ask_wishes_beans(callback, state)
-
-@user_router.message(CoffeeBeanStates.entering_np_warehouse)
-
-async def beans_np_warehouse_text(message: Message, state: FSMContext, bot: Bot):
-
-    warehouse = message.text.strip()
-
-    await state.update_data(np_warehouse=warehouse)
-
-    await ask_wishes_beans(message, state)
-
-@user_router.callback_query(F.data.startswith('loc_'), CoffeeBeanStates.choosing_location)
-
-async def beans_location(callback: CallbackQuery, state: FSMContext, bot: Bot):
-
-    loc_id = callback.data.split('_')[1]
-
-    await state.update_data(location_id=loc_id)
-
-    await ask_wishes_beans(callback, state)
-
-@user_router.message(CoffeeBeanStates.entering_phone)
-
-async def beans_phone(message: Message, state: FSMContext, bot: Bot):
-
-    if message.text == '🏠 НА ГОЛОВНУ':
-
-        await back_to_main(message, state)
-
-        return
-
-    phone = message.contact.phone_number if message.contact else (message.text or '').strip()
-
-    if len(''.join((ch for ch in phone if ch.isdigit()))) < 10:
-
-        await message.answer('❌ <b>НЕКОРЕКТНИЙ ТЕЛЕФОН.</b>\nСпробуйте ще раз у форматі +380...', parse_mode='HTML')
-
-        return
-
-    await state.update_data(phone=phone)
-
-    await user_db.set_phone(message.from_user.id, phone)
-
-    is_admin = await admin_db.is_admin(message.from_user.id)
-
-    await message.answer('✅ Телефон збережено.', reply_markup=kb.get_main_menu(is_admin))
-
-    await send_beans_invoice(message.from_user, message.chat.id, state, bot)
 
 async def ask_wishes_beans(target, state: FSMContext):
     text = '💬 <b>ПОБАЖАННЯ АБО УТОЧНЕННЯ ДО ЗАМОВЛЕННЯ (або "ні"):</b>'
@@ -1030,122 +832,51 @@ async def ask_wishes_beans(target, state: FSMContext):
     await state.set_state(CoffeeBeanStates.entering_wishes)
 
 @user_router.message(CoffeeBeanStates.entering_wishes)
-async def beans_wishes_entered(message: Message, state: FSMContext, bot: Bot):
+async def beans_wishes_entered(message: Message, state: FSMContext):
     wishes_raw = (message.text or '').strip()
-    wishes = '' if wishes_raw.lower() in ('ні', 'нет', 'no', '-', '—') else wishes_raw
+    wishes = '—' if wishes_raw.lower() in ('ні', 'нет', 'no', '-', '—') else wishes_raw
     await state.update_data(wishes=wishes)
-    
+    await ask_name_beans(message, state)
+
+async def ask_name_beans(target, state: FSMContext):
+    text = '👤 <b>ЯК ВАС ЗВАТИ?</b>'
+    if isinstance(target, CallbackQuery):
+        await target.message.answer(text, parse_mode='HTML')
+    else:
+        await target.answer(text, parse_mode='HTML')
+    await state.set_state(CoffeeBeanStates.entering_fullname)
+
+@user_router.message(CoffeeBeanStates.entering_fullname)
+async def beans_fullname(message: Message, state: FSMContext, bot: Bot):
+    await state.update_data(fullname=message.text.strip())
     phone = await user_db.get_phone(message.from_user.id)
     if phone:
         await state.update_data(phone=phone)
         await send_beans_invoice(message.from_user, message.chat.id, state, bot)
         return
-
     await message.answer('☎️ <b>ВКАЖІТЬ ВАШ ТЕЛЕФОН:</b>\n\nНатисніть кнопку нижче або введіть вручну (+380...):', reply_markup=kb.get_phone_kb(), parse_mode='HTML')
     await state.set_state(CoffeeBeanStates.entering_phone)
 
+@user_router.message(CoffeeBeanStates.entering_phone)
+async def beans_phone(message: Message, state: FSMContext, bot: Bot):
+    phone = message.contact.phone_number if message.contact else (message.text or '').strip()
+    if len(''.join((ch for ch in phone if ch.isdigit()))) < 10:
+        await message.answer('❌ <b>НЕКОРЕКТНИЙ ТЕЛЕФОН.</b>\nСпробуйте ще раз у форматі +380...', parse_mode='HTML')
+        return
+    await state.update_data(phone=phone)
+    await user_db.set_phone(message.from_user.id, phone)
+    await send_beans_invoice(message.from_user, message.chat.id, state, bot)
+
 @user_router.callback_query(F.data == 'back_main_menu_only')
-
 async def back_to_main_cb(callback: CallbackQuery, state: FSMContext):
-
     await state.clear()
-
     is_admin = await admin_db.is_admin(callback.from_user.id)
-
-    try:
-
-        await callback.message.delete()
-
-    except Exception:
-
-        pass
-
-    await callback.message.answer('☕️ <b>ГОЛОВНЕ МЕНЮ</b>', reply_markup=kb.get_main_menu(is_admin), parse_mode='HTML')
-
+    try: await callback.message.delete()
+    except: pass
+    await callback.message.answer('<i class="fas fa-coffee"></i> <b>ГОЛОВНЕ МЕНЮ</b>', reply_markup=kb.get_main_menu(is_admin), parse_mode='HTML')
     await callback.answer()
 
 async def back_to_main(message: Message, state: FSMContext):
-
     await state.clear()
-
     is_admin = await admin_db.is_admin(message.from_user.id)
-
-    await message.answer('☕️ <b>ГОЛОВНЕ МЕНЮ</b>', reply_markup=kb.get_main_menu(is_admin), parse_mode='HTML')
-
-class GuestStates(StatesGroup):
-    contacting_us = State()
-    replying_to_admin = State()
-
-@user_router.callback_query(F.data == 'contact_us_msg')
-async def contact_us_start(callback: CallbackQuery, state: FSMContext):
-    await state.set_state(GuestStates.contacting_us)
-    from app.utils.message_utils import safe_edit_message
-    await safe_edit_message(callback.message, '📝 <b>ЗВ\'ЯЗОК З АДМІНІСТРАЦІЄЮ</b>\n\nВведіть ваше повідомлення або запитання нижче:', parse_mode='HTML')
-
-@user_router.message(GuestStates.contacting_us)
-async def contact_us_send(message: Message, state: FSMContext, bot: Bot):
-    await state.clear()
-    msg_text = message.text
-    user_name = message.from_user.full_name
-    uid = message.from_user.id
-    username = message.from_user.username
-    user_link = f'@{username}' if username else f'<a href="tg://user?id={uid}">{user_name}</a>'
-    
-    from app.databases.mongo_client import get_db
-    db = await get_db()
-    cur = db.admins.find({'role': {'$in': ['super', 'boss', 'owner', 'developer']}})
-    rows = await cur.to_list(length=None)
-    targets = {int(r['user_id']) for r in rows}
-    
-    admin_msg = f'📩 <b>НОВЕ ПОВІДОМЛЕННЯ ВІД КОРИСТУВАЧА</b>\n\n👤 Від: {user_link}\n💬 <b>Текст:</b>\n{msg_text}'
-    
-    # Зберігаємо в БД
-    from app.databases.guest_messages_database import guest_messages_db
-    phone = await user_db.get_phone(uid)
-    await guest_messages_db.add_message(order_id=None, phone=phone, source='guest', text=msg_text)
-
-    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='💬 ВІДПОВІСТИ', callback_data=f'adm_msg_{uid}_none')]])
-    
-    for aid in targets:
-        try:
-            await bot.send_message(aid, admin_msg, parse_mode='HTML', reply_markup=markup)
-        except: pass
-        
-    is_admin = await admin_db.is_admin(uid)
-    await message.answer('✅ <b>Ваше повідомлення надіслано!</b> Адміністратор відповість вам найближчим часом.', parse_mode='HTML', reply_markup=kb.get_main_menu(is_admin))
-
-@user_router.callback_query(F.data.startswith('guest_reply_to_admin_'))
-async def guest_reply_start(callback: CallbackQuery, state: FSMContext):
-    parts = callback.data.split('_')
-    # guest_reply_to_admin_{admin_id}_{oid}
-    admin_id = parts[4]
-    oid = parts[5]
-    await state.update_data(reply_admin_id=admin_id, reply_oid=oid)
-    await state.set_state(GuestStates.replying_to_admin)
-    await callback.message.answer('📝 Введіть текст вашої відповіді:')
-    await callback.answer()
-
-@user_router.message(GuestStates.replying_to_admin)
-async def guest_reply_send(message: Message, state: FSMContext, bot: Bot):
-    data = await state.get_data()
-    admin_id = data.get('reply_admin_id')
-    oid = data.get('reply_oid')
-    await state.clear()
-    
-    user_name = message.from_user.full_name
-    uid = message.from_user.id
-    username = message.from_user.username
-    user_link = f'@{username}' if username else f'<a href="tg://user?id={uid}">{user_name}</a>'
-    
-    order_info = f" (Замовлення #{oid[-6:] if oid != 'none' else '—'})" if oid != 'none' else ""
-    admin_msg = f'📩 <b>ВІДПОВІДЬ ВІД КОРИСТУВАЧА</b>{order_info}\n\n👤 Від: {user_link}\n💬 <b>Текст:</b>\n{message.text}'
-    
-    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='💬 ВІДПОВІСТИ', callback_data=f'adm_msg_{uid}_{oid}')]])
-    
-    try:
-        await bot.send_message(int(admin_id), admin_msg, parse_mode='HTML', reply_markup=markup)
-        await message.answer('✅ Відповідь надіслано.')
-    except Exception as e:
-        from app.utils.admin_notifications import send_developer_error
-        await send_developer_error(f"Error sending guest reply to admin {admin_id}: {str(e)}")
-        await message.answer('❌ Не вдалося надіслати відповідь.')
+    await message.answer('<i class="fas fa-coffee"></i> <b>ГОЛОВНЕ МЕНЮ</b>', reply_markup=kb.get_main_menu(is_admin), parse_mode='HTML')

@@ -322,8 +322,15 @@ def get_beans_weight_kb():
 
 def get_beans_delivery_kb():
     keyboard = [
-        [InlineKeyboardButton(text='🏬 САМОВИВІЗ З КАВ\'ЯРНІ', callback_data='bean_del_pickup')],
         [InlineKeyboardButton(text='🚚 НОВА ПОШТА', callback_data='bean_del_np')],
+        [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='bean_back')]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def get_beans_payment_kb():
+    keyboard = [
+        [InlineKeyboardButton(text='💳 ОПЛАТИТИ ЗАРАЗ', callback_data='bean_pay_card')],
+        [InlineKeyboardButton(text='📦 НАКЛАДЕНИЙ ПЛАТІЖ', callback_data='bean_pay_cash')],
         [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='bean_back')]
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
@@ -398,7 +405,6 @@ async def get_contact_kb():
         InlineKeyboardButton(text='✉️ EMAIL', callback_data='contact_email')
     ])
     keyboard.append([
-        InlineKeyboardButton(text='💬 НАПИСАТИ НАМ', callback_data='contact_us_msg'),
         InlineKeyboardButton(text='🏠 НА ГОЛОВНУ', callback_data='back_main_menu_only')
     ])
 

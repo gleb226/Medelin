@@ -260,9 +260,6 @@ async def _ensure_phone_and_run(target, state: FSMContext, user, action):
 
     data = await state.get_data()
     
-    # Визначаємо, чи потрібен телефон. 
-    # Телефон потрібен для замовлення зерен (доставка) або бронювання.
-    # Для звичайного замовлення в закладі/на виніс — ні.
     order_type = data.get('order_type', '')
     needs_phone = order_type in ('beans_delivery', 'beans_booking', 'order_with_booking') or data.get('booking_mode')
 
@@ -366,7 +363,6 @@ async def send_order_invoice(user, chat_id, state, bot_unused=None):
         freq[i] = freq.get(i, 0) + 1
 
     for display_name, count in freq.items():
-        # ... (rest of parsing logic) ...
         pure_name = display_name
         embedded_price = None
         if ' [' in display_name and display_name.endswith(']'):
@@ -406,10 +402,8 @@ async def send_order_invoice(user, chat_id, state, bot_unused=None):
     pay_id = f'{p_type}_{user.id}_{int(time.time())}'
     await state.update_data(pay_id=pay_id)
     
-    # Створюємо замовлення в БД перед оплатою, щоб отримати ID
     loc_id = data['location_id']
     
-    # Формуємо рядок кошика з цінами
     cart_items_with_prices = []
     total_uah = 0
     for display_name in data['cart']:
@@ -480,12 +474,7 @@ async def send_beans_invoice(user, chat_id, state, bot):
     weight = int(str(data.get('weight') or '250'))
     total = int(base) if weight == 250 else int(base * (weight / 250) * (0.95 if weight == 500 else 0.9))
 
-    pay_id = f'beans_{user.id}_{int(time.time())}'
-    await state.update_data(pay_id=pay_id)
-    name = str(data.get('bean_name') or '')
-
-    # Створюємо замовлення перед оплатою на сайті
-    loc_id = data.get('location_id')
+    pay_method = data.get('payment_method', 'card')
     is_np = data.get('delivery_type') == 'nova_poshta'
     np_info = f"НП: {data.get('np_city_name')}, {data.get('np_warehouse')}" if is_np else "САМОВИВІЗ"
     time_info = 'НОВА ПОШТА' if is_np else 'БРОНЬ 2 ДНІ'
@@ -496,13 +485,19 @@ async def send_beans_invoice(user, chat_id, state, bot):
     if wishes:
         wishes_str += f"\nПОБАЖАННЯ: {wishes}"
 
+    fullname = data.get('fullname') or user.full_name
+
     rid = await orders_db.add_order(
-        user.id, user.username, user.full_name, data.get('phone', '—'), 
-        loc_id or "NP", time_info, '0', wishes_str, 
-        f"ЗЕРНА: {name}", order_type,
-        payment_mode='pay_now',
+        user.id, user.username, fullname, data.get('phone', '—'), 
+        data.get('location_id') or "NP", time_info, '0', wishes_str, 
+        f"ЗЕРНА: {data['bean_name']}", order_type,
+        payment_mode='pay_now' if pay_method == 'card' else 'pay_on_delivery',
         total_amount=total
     )
+
+    if pay_method == 'cash':
+        await process_beans_final(user, chat_id, state, bot, order_id=rid)
+        return
 
     from app.common.config import WEB_APP_URL
     payment_url = f"{WEB_APP_URL}/index.html?order_id={rid}"
@@ -514,7 +509,7 @@ async def send_beans_invoice(user, chat_id, state, bot):
 
     await bot.send_message(
         chat_id, 
-        f"<b>💳 ОПЛАТА КАВИ</b>\n\n<b>Сорт:</b> {name}\n<b>Вага:</b> {weight}г\n<b>Сума:</b> {total} ₴\n\nБудь ласка, натисніть кнопку нижче, щоб обрати спосіб оплати та завершити замовлення:",
+        f"<b>💳 ОПЛАТА КАВИ</b>\n\n<b>Сорт:</b> {data['bean_name']}\n<b>Вага:</b> {weight}г\n<b>Сума:</b> {total} ₴\n\nБудь ласка, натисніть кнопку нижче, щоб обрати спосіб оплати та завершити замовлення:",
         reply_markup=kb_pay,
         parse_mode='HTML'
     )
@@ -606,7 +601,7 @@ async def process_booking_order_final(user, chat_id, state, bot):
 
     await state.clear()
 
-async def process_beans_final(user, chat_id, state, bot):
+async def process_beans_final(user, chat_id, state, bot, order_id=None):
 
     data = await state.get_data()
 
@@ -628,11 +623,25 @@ async def process_beans_final(user, chat_id, state, bot):
         wishes_str += f"\nПОБАЖАННЯ: {wishes}"
 
     phone = data.get('phone') or '—'
-    rid = await orders_db.add_order(user.id, user.username, user.full_name, phone, loc_id or "NP", time_info, '0', wishes_str, f"ЗЕРНА: {data['bean_name']}", order_type)
+    fullname = data.get('fullname') or user.full_name
+    
+    pay_method = data.get('payment_method', 'card')
 
-    await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
+    if order_id:
+        rid = order_id
+    else:
+        rid = await orders_db.add_order(user.id, user.username, fullname, phone, loc_id or "NP", time_info, '0', wishes_str, f"ЗЕРНА: {data['bean_name']}", order_type)
 
-    await active_orders_db.add_active_order(rid, user.id, user.full_name, phone, loc_id or "NP", data['bean_name'], order_type)
+    if pay_method == 'card':
+        await orders_db.set_payment_id(rid, data.get('payment_charge_id'), data.get('provider_payment_charge_id'))
+
+    await active_orders_db.add_active_order(
+        rid, user.id, fullname, phone, loc_id or "NP", 
+        data['bean_name'], order_type, 
+        total=data.get('total_amount', 0), 
+        payment_mode='pay_now' if pay_method == 'card' else 'pay_on_delivery', 
+        wishes=wishes_str
+    )
 
     loc_name = "НОВА ПОШТА"
     delivery_line = ""
@@ -645,7 +654,7 @@ async def process_beans_final(user, chat_id, state, bot):
         delivery_line = f"🏛 <b>ОТРИМАННЯ:</b> {loc_name}\n"
 
     msg = f"☕️ <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n"
-    msg += f"👤 <b>КЛІЄНТ:</b> {user.full_name}\n"
+    msg += f"👤 <b>КЛІЄНТ:</b> {fullname}\n"
     if phone and phone != '—':
         msg += f"📞 <b>ТЕЛЕФОН:</b> <code>{phone}</code>\n"
     
@@ -656,38 +665,23 @@ async def process_beans_final(user, chat_id, state, bot):
         import html
         msg += f"💬 <b>ПОБАЖАННЯ:</b> {html.escape(wishes)}\n"
         
-    msg += f"💰 <b>СТАТУС:</b> ОПЛАЧЕНО"
+    p_status = '💰 <b>СТАТУС:</b> ОПЛАЧЕНО' if pay_method == 'card' else '📦 <b>ОПЛАТА:</b> НАКЛАДЕНИЙ ПЛАТІЖ'
+    msg += f"\n{p_status}"
 
     targets = set()
-    # ... rest remains same ...
-
-    targets = set()
-
     if is_np:
-
         db = await get_db()
-
         cur = db.admins.find({'role': {'$in': ['delivery_manager', 'boss', 'owner', 'developer']}})
-
         rows = await cur.to_list(length=None)
-
         targets.update([int(r['user_id']) for r in rows])
-
     else:
-
         targets.update(await admin_db.get_notification_targets(loc_id))
 
     for aid in targets:
-
         try:
-
             await bot.send_message(aid, msg, reply_markup=akb.get_booking_manage_kb(rid), parse_mode='HTML')
-
             await orders_db.mark_admin_notified(rid, aid)
-
-        except:
-
-            pass
+        except: pass
 
     success_text = f'✅ <b>ДЯКУЄМО!</b> Ваше замовлення прийнято. Ми відправимо каву у м. {data.get("np_city_name")} найближчим часом.' if is_np else f'✅ <b>ДЯКУЄМО!</b> Кава чекатиме на вас у <b>{loc_name}</b> протягом 2 днів.'
 

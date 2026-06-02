@@ -707,21 +707,7 @@ window.openCheckoutModal = function () {
                         ${
                             isBeans
                                 ? `
-                            <div class="delivery-section">
-                                <p class="form-label">Спосіб отримання:</p>
-                                <select name="delivery_type" id="delivery_type" data-action="toggle-bean-delivery" required>
-                                    <option value="" disabled selected>Оберіть спосіб...</option>
-                                    <option value="pickup">Самовивіз з кав'ярні</option>
-                                    <option value="nova_poshta">Нова Пошта (по Україні)</option>
-                                </select>
-                            </div>
-
-                            <div id="pickup_location_wrap" class="delivery-section--pickup" style="display:none; margin-top: 1.5rem;">
-                                <p class="form-label">Оберіть кав'ярню:</p>
-                                <select name="location">${locOpts}</select>
-                            </div>
-
-                            <div id="np_details_wrap" class="np-container" style="display:none; margin-top: 1.5rem;">
+                            <div id="np_details_wrap" class="np-container" style="display:block; margin-top: 1.5rem;">
                                 <p class="form-label">Місто:</p>
                                 <div class="search-wrapper">
                                     <input type="text" id="np_city_search" placeholder="Введіть назву міста...">
@@ -729,6 +715,7 @@ window.openCheckoutModal = function () {
                                 </div>
                                 <input type="hidden" name="np_city_ref" id="np_city_ref">
                                 <input type="hidden" name="np_city_name" id="np_city_name">
+                                <input type="hidden" name="delivery_type" value="nova_poshta">
 
                                 <div id="np_warehouse_search_wrap" class="np-warehouse-search" style="display:none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0,0,0,0.05);">
                                     <p class="form-label">Відділення або поштомат (№ або вул):</p>

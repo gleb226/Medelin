@@ -35,11 +35,9 @@
                 overflow-x: hidden;
             }
 
-            /* Hide scrollbars globally */
             html, body { scrollbar-width: none; -ms-overflow-style: none; }
             html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
 
-            /* Login Screen Styles */
             #login-screen {
                 position: fixed; top: 0; left: 0; right: 0; bottom: 0;
                 background: var(--color-cream);
@@ -64,7 +62,6 @@
             }
             .login-input:focus { border-color: var(--color-coffee); background: #fffdfa; }
 
-            /* Verification state */
             #verify-state { display: none; }
             .verify-pulse {
                 width: 80px; height: 80px; background: var(--color-coffee-soft);
@@ -78,7 +75,6 @@
             }
             @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
 
-            /* Sidebar & Main */
             .sidebar {
                 width: var(--sidebar-width); background: var(--color-dark-brown);
                 color: white; display: flex; flex-direction: column; position: fixed; height: 100vh;
@@ -119,45 +115,27 @@
             .order-meta { color: var(--color-text-muted); font-size: 0.95rem; }
             .order-items { margin-top: 0.8rem; font-size: 1rem; color: #444; background: var(--color-coffee-soft); padding: 1rem; border-radius: 12px; }
             .order-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: flex-end; }
-            .order-info, .order-title, .order-meta, .order-items { min-width: 0; overflow-wrap: anywhere; }
+
             .admin-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
             .admin-toolbar h3 { font-family: var(--font-accent); color: var(--color-dark-brown); font-size: 1.7rem; font-weight: 400; }
             .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
             .admin-field { display: flex; flex-direction: column; gap: 0.45rem; }
-            .admin-field--full { grid-column: 1 / -1; }
             .admin-field label { font-size: 0.82rem; font-weight: 800; color: var(--color-dark-brown); }
             .admin-field input, .admin-field select, .admin-field textarea {
                 width: 100%; padding: 0.9rem 1rem; border: 2px solid var(--color-coffee-soft);
                 border-radius: 12px; font-family: var(--font-main); font-size: 0.95rem; outline: none; background: #fffdfa;
-                appearance: none;
             }
-            .admin-field input[type="number"] { -moz-appearance: textfield; }
-            .admin-field input[type="number"]::-webkit-outer-spin-button,
-            .admin-field input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-            .admin-field textarea { min-height: 96px; resize: none; }
-            .admin-field input:focus, .admin-field select:focus, .admin-field textarea:focus { border-color: var(--color-coffee); }
             .admin-modal { position: fixed; inset: 0; background: rgba(60, 47, 47, 0.38); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1rem; }
             .admin-modal--active { display: flex; }
             .admin-modal__panel { width: min(880px, 100%); max-height: min(88vh, 900px); overflow-y: auto; background: white; border-radius: var(--radius); padding: clamp(1.2rem, 3vw, 2rem); box-shadow: 0 25px 70px rgba(0,0,0,0.18); }
             .admin-modal__header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
             .admin-modal__title { font-family: var(--font-accent); color: var(--color-dark-brown); font-size: 1.9rem; font-weight: 400; }
             .admin-modal__footer { display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 1.5rem; flex-wrap: wrap; }
-            .chip-list { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-            .chip { border: 1px solid rgba(139, 94, 60, 0.22); background: var(--color-coffee-soft); color: var(--color-dark-brown); padding: 0.32rem 0.6rem; border-radius: 999px; font-size: 0.76rem; font-weight: 800; }
-
-            #chat-window { height: 500px; overflow-y: auto; padding: 1.5rem; background: #fdfcf9; border-radius: var(--radius); display: flex; flex-direction: column; gap: 1rem; border: 1px solid rgba(139, 94, 60, 0.1); }
-            .msg { max-width: 85%; padding: 1rem 1.25rem; border-radius: 20px; position: relative; font-size: 1rem; line-height: 1.5; }
-            .msg--admin { align-self: flex-end; background: var(--color-coffee); color: white; border-bottom-right-radius: 4px; }
-            .msg--guest { align-self: flex-start; background: white; color: var(--color-dark-brown); border-bottom-left-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 
             .loader-wrap { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(247, 243, 233, 0.9); display: none; justify-content: center; align-items: center; z-index: 2000; }
             .spinner { width: 60px; height: 60px; border: 6px solid rgba(139, 94, 60, 0.1); border-top-color: var(--color-coffee); border-radius: 50%; animation: spin 1s linear infinite; }
             @keyframes spin { to { transform: rotate(360deg); } }
 
-            #reply-input { flex: 1; padding: 1.2rem; border-radius: 15px; border: 2px solid var(--color-coffee-soft); font-family: var(--font-main); font-size: 1rem; outline: none; transition: border-color 0.3s; min-width: 0; }
-            #reply-input:focus { border-color: var(--color-coffee); }
-
-            /* Mobile Sidebar Toggle */
             .sidebar-toggle {
                 display: none; width: 45px; height: 45px; background: var(--color-dark-brown); color: white;
                 border-radius: 10px; align-items: center; justify-content: center; cursor: pointer; border: none;
@@ -169,72 +147,34 @@
                 .sidebar--active { transform: translateX(0); }
                 .main-content { margin-left: 0; width: 100%; padding: 1.5rem; }
                 .sidebar-toggle { display: flex; }
-
-                .header { margin-bottom: 2rem; }
-                .order-item { flex-direction: column; align-items: flex-start; }
-                .order-actions { width: 100%; justify-content: flex-start; }
-                .btn--block-mobile { width: 100%; }
-            }
-
-            @media (max-width: 600px) {
-                .login-card { padding: 2rem; border-radius: 20px; }
-                .main-content { padding: 1rem; }
-                .card { padding: 1.25rem; border-radius: 15px; }
-                .header { flex-wrap: wrap; }
-                .header__actions { width: 100%; display: flex; gap: 10px; margin-top: 1rem; }
-                .header__actions .btn { flex: 1; }
-                .order-actions .btn { flex: 1 1 140px; justify-content: center; }
-                .order-items { width: 100%; font-size: 0.92rem; line-height: 1.45; }
-                .admin-toolbar { align-items: stretch; }
-                .admin-toolbar .order-actions { width: 100%; }
-                .admin-grid { grid-template-columns: 1fr; }
-                .admin-modal__footer .btn { flex: 1; justify-content: center; }
-                #chat-window { height: 400px; padding: 1rem; }
             }
         </style>
-        </head>
-        <body>
-        <!-- Mobile Sidebar Toggle -->
+    </head>
+    <body>
         <button class="sidebar-toggle" id="menu-toggle" style="position:fixed; top:1.5rem; right:1.5rem; z-index:2100;">
             <i class="fas fa-bars"></i>
         </button>
 
-        <!-- Login Screen -->
         <div id="login-screen">
             <div class="login-card">
                 <div id="login-form">
                     <h1 class="login-logo">MEDELIN</h1>
                     <p class="login-subtitle">Admin Access</p>
-
                     <div class="input-group">
-                        <label class="input-label">Ідентифікатор (@username / телефон / ID)</label>
+                        <label class="input-label">Ідентифікатор</label>
                         <input type="text" id="login-id" class="login-input" placeholder="@uzh_boss">
                     </div>
-
                     <div class="input-group">
                         <label class="input-label">Код доступу</label>
                         <input type="password" id="login-pass" class="login-input" placeholder="••••">
                     </div>
-
-                    <button class="btn btn--primary btn--block" onclick="attemptLogin()">
-                        Увійти <i class="fas fa-arrow-right" style="margin-left:10px;"></i>
-                    </button>
+                    <button class="btn btn--primary btn--block" onclick="attemptLogin()">Увійти</button>
                 </div>
-
                 <div id="verify-state">
-                    <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown); font-size: 2rem; margin-bottom: 0.5rem;">Підтвердження</h2>
-                    <p style="font-size: 0.95rem; margin-bottom: 2rem; color: var(--color-text-muted); line-height: 1.6;">Ми надіслали запит у ваш Telegram.<br>Натисніть <b>"Підтвердити"</b> для входу.</p>
-                    
-                    <div class="verify-pulse" style="width: 100px; height: 100px; background: var(--color-coffee-soft); margin: 0 auto 2rem;">
-                        <i class="fab fa-telegram-plane" style="font-size:2.5rem; color:var(--color-coffee); filter: drop-shadow(0 4px 10px rgba(139, 94, 60, 0.2));"></i>
-                    </div>
-
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.8rem;">
-                        <div style="font-size: 0.85rem; font-weight: 800; color: var(--color-coffee); letter-spacing: 2px; text-transform: uppercase; animation: fade 2s infinite;">Очікування...</div>
-                        <p style="font-size: 0.8rem; opacity: 0.5;">Перевірте сповіщення у боті</p>
-                    </div>
-
-                    <button class="btn btn--outline" onclick="resetLogin()" style="margin-top:2.5rem; padding: 0.7rem 1.5rem; font-size:0.85rem; border-radius: 15px; font-weight: 700;">Скасувати вхід</button>
+                    <h2 style="font-family:var(--font-accent);">Підтвердження</h2>
+                    <p>Натисніть <b>"Підтвердити"</b> у Telegram для входу.</p>
+                    <div class="verify-pulse"><i class="fab fa-telegram-plane" style="font-size:2rem; color:var(--color-coffee);"></i></div>
+                    <button class="btn btn--outline" onclick="resetLogin()">Скасувати</button>
                 </div>
             </div>
         </div>
@@ -242,64 +182,34 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar__header">
                 <a href="index.html" class="sidebar__logo">MEDELIN</a>
-                <p style="font-size: 0.75rem; letter-spacing: 2px; opacity: 0.5; margin-top: 0.8rem; font-weight: 800; color: var(--color-coffee);">ADMIN PANEL</p>
             </div>
             <nav class="sidebar__nav">
-                <a class="nav-item nav-item--active" data-section="orders">
-                    <i class="fas fa-shopping-bag"></i> Активні замовлення
-                </a>
-                <a class="nav-item" data-section="active">
-                    <i class="fas fa-bolt"></i> Активні
-                </a>
-                <a class="nav-item" data-section="beans">
-                    <i class="fas fa-coffee"></i> Зерно
-                </a>
-
-                <a class="nav-item" data-section="locations">
-                    <i class="fas fa-map-marker-alt"></i> Локації
-                </a>
-                <a class="nav-item" data-section="socials">
-                    <i class="fas fa-share-nodes"></i> Соцмережі
-                </a>
-                <a class="nav-item" data-section="support">
-                    <i class="fas fa-comments"></i> Підтримка
-                </a>
-                <a class="nav-item" data-section="team">
-                    <i class="fas fa-users-gear"></i> Команда
-                </a>
+                <a class="nav-item nav-item--active" data-section="orders"><i class="fas fa-shopping-bag"></i> Замовлення</a>
+                <a class="nav-item" data-section="beans"><i class="fas fa-coffee"></i> Зерно</a>
+                <a class="nav-item" data-section="locations"><i class="fas fa-map-marker-alt"></i> Локації</a>
+                <a class="nav-item" data-section="socials"><i class="fas fa-share-nodes"></i> Соцмережі</a>
+                <a class="nav-item" data-section="team"><i class="fas fa-users-gear"></i> Команда</a>
             </nav>
             <div style="padding: 2rem; border-top: 1px solid rgba(255,255,255,0.05);">
-                <a href="index.html" class="nav-item" style="padding: 0; background: none; border: none; font-size: 0.9rem;">
-                    <i class="fas fa-arrow-left"></i> На сайт
-                </a>
+                <a href="index.html" class="nav-item" style="padding: 0;"><i class="fas fa-arrow-left"></i> На сайт</a>
             </div>
         </aside>
 
         <main class="main-content" id="main-content">
             <header class="header">
                 <div>
-                    <h2 class="header__title" id="section-title">Активні замовлення</h2>
-                    <p id="admin-info" style="font-size:0.85rem; color:var(--color-coffee); margin-top:5px; font-weight:700;"></p>
+                    <h2 class="header__title" id="section-title">Замовлення</h2>
+                    <p id="admin-info" style="font-size:0.85rem; color:var(--color-coffee); font-weight:700;"></p>
                 </div>
                 <div class="header__actions">
-                    <button class="btn btn--primary" id="refresh-btn">
-                        <i class="fas fa-sync-alt"></i> Оновити
-                    </button>
-                    <button class="btn btn--outline" onclick="logout()" style="margin-left:5px;">Вийти</button>
+                    <button class="btn btn--primary" id="refresh-btn"><i class="fas fa-sync-alt"></i> Оновити</button>
+                    <button class="btn btn--outline" onclick="logout()">Вийти</button>
                 </div>
             </header>
-
-            <div id="content-area">
-                <div class="card">
-                    <div id="items-list">Завантаження...</div>
-                </div>
-            </div>
+            <div id="content-area"><div class="card"><div id="items-list">Завантаження...</div></div></div>
         </main>
 
-        <div class="loader-wrap" id="loader">
-            <div class="spinner"></div>
-        </div>
-
+        <div class="loader-wrap" id="loader"><div class="spinner"></div></div>
         <div class="admin-modal" id="admin-modal"></div>
 
         <script>
@@ -307,444 +217,104 @@
             let currentAdmin = JSON.parse(localStorage.getItem('medelin_admin_user') || 'null');
             let currentSection = 'orders';
             let verifyInterval = null;
-            let currentBeans = [];
-            let currentLocations = [];
-            let currentSocials = [];
-            let currentTeam = [];
-            let currentProfile = null;
 
-            // Sidebar Toggle Logic
             const menuToggle = document.getElementById('menu-toggle');
             const sidebar = document.getElementById('sidebar');
+            menuToggle.onclick = () => sidebar.classList.toggle('sidebar--active');
 
-            menuToggle.onclick = () => {
-                sidebar.classList.toggle('sidebar--active');
-                const icon = menuToggle.querySelector('i');
-                icon.className = sidebar.classList.contains('sidebar--active') ? 'fas fa-times' : 'fas fa-bars';
-            };
-
-            // Close sidebar on item click (mobile)
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.addEventListener('click', () => {
-                    if (window.innerWidth <= 1024) {
-                        sidebar.classList.remove('sidebar--active');
-                        menuToggle.querySelector('i').className = 'fas fa-bars';
-                    }
+                    const sec = item.getAttribute('data-section');
+                    if (!sec) return;
+                    currentSection = sec;
+                    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('nav-item--active'));
+                    item.classList.add('nav-item--active');
+                    document.getElementById('section-title').textContent = item.textContent.trim();
+                    refreshData();
                 });
             });
 
             async function attemptLogin() {
                 const id = document.getElementById('login-id').value;
                 const pass = document.getElementById('login-pass').value;
-                if (!id || !pass) return alert('Введіть логін та пароль');
+                if (!id || !pass) return alert('Введіть дані');
                 showLoader(true);
                 try {
-                    // Використовуємо таймаут для фечу
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
                     const resp = await fetch('/api/admin/login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ identifier: id, password: pass }),
-                        signal: controller.signal
+                        body: JSON.stringify({ identifier: id, password: pass })
                     });
-                    
-                    clearTimeout(timeoutId);
-
-                    if (!resp.ok) {
-                        let errorMsg = 'Помилка входу';
-                        try {
-                            const err = await resp.json();
-                            errorMsg = err.detail || errorMsg;
-                        } catch(e) {}
-                        throw new Error(errorMsg);
-                    }
+                    if (!resp.ok) throw new Error('Помилка входу');
                     const data = await resp.json();
                     startVerification(data.user_id);
-                } catch (e) {
-                    if (e.name === 'AbortError') {
-                        alert('Сервер занадто довго не відповідає (можливо, він прокидається). Спробуйте ще раз через 10 секунд.');
-                    } else if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
-                        alert('Помилка мережі. Перевірте зʼєднання або спробуйте оновити сторінку.');
-                    } else {
-                        alert(e.message);
-                    }
-                } finally {
-                    showLoader(false);
-                }
+                } catch (e) { alert(e.message); } finally { showLoader(false); }
             }
 
             function startVerification(userId) {
                 document.getElementById('login-form').style.display = 'none';
                 document.getElementById('verify-state').style.display = 'block';
-                if (verifyInterval) clearInterval(verifyInterval);
                 verifyInterval = setInterval(async () => {
                     try {
                         const resp = await fetch(`/api/admin/verify?user_id=${userId}`);
                         const data = await resp.json();
-                        if (data.status === 'ok') {
-                            clearInterval(verifyInterval);
-                            finishLogin(data.token, data.admin);
-                        }
+                        if (data.status === 'ok') { clearInterval(verifyInterval); finishLogin(data.token, data.admin); }
                     } catch (e) {}
                 }, 2000);
             }
 
             function finishLogin(token, admin) {
-                sessionToken = token;
-                currentAdmin = admin;
+                sessionToken = token; currentAdmin = admin;
                 localStorage.setItem('medelin_admin_token', token);
                 localStorage.setItem('medelin_admin_user', JSON.stringify(admin));
-                document.getElementById('login-screen').style.opacity = '0';
-                setTimeout(() => {
-                    document.getElementById('login-screen').style.display = 'none';
-                    showPanel();
-                }, 500);
+                location.reload();
             }
 
             function showPanel() {
-                document.getElementById('sidebar').style.display = 'flex';
-                document.getElementById('main-content').style.display = 'block';
-                document.getElementById('admin-info').textContent = `${currentAdmin.name} (${currentAdmin.role})`;
-                const restricted = ['beans', 'locations', 'socials'];
-                const support = ['support', 'team'];
+                document.getElementById('admin-info').textContent = `${currentAdmin.name} (${roleName(currentAdmin.role)})`;
+                const restricted = ['beans', 'locations', 'socials', 'team'];
                 document.querySelectorAll('.nav-item[data-section]').forEach(item => {
                     const sec = item.getAttribute('data-section');
-                    if (sec === 'shift' && currentAdmin.role !== 'admin') {
-                        item.style.display = 'none';
-                    }
                     if (restricted.includes(sec) && !['boss', 'owner', 'developer'].includes(currentAdmin.role)) {
-                        item.style.display = 'none';
-                    }
-                    if (support.includes(sec) && !['super', 'boss', 'owner', 'developer'].includes(currentAdmin.role)) {
                         item.style.display = 'none';
                     }
                 });
                 refreshData();
             }
 
-            function logout() {
-                localStorage.removeItem('medelin_admin_token');
-                localStorage.removeItem('medelin_admin_user');
-                location.reload();
-            }
-
-            function resetLogin() {
-                if (verifyInterval) clearInterval(verifyInterval);
-                document.getElementById('login-form').style.display = 'block';
-                document.getElementById('verify-state').style.display = 'none';
-            }
+            function logout() { localStorage.removeItem('medelin_admin_token'); localStorage.removeItem('medelin_admin_user'); location.reload(); }
+            function resetLogin() { clearInterval(verifyInterval); document.getElementById('login-form').style.display = 'block'; document.getElementById('verify-state').style.display = 'none'; }
+            function showLoader(show) { document.getElementById('loader').style.display = show ? 'flex' : 'none'; }
+            function roleName(role) { return ({ developer: 'Розробник', owner: 'Власник', boss: 'Власник', delivery_manager: 'Менеджер доставки' }[role] || role); }
 
             async function apiFetch(endpoint, method = 'GET', body = null) {
-                const url = `/api/admin/${endpoint}`;
-                const options = {
-                    method,
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${sessionToken}`
-                    }
-                };
+                const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionToken}` } };
                 if (body) options.body = JSON.stringify(body);
-                try {
-                    const response = await fetch(url, options);
-                    if (response.status === 401) return logout();
-                    if (!response.ok) {
-                        let message = 'Сталася помилка. Адміни вже працюють над цим.';
-                        try {
-                            const err = await response.json();
-                            message = err.detail || message;
-                        } catch(e) {}
-                        throw new Error(message);
-                    }
-                    return await response.json();
-                } catch (e) {
-                    console.error(e);
-                    reportClientError(e.message, `admin api: ${endpoint}`);
-                    alert(e.message || 'Сталася помилка. Адміни вже працюють над цим.');
-                    return null;
-                }
-            }
-
-            async function apiUpload(file) {
-                if (!file || !file.name) return '';
-                const fd = new FormData();
-                fd.append('file', file);
-                const response = await fetch('/api/admin/uploads', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${sessionToken}` },
-                    body: fd
-                });
-                if (!response.ok) throw new Error('Upload error');
-                const data = await response.json();
-                return data.url || '';
-            }
-
-            function showLoader(show) { document.getElementById('loader').style.display = show ? 'flex' : 'none'; }
-            function esc(value) {
-                return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-            }
-            function reportClientError(message, context = '') {
-                try {
-                    fetch('/api/client-error', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            source: 'admin-panel',
-                            path: location.href,
-                            message: String(message || 'Client error'),
-                            context: String(context || '')
-                        })
-                    });
-                } catch(e) {}
-            }
-            function roleName(role) {
-                return ({ developer: 'Розробник', owner: 'Власник', boss: 'Власник', super: 'Супер-адмін', admin: 'Адмін', delivery_manager: 'Менеджер доставки' }[role] || role || '—');
-            }
-            function openAdminModal(title, body, onSave) {
-                const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `<div class="admin-modal__panel">
-                    <div class="admin-modal__header">
-                        <h3 class="admin-modal__title">${esc(title)}</h3>
-                        <button class="btn btn--outline btn--sm" type="button" onclick="closeAdminModal()"><i class="fas fa-times"></i></button>
-                    </div>
-                    <form id="admin-modal-form">${body}
-                        <div class="admin-modal__footer">
-                            <button class="btn btn--outline" type="button" onclick="closeAdminModal()">Скасувати</button>
-                            <button class="btn btn--primary" type="submit"><i class="fas fa-check"></i> Зберегти</button>
-                        </div>
-                    </form>
-                </div>`;
-                modal.classList.add('admin-modal--active');
-                document.getElementById('admin-modal-form').onsubmit = async (e) => {
-                    e.preventDefault();
-                    showLoader(true);
-                    try {
-                        await onSave(new FormData(e.currentTarget));
-                        closeAdminModal();
-                        refreshData();
-                    } finally {
-                        showLoader(false);
-                    }
-                };
-            }
-            function closeAdminModal() {
-                const modal = document.getElementById('admin-modal');
-                modal.classList.remove('admin-modal--active');
-                modal.innerHTML = '';
-            }
-            function field(name, label, value = '', type = 'text', full = false) {
-                return `<div class="admin-field ${full ? 'admin-field--full' : ''}"><label>${label}</label><input name="${name}" type="${type}" value="${esc(value)}"></div>`;
-            }
-            function readonlyField(name, label, value = '', type = 'text') {
-                return `<div class="admin-field"><label>${label}</label><input name="${name}" type="${type}" value="${esc(value)}" readonly tabindex="-1"></div>`;
-            }
-            function fileField(name, label, full = true) {
-                return `<div class="admin-field ${full ? 'admin-field--full' : ''}"><label>${label}</label><input name="${name}" type="file" accept="image/*"></div>`;
-            }
-            function textareaField(name, label, value = '', full = true) {
-                return `<div class="admin-field ${full ? 'admin-field--full' : ''}"><label>${label}</label><textarea name="${name}">${esc(value)}</textarea></div>`;
-            }
-            async function payloadWithUpload(fd) {
-                const payload = Object.fromEntries(fd.entries());
-                const uploaded = await apiUpload(fd.get('image_file'));
-                if (uploaded) payload.image_url = uploaded;
-                delete payload.image_file;
-                return payload;
-            }
-            function toolbar(title, buttonText, action, extra = '') {
-                return `<div class="admin-toolbar"><h3>${title}</h3><div class="order-actions">${extra}<button class="btn btn--primary btn--sm" onclick="${action}"><i class="fas fa-plus"></i> ${buttonText}</button></div></div>`;
-            }
-            function calcBeanPrice(base, size) {
-                const n = Number(String(base || '').replace(',', '.'));
-                if (!Number.isFinite(n) || n <= 0) return '';
-                return Math.round(size === 500 ? n * 2 * 0.97 : n * 4 * 0.92);
-            }
-            function hydrateBeanPriceCalculator() {
-                const base = document.querySelector('#admin-modal-form input[name="price_250"]');
-                const p500 = document.querySelector('#admin-modal-form input[name="price_500"]');
-                const p1000 = document.querySelector('#admin-modal-form input[name="price_1000"]');
-                if (!base || !p500 || !p1000) return;
-                const update = () => {
-                    p500.value = calcBeanPrice(base.value, 500);
-                    p1000.value = calcBeanPrice(base.value, 1000);
-                };
-                base.addEventListener('input', update);
-                update();
+                const resp = await fetch(`/api/admin/${endpoint}`, options);
+                if (resp.status === 401) return logout();
+                return resp.ok ? await resp.json() : null;
             }
 
             async function loadOrders() {
                 showLoader(true);
                 const orders = await apiFetch('active-orders');
                 const list = document.getElementById('items-list');
-                list.innerHTML = '';
-                if (!orders || orders.length === 0) {
-                    list.innerHTML = '<p style="text-align:center; padding:3rem; opacity:0.5;">Активних замовлень немає</p>';
-                } else {
-                    orders.forEach(o => {
-                        const div = document.createElement('div');
-                        div.className = 'order-item';
-                        const typeLabel = {
-                            in_house: 'В закладі',
-                            takeaway: 'З собою',
-                            order_with_booking: 'Бронь + замовлення',
-                            beans_booking: 'Зерно в закладі',
-                            beans_delivery: 'Нова Пошта',
-                            nova_poshta: 'Нова Пошта'
-                        }[o.order_type] || 'Замовлення';
-                        const table = o.table_number ? ` | <i class="fas fa-chair"></i> Столик: ${o.table_number}` : '';
-                        const payState = o.is_paid ? '<span style="color:#2e7d32; font-weight:800;">Оплачено</span>' : '<span style="color:#b26a00; font-weight:800;">Очікує оплату</span>';
-                        const payBtn = !o.is_paid && Number(o.total || 0) > 0
-                            ? `<a class="btn btn--outline btn--sm" href="/index.html?order_id=${o.order_id}" target="_blank">Оплатити</a>`
-                            : '';
-                        div.innerHTML = `<div class="order-info"><div class="order-title">#${String(o.order_id).slice(-6)} — ${o.fullname || 'Гість'}</div><div class="order-meta"><i class="fas fa-phone"></i> ${o.phone || '—'} | <i class="fas fa-map-marker-alt"></i> ${o.location_name || 'Сайт'}${table} | ${typeLabel} | ${payState}</div><div class="order-items">${o.cart || ''}</div></div><div class="order-actions">${payBtn}<button class="btn btn--success" onclick="completeOrder('${o.order_id}')">Готово</button><button class="btn btn--danger btn--sm" onclick="cancelOrder('${o.order_id}')">Скасувати</button></div>`;
-                        list.appendChild(div);
-                    });
-                }
-                showLoader(false);
-            }
-
-            async function completeOrder(oid) {
-                if (confirm('Завершити замовлення?')) {
-                    await apiFetch(`orders/${oid}/complete`, 'POST');
-                    loadOrders();
-                }
-            }
-
-            async function cancelOrder(oid) {
-                if (confirm('Скасувати замовлення?')) {
-                    await apiFetch(`orders/${oid}/cancel`, 'POST');
-                    loadOrders();
-                }
-            }
-
-            async function loadShift() {
-                showLoader(true);
-                currentProfile = await apiFetch('me');
-                currentLocations = await apiFetch('locations') || [];
-                const list = document.getElementById('items-list');
-                const activeLoc = currentLocations.find(l => String(l._id) === String(currentProfile?.is_on_shift));
-                const status = activeLoc ? `Активна зміна: <b>${esc(activeLoc.name)}</b>` : 'Зміна не розпочата';
-                const action = activeLoc
-                    ? '<button class="btn btn--danger" onclick="endShift()"><i class="fas fa-stop"></i> Завершити зміну</button>'
-                    : '<button class="btn btn--primary" onclick="openShiftModal()"><i class="fas fa-play"></i> Почати зміну</button>';
-                list.innerHTML = `<div class="admin-toolbar"><h3>Зміна бариста</h3><div class="order-actions">${action}</div></div>
-                    <div class="order-item"><div class="order-info"><div class="order-title">${status}</div><div class="order-meta">Активна зміна визначає, які замовлення закладу ви бачите та обробляєте.</div></div></div>`;
-                showLoader(false);
-            }
-
-            function openShiftModal() {
-                const options = currentLocations.map(l => `<option value="${esc(l._id)}">${esc(l.name)} — ${esc(l.address || '')}</option>`).join('');
-                openAdminModal('Почати зміну', `<div class="admin-grid"><div class="admin-field admin-field--full"><label>Заклад</label><select name="location_id">${options}</select></div></div>`, async fd => {
-                    await apiFetch('shift/start', 'POST', Object.fromEntries(fd.entries()));
-                });
-            }
-
-            async function endShift() {
-                if (confirm('Завершити поточну зміну?')) {
-                    await apiFetch('shift/end', 'POST');
-                    loadShift();
-                }
-            }
-
-            async function loadBookings() {
-                showLoader(true);
-                const bookings = await apiFetch('active-bookings');
-                const list = document.getElementById('items-list');
-                list.innerHTML = '';
-                if (!bookings || bookings.length === 0) {
-                    list.innerHTML = '<p style="text-align:center; padding:3rem; opacity:0.5;">Активних бронювань немає</p>';
-                } else {
-                    bookings.forEach(b => {
-                        const div = document.createElement('div');
-                        div.className = 'order-item';
-                        div.innerHTML = `<div class="order-info"><div class="order-title">${b.fullname} — ${b.date_time}</div><div class="order-meta"><i class="fas fa-phone"></i> ${b.phone} | <i class="fas fa-users"></i> Гостей: ${b.people_count}</div><div class="order-items">${b.wishes || 'Без побажань'}</div></div><div class="order-actions"><button class="btn btn--danger" onclick="deleteBooking('${b.booking_id}')">Видалити</button></div>`;
-                        list.appendChild(div);
-                    });
-                }
-                showLoader(false);
-            }
-
-            async function deleteBooking(id) {
-                if (confirm('Видалити бронювання?')) {
-                    await apiFetch(`bookings/${id}`, 'DELETE');
-                    loadBookings();
-                }
-            }
-
-            async function loadSupport() {
-                showLoader(true);
-                const chats = await apiFetch('support/chats');
-                const list = document.getElementById('items-list');
-                list.innerHTML = '<h3 style="margin-bottom:2rem;">Чати підтримки</h3>';
-                if (!chats || chats.length === 0) {
-                    list.innerHTML += '<p style="text-align:center; padding:3rem; opacity:0.5;">Повідомлень немає</p>';
-                } else {
-                    chats.forEach(chat => {
-                        const div = document.createElement('div');
-                        div.className = 'card';
-                        div.style.cursor = 'pointer';
-                        div.style.padding = '1.5rem';
-                        const unread = chat.unread_count > 0 ? `<span style="background:var(--color-coffee); color:white; padding: 4px 10px; border-radius: 50px; font-size: 0.8rem; margin-left: 10px;">${chat.unread_count} нових</span>` : '';
-                        div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;"><div><strong style="font-size:1.1rem; color:var(--color-dark-brown);">${chat._id.phone || 'Гість'}</strong> ${unread}<div style="margin-top:8px; color:#666;">${chat.last_text}</div></div><div style="font-size:0.85rem; color:#999;">${new Date(chat.last_time).toLocaleString('uk-UA')}</div></div>`;
-                        div.onclick = () => openChat(chat._id.phone, chat._id.order_id);
-                        list.appendChild(div);
-                    });
-                }
-                showLoader(false);
-            }
-
-            async function openChat(phone, orderId) {
-                showLoader(true);
-                const messages = await apiFetch(`support/messages?phone=${encodeURIComponent(phone || '')}&order_id=${encodeURIComponent(orderId || '')}`);
-                if (!messages) {
-                    showLoader(false);
-                    return;
-                }
-                const list = document.getElementById('items-list');
-                list.innerHTML = `<div style="display:flex; align-items:center; gap:1rem; margin-bottom:2rem; flex-wrap:wrap;"><button class="btn btn--outline" onclick="loadSupport()"><i class="fas fa-arrow-left"></i> Назад</button><h3 style="font-family:var(--font-accent); font-size:1.8rem; flex:1;">Чат: ${esc(phone)}</h3><button class="btn btn--danger btn--sm" onclick="clearSupportChat('${esc(phone)}','${esc(orderId || '')}')"><i class="fas fa-trash"></i> Очистити</button></div><div id="chat-window"></div><div style="margin-top:2rem; display:flex; gap:1rem; background:white; padding:1.5rem; border-radius:var(--radius); box-shadow:var(--shadow);"><input type="text" id="reply-input" placeholder="Напишіть відповідь..."><button class="btn btn--primary" id="send-btn"><i class="fas fa-paper-plane"></i> Відправити</button></div>`;
-                const win = document.getElementById('chat-window');
-                messages.forEach(msg => {
+                list.innerHTML = orders?.length ? '' : '<p style="text-align:center; padding:2rem;">Немає замовлень</p>';
+                orders?.forEach(o => {
                     const div = document.createElement('div');
-                    const isAdmin = msg.source === 'admin';
-                    div.className = `msg ${isAdmin ? 'msg--admin' : 'msg--guest'}`;
-                    div.innerHTML = `<div>${msg.text}</div><div style="font-size:0.7rem; opacity:0.6; margin-top:5px; text-align:right;">${new Date(msg.created_at).toLocaleTimeString('uk-UA')}</div>`;
-                    win.appendChild(div);
+                    div.className = 'order-item';
+                    div.innerHTML = `<div class="order-info"><div class="order-title">#${String(o.order_id).slice(-6)} — ${o.fullname}</div><div class="order-meta">${o.phone} | ${o.location_name}</div><div class="order-items">${o.cart || ''}</div></div><div class="order-actions"><button class="btn btn--success btn--sm" onclick="completeOrder('${o.order_id}')">Готово</button></div>`;
+                    list.appendChild(div);
                 });
-                win.scrollTop = win.scrollHeight;
-                document.getElementById('send-btn').onclick = async () => {
-                    const text = document.getElementById('reply-input').value;
-                    if (!text) return;
-                    showLoader(true);
-                    if (await apiFetch('support/reply', 'POST', { phone, order_id: orderId, text })) { openChat(phone, orderId); }
-                };
                 showLoader(false);
             }
 
-            async function clearSupportChat(phone, orderId) {
-                if (!confirm('Очистити цей чат?')) return;
-                showLoader(true);
-                await apiFetch(`support/messages?phone=${encodeURIComponent(phone)}&order_id=${encodeURIComponent(orderId || '')}`, 'DELETE');
-                await loadSupport();
-                showLoader(false);
-            }
+            async function completeOrder(oid) { if (confirm('Виконано?')) { await apiFetch(`orders/${oid}/complete`, 'POST'); loadOrders(); } }
 
-            function refreshData() {
-                if (currentSection === 'orders') loadOrders();
-                else if (currentSection === 'shift') loadShift();
-                else if (currentSection === 'bookings') loadBookings();
-                else if (currentSection === 'support') loadSupport();
-                else if (currentSection === 'beans') loadBeans();
-                else if (currentSection === 'locations') loadLocations();
-                else if (currentSection === 'socials') loadSocials();
-                else if (currentSection === 'team') loadTeam();
-            }
+            function refreshData() { if (currentSection === 'orders') loadOrders(); }
 
             document.getElementById('refresh-btn').onclick = refreshData;
-            if (sessionToken && currentAdmin) {
-                document.getElementById('login-screen').style.display = 'none';
-                showPanel();
-            }
+            if (sessionToken && currentAdmin) { document.getElementById('login-screen').style.display = 'none'; showPanel(); }
         </script>
     </body>
 </html>

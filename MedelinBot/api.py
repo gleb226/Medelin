@@ -1234,7 +1234,7 @@ async def admin_delete_social(social_id: str, admin: dict = fastapi.Depends(get_
     return {"status": "ok"}
 
 def _can_manage_admin(caller_role: str, target_role: str) -> bool:
-    levels = {'developer': 5, 'owner': 4, 'boss': 4, 'super': 3, 'admin': 2, 'delivery_manager': 2}
+    levels = {'developer': 5, 'owner': 4, 'boss': 4, 'super': 3, 'delivery_manager': 2}
     caller_role = (caller_role or '').lower()
     target_role = (target_role or '').lower()
     if caller_role == 'developer':
@@ -1244,7 +1244,7 @@ def _can_manage_admin(caller_role: str, target_role: str) -> bool:
     if caller_role in ('owner', 'boss'):
         return target_role != 'developer'
     if caller_role == 'super':
-        return target_role in ('admin', 'delivery_manager')
+        return target_role in ('delivery_manager')
     return levels.get(caller_role, 0) > levels.get(target_role, 0)
 
 @app.get('/api/admin/team')
@@ -1258,12 +1258,12 @@ async def admin_get_team(admin: dict = fastapi.Depends(get_current_admin)):
 
 @app.post('/api/admin/team')
 async def admin_save_team_member(request: Request, admin: dict = fastapi.Depends(get_current_admin)):
-    caller_role = admin.get('role') or 'admin'
+    caller_role = admin.get('role') or 'delivery_manager'
     if caller_role not in ('super', 'boss', 'owner', 'developer'):
         raise HTTPException(status_code=403, detail="Forbidden")
     data = await request.json()
     user_id = int(data.get('user_id') or 0)
-    role = (data.get('role') or 'admin').strip()
+    role = (data.get('role') or 'delivery_manager').strip()
     if not user_id or not _can_manage_admin(caller_role, role):
         raise HTTPException(status_code=403, detail="Недостатньо прав")
     receive_notifications = bool(data.get('receive_notifications', True))
@@ -1271,7 +1271,7 @@ async def admin_save_team_member(request: Request, admin: dict = fastapi.Depends
     from app.databases.mongo_client import get_db
     db = await get_db()
     old = await db.admins.find_one({'user_id': user_id}, {'_id': 0, 'role': 1})
-    if old and not _can_manage_admin(caller_role, old.get('role') or 'admin'):
+    if old and not _can_manage_admin(caller_role, old.get('role') or 'delivery_manager'):
         raise HTTPException(status_code=403, detail="Недостатньо прав")
     await db.admins.update_one(
         {'user_id': user_id},
@@ -1289,7 +1289,7 @@ async def admin_save_team_member(request: Request, admin: dict = fastapi.Depends
 
 @app.delete('/api/admin/team/{user_id}')
 async def admin_delete_team_member(user_id: int, admin: dict = fastapi.Depends(get_current_admin)):
-    caller_role = admin.get('role') or 'admin'
+    caller_role = admin.get('role') or 'delivery_manager'
     if caller_role not in ('super', 'boss', 'owner', 'developer'):
         raise HTTPException(status_code=403, detail="Forbidden")
     from app.databases.mongo_client import get_db
@@ -1297,63 +1297,9 @@ async def admin_delete_team_member(user_id: int, admin: dict = fastapi.Depends(g
     target = await db.admins.find_one({'user_id': int(user_id)}, {'_id': 0, 'role': 1})
     if not target:
         raise HTTPException(status_code=404, detail="Адміністратора не знайдено")
-    if not _can_manage_admin(caller_role, target.get('role') or 'admin'):
+    if not _can_manage_admin(caller_role, target.get('role') or 'delivery_manager'):
         raise HTTPException(status_code=403, detail="Недостатньо прав для видалення цього користувача")
     await db.admins.delete_one({'user_id': int(user_id)})
-    return {"status": "ok"}
-
-@app.get('/api/admin/support/chats')
-async def admin_get_chats(admin: dict = fastapi.Depends(get_current_admin)):
-    if admin.get('role') not in ('super', 'boss', 'owner', 'developer'):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    from app.databases.guest_messages_database import guest_messages_db
-    try:
-        return await guest_messages_db.get_unique_chats()
-    except Exception as e:
-        await send_developer_error(f"Admin support chats load failed:\n<code>{_safe_alert_text(e)}</code>")
-        raise HTTPException(status_code=503, detail="Чати тимчасово недоступні")
-
-@app.get('/api/admin/support/messages')
-async def admin_get_messages(request: Request, phone: str = None, order_id: str = None, admin: dict = fastapi.Depends(get_current_admin)):
-    if admin.get('role') not in ('super', 'boss', 'owner', 'developer'):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    from app.databases.guest_messages_database import guest_messages_db
-    try:
-        return await guest_messages_db.get_messages(phone, order_id if order_id not in ('', 'none', 'null', 'undefined') else None)
-    except Exception as e:
-        await send_developer_error(f"Admin support messages load failed:\nphone={_safe_alert_text(phone, 120)}\norder_id={_safe_alert_text(order_id, 120)}\n<code>{_safe_alert_text(e)}</code>")
-        raise HTTPException(status_code=503, detail="Повідомлення тимчасово недоступні")
-
-@app.post('/api/admin/support/reply')
-async def admin_reply_support(request: Request, admin: dict = fastapi.Depends(get_current_admin)):
-    if admin.get('role') not in ('super', 'boss', 'owner', 'developer'):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    data = await request.json()
-    phone = data.get('phone')
-    order_id = data.get('order_id')
-    text = data.get('text')
-    
-    from app.databases.guest_messages_database import guest_messages_db
-    try:
-        await guest_messages_db.add_message(order_id, phone, 'admin', text)
-    except Exception as e:
-        await send_developer_error(f"Admin support reply failed:\nphone={_safe_alert_text(phone, 120)}\norder_id={_safe_alert_text(order_id, 120)}\n<code>{_safe_alert_text(e)}</code>")
-        raise HTTPException(status_code=503, detail="Відповідь тимчасово не відправилась")
-    return {"status": "ok"}
-
-@app.delete('/api/admin/support/messages')
-async def admin_clear_support_chat(phone: str, order_id: str = None, admin: dict = fastapi.Depends(get_current_admin)):
-    if admin.get('role') not in ('super', 'boss', 'owner', 'developer'):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    from app.databases.mongo_client import get_db
-    from app.utils.phone_utils import normalize_phone
-    db = await get_db()
-    query = {'phone_digits': normalize_phone(phone)}
-    if order_id and order_id != 'none':
-        query['order_id'] = order_id
-    else:
-        query['order_id'] = {'$in': [None, 'none', '']}
-    await db.guest_messages.delete_many(query)
     return {"status": "ok"}
 
 @app.get('/api/past-orders')

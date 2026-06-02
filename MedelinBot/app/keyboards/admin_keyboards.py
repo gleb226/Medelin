@@ -19,7 +19,6 @@ ROLE_NAMES = {
     'developer': 'Розробник',
     'owner': 'Власник',
     'boss': 'Власник',
-    'admin': 'Адміністратор закладів',
     'delivery_manager': 'Менеджер доставки',
     'courier': 'Курʼєр'
 }
@@ -33,26 +32,26 @@ ORDER_TYPE_NAMES = {
     'beans_delivery': 'Нова Пошта'
 }
 
-def get_main_admin_menu(is_on_shift: bool=False, role: str='admin'):
+def get_main_admin_menu(is_on_shift: bool=False, role: str='delivery_manager'):
 
     keyboard = []
 
     role = role.lower()
 
-    # Почати зміну тільки для адмінів та менеджерів доставки
-    if role in ('admin', 'delivery_manager'):
+    # Почати зміну тільки для менеджерів доставки
+    if role == 'delivery_manager':
 
         shift_text = '🔴 ЗАВЕРШИТИ ЗМІНУ' if is_on_shift else '🟢 ПОЧАТИ ЗМІНУ'
 
         keyboard.append([KeyboardButton(text=shift_text)])
 
-    if role in ('boss', 'owner', 'developer', 'delivery_manager', 'admin'):
+    if role in ('boss', 'owner', 'developer', 'delivery_manager'):
         keyboard.append([KeyboardButton(text='🆕 НОВІ ЗАПИТИ'), KeyboardButton(text='⚡️ АКТИВНІ')])
 
 
     if role in ('boss', 'owner', 'developer'):
-        # Об'єднуємо ПІДТРИМКА та КОМАНДА в один рядок
-        keyboard.append([KeyboardButton(text='💬 ПІДТРИМКА'), KeyboardButton(text='👥 КОМАНДА')])
+        # Тільки КОМАНДА (ПІДТРИМКУ прибрали)
+        keyboard.append([KeyboardButton(text='👥 КОМАНДА')])
 
     if role in ('boss', 'owner', 'developer'):
 
@@ -110,157 +109,60 @@ def get_admin_roles_kb(caller_role: str):
 
     if caller_role == 'developer':
 
-        roles = [('Власник', 'boss'), ('Адміністратор', 'admin'), ('Менеджер доставки', 'delivery_manager')]
+        roles = [('Власник', 'boss'), ('Менеджер доставки', 'delivery_manager')]
 
     elif caller_role in ('owner', 'boss'):
 
-        roles = [('Адміністратор', 'admin'), ('Менеджер доставки', 'delivery_manager')]
+        roles = [('Менеджер доставки', 'delivery_manager')]
 
     buttons = []
 
-    row = []
+    for label, r in roles:
 
-    for label, role in roles:
+        buttons.append([InlineKeyboardButton(text=label, callback_data=f"set_role_{r}")])
 
-        row.append(InlineKeyboardButton(text=label, callback_data=f"set_role_{role}"))
+    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='adm_add_new')])
 
-        if len(row) == 2:
-
-            buttons.append(row)
-
-            row = []
-
-    if row:
-
-        buttons.append(row)
-
-    buttons.append([InlineKeyboardButton(text='⬅️ СКАСУВАТИ', callback_data='adm_back_to_manage')])
-
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-def get_locations_selection_kb(all_locations, selected_ids: list, is_all: bool = False):
-
-    buttons = []
-
-    all_text = "✅ УСІ ЗАКЛАДИ" if is_all else "⬜️ УСІ ЗАКЛАДИ"
-
-    buttons.append([InlineKeyboardButton(text=all_text, callback_data="adm_loc_toggle_all")])
-
-    if not is_all:
-
-        for loc in all_locations:
-
-            loc_id = str(loc['_id'])
-
-            is_selected = loc_id in selected_ids
-
-            mark = "✅" if is_selected else "⬜️"
-
-            buttons.append([InlineKeyboardButton(text=f"{mark} {loc['name']}", callback_data=f"adm_loc_toggle_{loc_id}")])
-
-    buttons.append([InlineKeyboardButton(text="📥 ПІДТВЕРДИТИ", callback_data="adm_loc_confirm")])
-
-    buttons.append([InlineKeyboardButton(text="⬅️ НАЗАД", callback_data="adm_back_to_manage")])
-
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-def get_booking_manage_kb(booking_id, user_id=None):
-    buttons = [
-        [InlineKeyboardButton(text='✅ ПІДТВЕРДИТИ', callback_data=f'adm2_confirm_{booking_id}'),
-         InlineKeyboardButton(text='❌ ВІДХИЛИТИ', callback_data=f'adm2_cancel_{booking_id}')]
-    ]
-    uid_str = str(user_id) if user_id is not None else "none"
-    buttons.append([InlineKeyboardButton(text='💬 НАПИСАТИ ГОСТЮ', callback_data=f'adm_msg_{uid_str}_{booking_id}')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_admins_to_remove_kb(admins):
 
     buttons = []
 
-    for user_id, username, display_name, role in admins:
+    for uid, user, name, role in admins:
 
-        title = display_name or (f'@{username}' if username else None) or str(user_id)
-        role_name = ROLE_NAMES.get(role, role)
+        buttons.append([InlineKeyboardButton(text=f"🗑 {name} (@{user or '—'})", callback_data=f"adm_del_yes_{uid}")])
 
-        buttons.append([InlineKeyboardButton(text=f'❌ {title} ({role_name})', callback_data=f'adm_delete_{user_id}')])
+    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='adm_remove')])
 
-    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='adm_back_to_manage')])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_booking_manage_kb(order_id, user_id=None):
+
+    buttons = []
+
+    buttons.append([InlineKeyboardButton(text='✅ ПРИЙНЯТИ', callback_data=f'adm2_confirm_{order_id}'), InlineKeyboardButton(text='❌ ВІДХИЛИТИ', callback_data=f'adm2_cancel_{order_id}')])
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_beans_manage_kb():
 
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='✨ ДОДАТИ ЗЕРНО', callback_data='beans_add')], [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ ЗЕРНО', callback_data='beans_edit')], [InlineKeyboardButton(text='🗑 ВИДАЛИТИ ЗЕРНО', callback_data='beans_del')], [InlineKeyboardButton(text='📋 СПИСОК ЗЕРНА', callback_data='beans_list')], [InlineKeyboardButton(text='⬅️ В АДМІН-ПАНЕЛЬ', callback_data='beans_back')]])
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='➕ ДОДАТИ СОРТ', callback_data='bean_add')], [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')]])
 
 def get_locations_manage_kb():
 
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='✨ ДОДАТИ ЛОКАЦІЮ', callback_data='locs_add')], [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ ЛОКАЦІЮ', callback_data='locs_edit')], [InlineKeyboardButton(text='🗑 ВИДАЛИТИ ЛОКАЦІЮ', callback_data='locs_del')], [InlineKeyboardButton(text='📋 СПИСОК ЛОКАЦІЙ', callback_data='locs_list')], [InlineKeyboardButton(text='⬅️ В АДМІН-ПАНЕЛЬ', callback_data='locs_back')]])
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='➕ ДОДАТИ ЛОКАЦІЮ', callback_data='loc_add')], [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')]])
 
 def get_socials_manage_kb():
 
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='📱 ДОДАТИ СОЦМЕРЕЖУ', callback_data='soc_add')], [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ СОЦМЕРЕЖУ', callback_data='soc_edit')], [InlineKeyboardButton(text='🗑 ВИДАЛИТИ СОЦМЕРЕЖУ', callback_data='soc_del')], [InlineKeyboardButton(text='📋 СПИСОК СОЦМЕРЕЖ', callback_data='soc_list')], [InlineKeyboardButton(text='⬅️ В АДМІН-ПАНЕЛЬ', callback_data='soc_back')]])
-
-def get_yes_no_kb(yes_cb: str, no_cb: str='menu_no'):
-
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='✅ ПІДТВЕРДИТИ', callback_data=yes_cb), InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data=no_cb)]])
-
-def get_beans_list_kb(beans, prefix='beans_delete'):
-
-    buttons = []
-
-    for b in beans:
-
-        prefix_str = '❌' if 'delete' in prefix or 'del' in prefix else '✏️'
-
-        buttons.append([InlineKeyboardButton(text=f"{prefix_str} {b['name']}", callback_data=f"{prefix}_{b['_id']}")])
-
-    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='beans_back')])
-
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-def get_locations_list_kb(locs, prefix='locs_delete'):
-
-    buttons = []
-
-    for l in locs:
-
-        prefix_str = '▫️' if 'delete' in prefix or 'del' in prefix else '✏️'
-
-        buttons.append([InlineKeyboardButton(text=f"{prefix_str} {l['name']}", callback_data=f"{prefix}_{l['_id']}")])
-
-    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='locs_back')])
-
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-def get_support_chats_kb(chats):
-    buttons = []
-    for c in chats:
-        cid = c['_id']
-        phone = cid.get('phone') or '—'
-        oid = cid.get('order_id') or 'none'
-        unread = f" ({c['unread_count']})" if c['unread_count'] > 0 else ""
-        text = f"{phone} | {oid[-6:] if oid != 'none' else 'Без замовл.'}{unread}"
-        buttons.append([InlineKeyboardButton(text=text, callback_data=f"support_chat_{phone}_{oid}")])
-    
-    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='➕ ДОДАТИ СОЦМЕРЕЖУ', callback_data='soc_add')], [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')]])
 
 def get_admin_login_confirm_kb(user_id: int):
+
     return InlineKeyboardMarkup(inline_keyboard=[
+
         [InlineKeyboardButton(text='✅ ПІДТВЕРДИТИ ВХІД', callback_data=f'admin_auth_confirm_{user_id}')],
+
         [InlineKeyboardButton(text='❌ ВІДХИЛИТИ', callback_data=f'admin_auth_reject_{user_id}')]
+
     ])
-
-def get_socials_list_kb(socs, prefix='soc_delete'):
-
-    buttons = []
-
-    for s in socs:
-
-        prefix_str = '❌' if 'delete' in prefix or 'del' in prefix else '✏️'
-
-        buttons.append([InlineKeyboardButton(text=f"{prefix_str} {s['name']}", callback_data=f"{prefix}_{s['_id']}")])
-
-    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='soc_back')])
-
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
