@@ -43,7 +43,7 @@ function renderCoffeeData(coffeeData) {
             <div class="product-card__content">
                 <h3 class="product-card__title">${displayName}</h3>
                 <div class="product-card__price-row">
-                    <span class="product-card__price">${item.price_250} ₴</span>
+                    <span class="product-card__price">${item.price_250} ₴ / 250г</span>
                     <button class="btn-add-plus"><i class="fas fa-plus"></i></button>
                 </div>
             </div>`;
@@ -79,8 +79,6 @@ function openCoffeePopup(item) {
     const body = renderScale(item.body, 'fa-seedling');
 
     const price250 = item && item.price_250 != null ? item.price_250 : '';
-    const price500 = item && item.price_500 != null ? item.price_500 : '';
-    const price1000 = item && item.price_1000 != null ? item.price_1000 : '';
 
     let html = `
     <div class="popup__body-inner">
@@ -89,17 +87,15 @@ function openCoffeePopup(item) {
             ${item.sort ? `<div class="popup__info-chip"><strong><i class="fas fa-layer-group"></i> Склад</strong><span>${item.sort}</span></div>` : ''}
             ${item.taste ? `<div class="popup__info-chip"><strong><i class="fas fa-utensils"></i> Смак</strong><span>${item.taste}</span></div>` : ''}
             ${item.roast ? `<div class="popup__info-chip"><strong><i class="fas fa-fire"></i> Обсмаження</strong><span>${item.roast}</span></div>` : ''}
+            <div class="popup__info-chip"><strong><i class="fas fa-tag"></i> Ціна за 250г</strong><span>${price250} ₴</span></div>
         </div>
         <div class="scales-block">
             ${acidity ? `<div class="scale-row"><span>Кислинка</span> <span>${acidity}</span></div>` : ''}
             ${bitterness ? `<div class="scale-row"><span>Гірчинка</span> <span>${bitterness}</span></div>` : ''}
             ${body ? `<div class="scale-row"><span>Тіло (Насиченість)</span> <span>${body}</span></div>` : ''}
         </div>
-        <div class="popup__weights-selection">
-            <label class="weight-label weight-label--active" data-action="select-weight">
-                <input type="radio" name="bean_weight_${item.id}" value="250" data-price="${item.price_250}" checked style="display:none;">
-                <div class="weight-label__size">250г — ${price250}₴</div>
-            </label>
+        <div class="popup__weights-selection" style="display:none;">
+            <input type="radio" name="bean_weight_${item.id}" value="250" data-price="${item.price_250}" checked>
         </div>
         <button class="btn btn--full-width" type="button" data-action="add-bean-to-cart" data-bean-id="${item.id}" data-bean-name="${String(item.name || '').replace(/[\"']/g, '')}" data-weight-name="bean_weight_${item.id}"><i class="fas fa-shopping-cart" style="margin-right:10px;"></i> Додати до кошика</button>
     </div>`;
