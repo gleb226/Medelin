@@ -766,7 +766,16 @@ window.openCheckoutModal = function () {
                     <p class="payment-title">Оберіть метод оплати:</p>
                     <div class="payment-methods-grid">
                         <button class="payment-btn" type="button" data-action="submit-checkout" data-method="card">
-                            <i class="fas fa-credit-card"></i> <span>Оплатити зараз (онлайн)</span>
+                            <i class="fas fa-credit-card"></i> <span>Картка</span>
+                        </button>
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="applepay">
+                            <i class="fab fa-apple-pay"></i> <span>Apple Pay</span>
+                        </button>
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="googlepay">
+                            <i class="fab fa-google-pay"></i> <span>Google Pay</span>
+                        </button>
+                        <button class="payment-btn" type="button" data-action="submit-checkout" data-method="privatpay">
+                            <i class="fas fa-university"></i> <span>PrivatPay</span>
                         </button>
                         <button class="payment-btn" type="button" data-action="submit-checkout" data-method="cash">
                             <i class="fas fa-truck-ramp-box"></i> <span>Наложений платіж</span>

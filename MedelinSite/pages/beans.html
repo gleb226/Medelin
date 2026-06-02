@@ -78,10 +78,21 @@
         </header>
 
         <main class="main">
-            <section class="products">
-                <h1 class="section-title section-title--mb-5">Кава в зернах</h1>
-                <div id="coffee-root"></div>
-            </section>
+            <div id="beans-page-content">
+                <section class="products" id="beans-grid-section">
+                    <h1 class="section-title section-title--mb-5">Кава в зернах</h1>
+                    <div id="coffee-root"></div>
+                </section>
+
+                <section class="bean-detail" id="bean-detail-section" style="display:none; padding: 2rem 0; min-height: 80vh;">
+                    <div class="container" style="max-width: 1000px; margin: 0 auto; padding: 0 1.5rem;">
+                        <button class="btn btn--outline" onclick="closeBeanDetail()" style="margin-bottom: 2.5rem; border-radius: 12px; padding: 0.8rem 1.5rem;">
+                            <i class="fas fa-arrow-left" style="margin-right: 8px;"></i> Назад до списку
+                        </button>
+                        <div id="bean-detail-content"></div>
+                    </div>
+                </section>
+            </div>
 
             <div class="cart-fab" data-action="open-cart-modal" id="cart-fab">
                 <i class="fas fa-shopping-basket"></i>

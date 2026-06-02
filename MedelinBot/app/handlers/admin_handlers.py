@@ -224,6 +224,26 @@ async def deliver_guest_message(bot: Bot, order: dict | None, text_html: str, si
 
     return 'both' if telegram_target and telegram_ok else 'site'
 
+@admin_router.callback_query(F.data.startswith('admin_auth_confirm_'))
+async def admin_auth_confirm(callback: CallbackQuery):
+    user_id = int(callback.data.replace('admin_auth_confirm_', ''))
+    if callback.from_user.id != user_id:
+        await callback.answer("❌ Це не ваш запит.", show_alert=True)
+        return
+    await admin_db.confirm_auth_request(user_id)
+    await callback.message.edit_text("✅ <b>ВХІД ПІДТВЕРДЖЕНО!</b>\nПоверніться у браузер.", parse_mode='HTML')
+    await callback.answer("Підтверджено!")
+
+@admin_router.callback_query(F.data.startswith('admin_auth_reject_'))
+async def admin_auth_reject(callback: CallbackQuery):
+    user_id = int(callback.data.replace('admin_auth_reject_', ''))
+    if callback.from_user.id != user_id:
+        await callback.answer("❌ Це не ваш запит.", show_alert=True)
+        return
+    await admin_db.remove_auth_request(user_id)
+    await callback.message.edit_text("❌ <b>ВХІД ВІДХИЛЕНО.</b>", parse_mode='HTML')
+    await callback.answer("Відхилено.")
+
 @admin_router.message(F.text == '↩️ НА ГОЛОВНУ')
 
 async def back_to_main_from_admin(message: Message, state: FSMContext):
