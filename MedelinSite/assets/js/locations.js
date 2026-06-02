@@ -239,6 +239,7 @@ function setupGuestMessageForm() {
             if (resp.ok) {
                 window.showToast('Дякуємо! Повідомлення надіслано.', 'success');
                 form.reset();
+                if (window.closePopup) window.closePopup('guest-message-popup');
             } else {
                 window.showToast('Помилка відправки. Спробуйте пізніше.', 'error');
             }

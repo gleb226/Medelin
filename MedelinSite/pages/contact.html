@@ -102,57 +102,16 @@
                         <div class="contact__social">
                             <h4 class="contact__location-name">Зв'яжіться з нами</h4>
                             <div id="socials-list" class="contact-card contact-card--full-height contact-card--centered">
-                                <div class="contact-social-icons">
-                                    <a href="mailto:medelin.social@gmail.com" class="social-icon" title="Email"
-                                        ><i class="fas fa-envelope"></i
-                                    ></a>
-                                    <a href="tel:+380503775906" class="social-icon" title="Телефон"
-                                        ><i class="fas fa-phone-alt"></i
-                                    ></a>
-                                    <a
-                                        href="https://www.instagram.com/medelin_com/"
-                                        target="_blank"
-                                        class="social-icon"
-                                        title="Instagram"
-                                        ><i class="fab fa-instagram"></i
-                                    ></a>
-                                    <a
-                                        href="https://www.facebook.com/medelin.uzh/"
-                                        target="_blank"
-                                        class="social-icon"
-                                        title="Facebook"
-                                        ><i class="fab fa-facebook-f"></i
-                                    ></a>
-                                    <a
-                                        href="https://github.com/gleb226/MedelineSite"
-                                        target="_blank"
-                                        class="social-icon"
-                                        title="GitHub"
-                                        ><i class="fab fa-github"></i
-                                    ></a>
-                                </div>
+                                <!-- Socials will be injected here by JS -->
+                                <div class="loading">Завантаження...</div>
                             </div>
+                            <button class="btn btn--full-width" style="margin-top: 1.5rem;" onclick="window.openPopup('guest-message-popup')">
+                                <i class="fas fa-paper-plane" style="margin-right: 8px;"></i> Написати нам
+                            </button>
                         </div>
                     </div>
-                    <div class="contact-split__social" style="flex: 1.2;">
-                        <h4 class="contact__location-name">Напишіть нам</h4>
-                        <div class="contact-card" style="padding: 2rem;">
-                            <form id="guest-message-form" class="checkout-modal__form" style="padding: 0 !important; gap: 1rem;">
-                                <div class="form-group">
-                                    <label class="form-label">Ваше ім'я</label>
-                                    <input type="text" name="name" placeholder="Як до вас звертатися?" required>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Телефон або @username</label>
-                                    <input type="text" name="contact" placeholder="Для зворотнього зв'язку" required>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Повідомлення</label>
-                                    <textarea name="message" placeholder="Ваше запитання або пропозиція..." rows="3" required></textarea>
-                                </div>
-                                <button type="submit" class="btn btn--full-width" style="margin-top: 0.5rem;">Надіслати</button>
-                            </form>
-                        </div>
+                    <div class="contact-split__map">
+                        <div id="map"></div>
                     </div>
                 </div>
             </section>
@@ -160,6 +119,32 @@
             <div id="cart-modal-container"></div>
             <div id="checkout-modal-container"></div>
         </main>
+
+        <!-- Guest Message Modal -->
+        <div class="popup" id="guest-message-popup">
+            <div class="popup__overlay" data-action="close-popup" data-popup-id="guest-message-popup"></div>
+            <div class="popup__content" style="max-width: 500px;">
+                <button class="popup__close" type="button" data-action="close-popup" data-popup-id="guest-message-popup"><i class="fas fa-times"></i></button>
+                <div class="popup__body-inner" style="padding: 2.5rem;">
+                    <h3 class="popup__title popup__title--margin-bottom" style="text-align: center;">Напишіть нам</h3>
+                    <form id="guest-message-form" class="checkout-modal__form" style="padding: 0 !important; gap: 1.5rem;">
+                        <div class="form-group">
+                            <label class="form-label">Ваше ім'я</label>
+                            <input type="text" name="name" placeholder="Як до вас звертатися?" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Телефон або @username</label>
+                            <input type="text" name="contact" placeholder="Для зворотнього зв'язку" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Повідомлення</label>
+                            <textarea name="message" placeholder="Ваше запитання або пропозиція..." rows="4" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn--full-width">Надіслати повідомлення</button>
+                    </form>
+                </div>
+            </div>
+        </div>
 
         <div id="popups-container"></div>
 
