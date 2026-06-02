@@ -134,8 +134,25 @@
                             </div>
                         </div>
                     </div>
-                    <div class="contact-split__map">
-                        <div id="map"></div>
+                    <div class="contact-split__social" style="flex: 1.2;">
+                        <h4 class="contact__location-name">Напишіть нам</h4>
+                        <div class="contact-card" style="padding: 2rem;">
+                            <form id="guest-message-form" class="checkout-modal__form" style="padding: 0 !important; gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Ваше ім'я</label>
+                                    <input type="text" name="name" placeholder="Як до вас звертатися?" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Телефон або @username</label>
+                                    <input type="text" name="contact" placeholder="Для зворотнього зв'язку" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Повідомлення</label>
+                                    <textarea name="message" placeholder="Ваше запитання або пропозиція..." rows="3" required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn--full-width" style="margin-top: 0.5rem;">Надіслати</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </section>

@@ -546,7 +546,12 @@ async def notify_admins_about_order(order_id: str):
             msg += f'🕒 Час: {date_time}\n'
 
     msg += f'💰 Сума: <b>{total} грн</b>\n'
-    msg += f"💳 Оплата: Онлайн (Сплачено)\n"
+    
+    payment_status = "Онлайн (Сплачено)"
+    if order.get('payment_mode') == 'pay_at_checkout' or order.get('payment_method') == 'cash':
+        payment_status = "Післяплата (Наложений платіж)"
+    
+    msg += f"💳 Оплата: <b>{payment_status}</b>\n"
     
     clean_wishes = wishes.replace(f"TG: {tg_nick}", "").replace("TG: ", "").replace("МЕНЮ", "").strip()
     if clean_wishes:
@@ -671,6 +676,21 @@ async def process_repay(req: RepayRequest):
     encoded = base64.b64encode(json.dumps(liqpay_params).encode()).decode()
     sig = base64.b64encode(hashlib.sha1((LIQPAY_PRIVATE_KEY + encoded + LIQPAY_PRIVATE_KEY).encode()).digest()).decode()
     return {'status': 'ok', 'data': encoded, 'signature': sig, 'provider': 'liqpay'}
+
+@app.post("/api/guest-message")
+async def guest_message(data: dict):
+    from app.utils.admin_notifications import send_admin_notification
+    name = data.get('name', 'Гість')
+    contact = data.get('contact', 'Не вказано')
+    msg = data.get('message', '')
+    
+    text = f"💬 <b>НОВЕ ПОВІДОМЛЕННЯ З САЙТУ</b>\n\n"
+    text += f"👤 Від: <b>{name}</b>\n"
+    text += f"📞 Контакт: <code>{contact}</code>\n\n"
+    text += f"📝 Повідомлення:\n{msg}"
+    
+    await send_admin_notification(text)
+    return {"status": "ok"}
 
 @app.post('/api/checkout')
 async def process_checkout(req: CheckoutRequest):

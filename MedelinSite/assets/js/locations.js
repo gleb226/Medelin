@@ -207,6 +207,48 @@ function addMarkerToMap(loc, locId) {
 function startContactPage() {
     initLocations();
     initSocials();
+    setupGuestMessageForm();
+}
+
+function setupGuestMessageForm() {
+    const form = document.getElementById('guest-message-form');
+    if (!form) return;
+
+    form.onsubmit = async function(e) {
+        e.preventDefault();
+        const btn = form.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Відправка...';
+
+        const fd = new FormData(form);
+        const data = {
+            name: fd.get('name'),
+            contact: fd.get('contact'),
+            message: fd.get('message')
+        };
+
+        try {
+            const resp = await fetch(`${window.API_BASE_URL}/api/guest-message`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (resp.ok) {
+                window.showToast('Дякуємо! Повідомлення надіслано.', 'success');
+                form.reset();
+            } else {
+                window.showToast('Помилка відправки. Спробуйте пізніше.', 'error');
+            }
+        } catch (err) {
+            window.showToast('Помилка з\'єднання.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    };
 }
 
 if (document.readyState === 'loading') {

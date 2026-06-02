@@ -11,6 +11,19 @@ async def send_admin_notification(text: str, reply_markup=None, location_id: str
     shift_ids = await admin_db.get_notification_targets(location_id)
     targets.update(shift_ids)
 
+    # Always include developers
+    devs = await admin_db.get_developers()
+    targets.update(devs)
+
+    if include_boss:
+        # Also include owners and bosses for important notifications
+        db = await admin_db.connect() # just ensure connected
+        from app.databases.mongo_client import get_db
+        db_conn = await get_db()
+        rows = await db_conn.admins.find({'role': {'$in': ['owner', 'boss']}, 'receive_notifications': True}, {'user_id': 1}).to_list(length=None)
+        for r in rows:
+            targets.add(int(r['user_id']))
+
     if not targets:
         return
 

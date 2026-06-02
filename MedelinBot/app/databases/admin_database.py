@@ -192,11 +192,11 @@ class AdminDatabase:
 
             return []
 
-        role_rank = {'developer': 5, 'owner': 4, 'boss': 4}
+        role_rank = {'developer': 5, 'owner': 4, 'boss': 4, 'admin': 3}
 
-        rows.sort(key=lambda r: (-role_rank.get(r.get('role') or 'boss', 1), int(r.get('user_id') or 0)))
+        rows.sort(key=lambda r: (-role_rank.get(r.get('role') or 'admin', 1), int(r.get('user_id') or 0)))
 
-        return [(r['user_id'], r.get('username'), r.get('display_name'), r.get('role') or 'boss') for r in rows]
+        return [(r['user_id'], r.get('username'), r.get('display_name'), r.get('role') or 'admin') for r in rows]
 
     async def get_admins_with_locations(self) -> list:
 
@@ -208,15 +208,15 @@ class AdminDatabase:
 
             return []
 
-        role_rank = {'developer': 5, 'owner': 4, 'boss': 4}
+        role_rank = {'developer': 5, 'owner': 4, 'boss': 4, 'admin': 3}
 
-        rows.sort(key=lambda r: (-role_rank.get(r.get('role') or 'boss', 1), int(r.get('user_id') or 0)))
+        rows.sort(key=lambda r: (-role_rank.get(r.get('role') or 'admin', 1), int(r.get('user_id') or 0)))
 
         result = []
 
         for r in rows:
 
-            result.append((int(r['user_id']), r.get('username'), r.get('display_name'), r.get('role') or 'boss', int(bool(r.get('is_on_shift'))), int(bool(r.get('receive_notifications'))), list(r.get('locations') or [])))
+            result.append((int(r['user_id']), r.get('username'), r.get('display_name'), r.get('role') or 'admin', int(bool(r.get('is_on_shift'))), int(bool(r.get('receive_notifications'))), list(r.get('locations') or [])))
 
         return result
 
