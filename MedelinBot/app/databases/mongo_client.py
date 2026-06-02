@@ -20,24 +20,10 @@ async def get_db() -> AsyncIOMotorDatabase:
         raise RuntimeError('MONGO_URI is not set in .env')
     
     if _client is None:
-        uri_to_use = MONGO_URI
-        # ATLAS clusters require TLS and often have DNS issues on Windows
-        is_atlas = 'mongodb.net' in str(MONGO_URI)
-        
-        if is_atlas and str(MONGO_URI).startswith('mongodb+srv://') and os.name == 'nt':
-            uri_to_use = await _expand_mongodb_srv_uri_windows(MONGO_URI) or MONGO_URI
-        
-        # Ensure TLS is enabled for Atlas if not specified
-        if is_atlas and 'tls=' not in uri_to_use.lower() and 'ssl=' not in uri_to_use.lower():
-            sep = '&' if '?' in uri_to_use else '?'
-            uri_to_use += f"{sep}tls=true"
-
         _client = AsyncIOMotorClient(
-            uri_to_use,
-            serverSelectionTimeoutMS=30000, # Increase to 30s
+            MONGO_URI,
+            serverSelectionTimeoutMS=30000,
             connectTimeoutMS=20000,
-            socketTimeoutMS=30000,
-            heartbeatFrequencyMS=10000,
             retryWrites=True
         )
     
