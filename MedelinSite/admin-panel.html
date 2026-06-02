@@ -311,7 +311,205 @@
 
             async function completeOrder(oid) { if (confirm('Виконано?')) { await apiFetch(`orders/${oid}/complete`, 'POST'); loadOrders(); } }
 
-            function refreshData() { if (currentSection === 'orders') loadOrders(); }
+            function refreshData() {
+                if (currentSection === 'orders') loadOrders();
+                if (currentSection === 'beans') loadBeans();
+                if (currentSection === 'locations') loadLocations();
+                if (currentSection === 'socials') loadSocials();
+                if (currentSection === 'team') loadTeam();
+            }
+
+            async function loadBeans() {
+                showLoader(true);
+                const beans = await apiFetch('beans');
+                const list = document.getElementById('items-list');
+                list.innerHTML = `<div class="admin-toolbar"><h3>Список зерна</h3><button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати сорт</button></div><div id="beans-grid" class="admin-grid"></div>`;
+                const grid = document.getElementById('beans-grid');
+                beans?.forEach(b => {
+                    const div = document.createElement('div');
+                    div.className = 'card';
+                    div.style.padding = '1.5rem';
+                    div.innerHTML = `<strong>${b.name}</strong><br><small>${b.price_250} ₴</small><div class="order-actions" style="margin-top:1rem;"><button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')">Видалити</button></div>`;
+                    grid.appendChild(div);
+                });
+                showLoader(false);
+            }
+
+            function openBeanModal(b = null) {
+                const modal = document.getElementById('admin-modal');
+                modal.innerHTML = `
+                <div class="admin-modal__panel">
+                    <div class="admin-modal__header"><h3 class="admin-modal__title">${b ? 'Редагувати' : 'Додати'} сорт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
+                    <form id="bean-form">
+                        <div class="admin-grid">
+                            <div class="admin-field"><label>Назва</label><input name="name" value="${b?.name || ''}" required></div>
+                            <div class="admin-field"><label>Ціна 250г</label><input type="number" name="price_250" value="${b?.price_250 || ''}" required></div>
+                            <div class="admin-field"><label>Склад (Арабіка/Робуста)</label><input name="species" value="${b?.species || ''}"></div>
+                            <div class="admin-field"><label>Обсмаження</label><input name="roast" value="${b?.roast || ''}"></div>
+                            <div class="admin-field"><label>Дескриптори</label><input name="descriptors" value="${b?.descriptors || b?.taste || ''}"></div>
+                            <div class="admin-field"><label>SCA Score</label><input name="cup_score" value="${b?.cup_score || ''}"></div>
+                            <div class="admin-field"><label>Кислинка (1-5)</label><input type="number" name="acidity" min="0" max="5" value="${b?.acidity || ''}"></div>
+                            <div class="admin-field"><label>Гірчинка (1-5)</label><input type="number" name="bitterness" min="0" max="5" value="${b?.bitterness || ''}"></div>
+                            <div class="admin-field"><label>Насиченість (1-5)</label><input type="number" name="body" min="0" max="5" value="${b?.body || ''}"></div>
+                            <div class="admin-field"><label>Різновид</label><input name="variety" value="${b?.variety || ''}"></div>
+                            <div class="admin-field"><label>Висота</label><input name="altitude" value="${b?.altitude || ''}"></div>
+                            <div class="admin-field"><label>Обробка</label><input name="processing" value="${b?.processing || ''}"></div>
+                            <div class="admin-field"><label>Врожай</label><input name="harvest" value="${b?.harvest || ''}"></div>
+                            <div class="admin-field"><label>URL Фото</label><input name="image_url" value="${b?.image_url || ''}"></div>
+                        </div>
+                        <div class="admin-field" style="margin-top:1rem;"><label>Опис</label><textarea name="description" rows="3">${b?.description || ''}</textarea></div>
+                    </form>
+                    <div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveBean('${b?.id || ''}')">Зберегти</button></div>
+                </div>`;
+                modal.classList.add('admin-modal--active');
+            }
+
+            async function saveBean(id) {
+                const fd = new FormData(document.getElementById('bean-form'));
+                const data = Object.fromEntries(fd.entries());
+                const method = id ? 'POST' : 'POST';
+                const endpoint = id ? `beans/${id}` : 'beans';
+                await apiFetch(endpoint, 'POST', data);
+                closeAdminModal(); refreshData();
+            }
+
+            async function deleteBean(id) { if (confirm('Видалити?')) { await apiFetch(`beans/${id}`, 'DELETE'); refreshData(); } }
+
+            async function loadLocations() {
+                showLoader(true);
+                const locs = await apiFetch('locations');
+                const list = document.getElementById('items-list');
+                list.innerHTML = `<div class="admin-toolbar"><h3>Локації</h3><button class="btn btn--primary btn--sm" onclick="openLocationModal()">+ Додати локацію</button></div><div id="locs-grid" class="admin-grid"></div>`;
+                const grid = document.getElementById('locs-grid');
+                locs?.forEach(l => {
+                    const div = document.createElement('div');
+                    div.className = 'card';
+                    div.style.padding = '1.5rem';
+                    div.innerHTML = `<strong>${l.name}</strong><br><small>${l.address}</small><div class="order-actions" style="margin-top:1rem;"><button class="btn btn--outline btn--sm" onclick='openLocationModal(${JSON.stringify(l).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteLocation('${l.id}')">Видалити</button></div>`;
+                    grid.appendChild(div);
+                });
+                showLoader(false);
+            }
+
+            function openLocationModal(l = null) {
+                const modal = document.getElementById('admin-modal');
+                modal.innerHTML = `
+                <div class="admin-modal__panel">
+                    <div class="admin-modal__header"><h3 class="admin-modal__title">${l ? 'Редагувати' : 'Додати'} локацію</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
+                    <form id="loc-form">
+                        <div class="admin-grid">
+                            <div class="admin-field"><label>Назва</label><input name="name" value="${l?.name || ''}" required></div>
+                            <div class="admin-field"><label>Адреса</label><input name="address" value="${l?.address || ''}" required></div>
+                            <div class="admin-field"><label>Графік</label><input name="schedule" value="${l?.schedule || ''}"></div>
+                            <div class="admin-field"><label>Телефон</label><input name="phone" value="${l?.phone || ''}"></div>
+                            <div class="admin-field"><label>URL Фото</label><input name="image_url" value="${l?.image_url || ''}"></div>
+                            <div class="admin-field"><label>Google Maps URL</label><input name="google_maps_url" value="${l?.google_maps_url || ''}"></div>
+                        </div>
+                        <div class="admin-field" style="margin-top:1rem;"><label>Атмосфера/Опис</label><textarea name="atmosphere" rows="3">${l?.atmosphere || ''}</textarea></div>
+                    </form>
+                    <div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveLocation('${l?.id || ''}')">Зберегти</button></div>
+                </div>`;
+                modal.classList.add('admin-modal--active');
+            }
+
+            async function saveLocation(id) {
+                const fd = new FormData(document.getElementById('loc-form'));
+                const data = Object.fromEntries(fd.entries());
+                const endpoint = id ? `locations/${id}` : 'locations';
+                await apiFetch(endpoint, 'POST', data);
+                closeAdminModal(); refreshData();
+            }
+
+            async function deleteLocation(id) { if (confirm('Видалити?')) { await apiFetch(`locations/${id}`, 'DELETE'); refreshData(); } }
+
+            async function loadSocials() {
+                showLoader(true);
+                const socials = await apiFetch('socials');
+                const list = document.getElementById('items-list');
+                list.innerHTML = `<div class="admin-toolbar"><h3>Соцмережі</h3><button class="btn btn--primary btn--sm" onclick="openSocialModal()">+ Додати</button></div><div id="socials-list"></div>`;
+                const slist = document.getElementById('socials-list');
+                socials?.forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = 'order-item';
+                    div.innerHTML = `<div class="order-info"><strong>${s.name}</strong><br><small>${s.url}</small></div><div class="order-actions"><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button></div>`;
+                    slist.appendChild(div);
+                });
+                showLoader(false);
+            }
+
+            function openSocialModal() {
+                const modal = document.getElementById('admin-modal');
+                modal.innerHTML = `
+                <div class="admin-modal__panel" style="max-width:400px;">
+                    <div class="admin-modal__header"><h3 class="admin-modal__title">Додати контакт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
+                    <form id="social-form">
+                        <div class="admin-field"><label>Назва</label><input name="name" placeholder="Instagram" required></div>
+                        <div class="admin-field" style="margin-top:1rem;"><label>URL</label><input name="url" placeholder="https://..." required></div>
+                    </form>
+                    <div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveSocial()">Зберегти</button></div>
+                </div>`;
+                modal.classList.add('admin-modal--active');
+            }
+
+            async function saveSocial() {
+                const fd = new FormData(document.getElementById('social-form'));
+                await apiFetch('socials', 'POST', Object.fromEntries(fd.entries()));
+                closeAdminModal(); refreshData();
+            }
+
+            async function deleteSocial(id) { if (confirm('Видалити?')) { await apiFetch(`socials/${id}`, 'DELETE'); refreshData(); } }
+
+            async function loadTeam() {
+                showLoader(true);
+                const team = await apiFetch('team');
+                const list = document.getElementById('items-list');
+                list.innerHTML = `<div class="admin-toolbar"><h3>Команда</h3><button class="btn btn--primary btn--sm" onclick="openTeamModal()">+ Додати учасника</button></div><div id="team-list"></div>`;
+                const tlist = document.getElementById('team-list');
+                team?.forEach(t => {
+                    const [uid, uname, dname, role, shift, notify, locs] = t;
+                    const div = document.createElement('div');
+                    div.className = 'order-item';
+                    div.innerHTML = `<div class="order-info"><strong>${dname}</strong> (@${uname || '—'})<br><small>Роль: ${roleName(role)} | ID: ${uid}</small></div><div class="order-actions"><button class="btn btn--danger btn--sm" onclick="deleteTeam('${uid}')">Видалити</button></div>`;
+                    tlist.appendChild(div);
+                });
+                showLoader(false);
+            }
+
+            function openTeamModal() {
+                const modal = document.getElementById('admin-modal');
+                modal.innerHTML = `
+                <div class="admin-modal__panel" style="max-width:450px;">
+                    <div class="admin-modal__header"><h3 class="admin-modal__title">Додати в команду</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
+                    <form id="team-form">
+                        <div class="admin-field"><label>Telegram ID</label><input type="number" name="user_id" placeholder="123456789" required></div>
+                        <div class="admin-field" style="margin-top:1rem;"><label>Ім'я в системі</label><input name="display_name" placeholder="Іван Менеджер" required></div>
+                        <div class="admin-field" style="margin-top:1rem;"><label>Нікнейм (@)</label><input name="username" placeholder="ivan_medelin"></div>
+                        <div class="admin-field" style="margin-top:1rem;"><label>Роль</label><select name="role"><option value="admin">Адмін локації</option><option value="delivery_manager">Менеджер доставки</option><option value="boss">Власник/Бос</option></select></div>
+                    </form>
+                    <div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveTeam()">Зберегти</button></div>
+                </div>`;
+                modal.classList.add('admin-modal--active');
+            }
+
+            async function saveTeam() {
+                const fd = new FormData(document.getElementById('team-form'));
+                const data = Object.fromEntries(fd.entries());
+                data.user_id = parseInt(data.user_id);
+                await apiFetch('team', 'POST', data);
+                closeAdminModal(); refreshData();
+            }
+
+            async function deleteTeam(id) { if (confirm('Видалити?')) { await apiFetch(`team/${id}`, 'DELETE'); refreshData(); } }
+
+            function closeAdminModal() { document.getElementById('admin-modal').classList.remove('admin-modal--active'); }
+
+            function refreshData() {
+                if (currentSection === 'orders') loadOrders();
+                if (currentSection === 'beans') loadBeans();
+                if (currentSection === 'locations') loadLocations();
+                if (currentSection === 'socials') loadSocials();
+                if (currentSection === 'team') loadTeam();
+            }
 
             document.getElementById('refresh-btn').onclick = refreshData;
             if (sessionToken && currentAdmin) { document.getElementById('login-screen').style.display = 'none'; showPanel(); }

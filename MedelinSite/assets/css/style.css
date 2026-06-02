@@ -1266,6 +1266,15 @@ h4 {
     color: var(--color-dark-brown);
 }
 
+.product-card__info-brief {
+    line-height: 1.4;
+}
+
+.product-card__info-brief strong {
+    color: var(--color-coffee);
+    font-weight: 700;
+}
+
 .product-card__price {
     font-size: 1.4rem;
     color: var(--color-coffee);

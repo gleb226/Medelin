@@ -92,9 +92,125 @@ async def finish_order(callback: CallbackQuery):
     await callback.answer('Замовлення виконано!')
     await list_active_orders(callback)
 
-@admin_router.callback_query(F.data == 'beans_manage')
-async def manage_beans(callback: CallbackQuery):
-    await safe_edit_message(callback.message, '☕️ <b>КЕРУВАННЯ ЗЕРНАМИ:</b>', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
+@admin_router.message(F.text == '🛍 АКТИВНІ ЗАМОВЛЕННЯ')
+async def show_active_panel_msg(message: Message):
+    if not await admin_db.is_admin(message.from_user.id): return
+    await message.answer('🛍 <b>КЕРУВАННЯ ЗАМОВЛЕННЯМИ:</b>', reply_markup=akb.get_active_types_kb(), parse_mode='HTML')
+
+@admin_router.message(F.text == '☕️ КЕРУВАННЯ ЗЕРНАМИ')
+async def manage_beans_msg(message: Message):
+    if not await admin_db.is_admin(message.from_user.id): return
+    await message.answer('☕️ <b>КЕРУВАННЯ ЗЕРНАМИ:</b>', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
+
+@admin_router.message(F.text == '📍 ЛОКАЦІЇ')
+async def manage_locations_msg(message: Message):
+    if not await admin_db.is_admin(message.from_user.id): return
+    await message.answer('📍 <b>КЕРУВАННЯ ЛОКАЦІЯМИ:</b>', reply_markup=akb.get_locations_manage_kb(), parse_mode='HTML')
+
+@admin_router.message(F.text == '📞 КОНТАКТИ')
+async def manage_contacts_msg(message: Message):
+    if not await admin_db.is_admin(message.from_user.id): return
+    await message.answer('📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>', reply_markup=akb.get_contacts_manage_kb(), parse_mode='HTML')
+
+@admin_router.message(F.text == '👤 ПЕРСОНАЛ')
+async def manage_staff_msg(message: Message):
+    if not await admin_db.is_admin(message.from_user.id): return
+    await message.answer('👤 <b>КЕРУВАННЯ ПЕРСОНАЛОМ:</b>', reply_markup=akb.get_staff_manage_kb(), parse_mode='HTML')
+
+@admin_router.callback_query(F.data == 'locations_manage')
+async def manage_locations_cb(callback: CallbackQuery):
+    await safe_edit_message(callback.message, '📍 <b>КЕРУВАННЯ ЛОКАЦІЯМИ:</b>', reply_markup=akb.get_locations_manage_kb(), parse_mode='HTML')
+
+@admin_router.callback_query(F.data == 'contacts_manage')
+async def manage_contacts_cb(callback: CallbackQuery):
+    await safe_edit_message(callback.message, '📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>', reply_markup=akb.get_contacts_manage_kb(), parse_mode='HTML')
+
+@admin_router.callback_query(F.data == 'beans_list')
+async def list_beans_admin(callback: CallbackQuery):
+    beans = await coffee_beans_db.get_all_beans()
+    if not beans:
+        await callback.answer('Сорти відсутні.')
+        return
+    
+    text = "📜 <b>СПИСОК ЗЕРЕН:</b>\n\n"
+    buttons = []
+    for b in beans:
+        bid = str(b['_id'])
+        text += f"• <b>{b['name']}</b> ({b.get('price_250')} ₴)\n"
+        buttons.append([InlineKeyboardButton(text=f"❌ Видалити {b['name'][:15]}", callback_data=f"bean_del_{bid}")])
+    
+    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='beans_manage')])
+    await safe_edit_message(callback.message, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons), parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('bean_del_'))
+async def delete_bean_admin(callback: CallbackQuery):
+    bid = callback.data.replace('bean_del_', '')
+    await coffee_beans_db.delete_bean(bid)
+    await callback.answer('Сорт видалено!')
+    await list_beans_admin(callback)
+
+@admin_router.callback_query(F.data == 'locations_list')
+async def list_locations_admin(callback: CallbackQuery):
+    locs = await location_db.get_all_locations()
+    text = "📍 <b>СПИСОК ЛОКАЦІЙ:</b>\n\n"
+    buttons = []
+    for l in locs:
+        lid = str(l['_id'])
+        text += f"• <b>{l['name']}</b>\n"
+        buttons.append([InlineKeyboardButton(text=f"❌ Видалити {l['name'][:15]}", callback_data=f"loc_del_{lid}")])
+    
+    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='locations_manage')])
+    await safe_edit_message(callback.message, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons), parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('loc_del_'))
+async def delete_location_admin(callback: CallbackQuery):
+    lid = callback.data.replace('loc_del_', '')
+    db = await get_db()
+    from bson import ObjectId
+    await db.locations.delete_one({'_id': ObjectId(lid)})
+    await callback.answer('Локацію видалено!')
+    await list_locations_admin(callback)
+
+@admin_router.callback_query(F.data == 'contacts_list')
+async def list_contacts_admin(callback: CallbackQuery):
+    socials = await contacts_db.get_all_contacts()
+    text = "📞 <b>СПИСОК КОНТАКТІВ:</b>\n\n"
+    buttons = []
+    for s in socials:
+        sid = str(s['_id'])
+        text += f"• <b>{s['name']}</b>: {s['url']}\n"
+        buttons.append([InlineKeyboardButton(text=f"❌ Видалити {s['name']}", callback_data=f"contact_del_{sid}")])
+    
+    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='contacts_manage')])
+    await safe_edit_message(callback.message, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons), parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('contact_del_'))
+async def delete_contact_admin(callback: CallbackQuery):
+    sid = callback.data.replace('contact_del_', '')
+    await contacts_db.remove_contact(sid)
+    await callback.answer('Контакт видалено!')
+    await list_contacts_admin(callback)
+
+@admin_router.callback_query(F.data == 'staff_list')
+async def list_staff_admin(callback: CallbackQuery):
+    staff = await admin_db.get_admins_with_locations()
+    text = "👤 <b>СПИСОК ПЕРСОНАЛУ:</b>\n\n"
+    buttons = []
+    for s in staff:
+        uid, uname, dname, role, shift, notify, locs = s
+        text += f"• <b>{dname}</b> (@{uname or '—'}) — {role}\n"
+        if str(uid) not in DEVELOPER_IDS:
+            buttons.append([InlineKeyboardButton(text=f"❌ Видалити {dname[:15]}", callback_data=f"staff_del_{uid}")])
+    
+    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='staff_manage')])
+    await safe_edit_message(callback.message, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons), parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('staff_del_'))
+async def delete_staff_admin(callback: CallbackQuery):
+    uid = int(callback.data.replace('staff_del_', ''))
+    await admin_db.remove_admin(uid)
+    await callback.answer('Учасника видалено!')
+    await list_staff_admin(callback)
 
 @admin_router.callback_query(F.data == 'bean_add')
 async def add_bean_start(callback: CallbackQuery, state: FSMContext):

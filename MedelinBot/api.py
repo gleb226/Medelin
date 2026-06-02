@@ -96,6 +96,42 @@ def build_cart_text(cart: list) -> tuple[int, str]:
         items.append(f"- {item['name']} ({price} грн)")
     return (total, '\n'.join(items))
 
+async def call_np(model: str, method: str, params: dict):
+    url = "https://api.novaposhta.ua/v2.0/json/"
+    payload = {
+        "apiKey": NP_API_KEY,
+        "modelName": model,
+        "calledMethod": method,
+        "methodProperties": params
+    }
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                data = await resp.json()
+                if not data.get('success'):
+                    logger.error(f"NP API Error: {data.get('errors')}")
+                    return []
+                return data.get('data', [])
+    except Exception as e:
+        logger.error(f"NP API Exception: {e}")
+        return []
+
+@app.get('/api/nova-poshta/cities')
+async def get_np_cities(search: str = Query('')):
+    if len(search) < 2: return []
+    return await call_np("Address", "getCities", {"FindByString": search, "Limit": "20"})
+
+@app.get('/api/nova-poshta/warehouses')
+async def get_np_warehouses(cityRef: str, search: str = Query('')):
+    params = {"CityRef": cityRef, "Limit": "50"}
+    if search: params["FindByString"] = search
+    return await call_np("Address", "getWarehouses", params)
+
+@app.get('/api/nova-poshta/streets')
+async def get_np_streets(cityRef: str, search: str = Query('')):
+    if len(search) < 2: return []
+    return await call_np("Address", "getStreets", {"CityRef": cityRef, "FindByString": search, "Limit": "20"})
+
 @app.get('/api/coffee')
 async def get_coffee(): return await public_data_cache.refresh_coffee()
 
@@ -124,8 +160,15 @@ async def process_checkout(req: CheckoutRequest):
     wishes_str = f'TG: @{tg_nick}' if tg_nick else ''
     if order_type == 'nova_poshta':
         np_city = (user.get('np_city_name') or '').strip()
-        np_warehouse = (user.get('np_warehouse') or '').strip()
-        wishes_str += f'\nНП: {np_city}, {np_warehouse}'
+        np_mode = user.get('np_delivery_mode')
+        if np_mode == 'courier':
+            np_st = user.get('np_street_name', '')
+            np_h = user.get('np_house', '')
+            np_f = user.get('np_flat', '')
+            wishes_str += f'\nНП (Кур\'єр): {np_city}, вул. {np_st}, буд. {np_h}, кв. {np_f}'
+        else:
+            np_warehouse = (user.get('np_warehouse') or '').strip()
+            wishes_str += f'\nНП (Відділення): {np_city}, {np_warehouse}'
     if comment: wishes_str += f'\nКоментар: {comment}'
     
     user_id = None
@@ -183,6 +226,157 @@ async def report_error(req: Request):
             except: pass
         return {'status': 'ok'}
     except: return {'status': 'error'}
+
+# --- Admin API ---
+class LoginRequest(BaseModel):
+    identifier: str
+    password: str
+
+async def get_current_admin(request: Request):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        raise HTTPException(status_code=401, detail='Неавторизовано')
+    token = auth_header.split(' ')[1]
+    admin = await admin_db.verify_session(token)
+    if not admin:
+        raise HTTPException(status_code=401, detail='Сесія недійсна')
+    return admin
+
+@app.post('/api/admin/login')
+async def admin_login(req: LoginRequest):
+    # If password is correct (for security, use ADMIN_PANEL_PASSWORD from config)
+    from app.common.config import ADMIN_PANEL_PASSWORD
+    if req.password != ADMIN_PANEL_PASSWORD:
+        raise HTTPException(status_code=401, detail='Невірний пароль')
+    
+    admin = await admin_db.find_admin_by_identifier(req.identifier)
+    if not admin:
+        raise HTTPException(status_code=404, detail='Адміністратора не знайдено')
+    
+    # Send confirmation to bot
+    from app.common.bot_instance import bot
+    msg = f"🔐 <b>ЗАПИТ НА ВХІД В АДМІН-ПАНЕЛЬ</b>\n\n👤 <b>{admin['display_name']}</b> (@{admin.get('username', '—')})\n\nПідтвердіть вхід:"
+    await bot.send_message(admin['user_id'], msg, reply_markup=akb.get_admin_auth_kb(admin['user_id']), parse_mode='HTML')
+    
+    return {'status': 'ok', 'user_id': admin['user_id']}
+
+@app.get('/api/admin/verify')
+async def admin_verify(user_id: int):
+    req = await admin_db.get_auth_request(user_id)
+    if req and req.get('confirmed'):
+        # Create session
+        token = hashlib.sha256(f"{user_id}{time.time()}".encode()).hexdigest()
+        await admin_db.create_session(user_id, token)
+        admin = await admin_db.get_admin_by_id(user_id)
+        return {'status': 'ok', 'token': token, 'admin': admin}
+    return {'status': 'pending'}
+
+@app.get('/api/admin/active-orders')
+async def get_active_orders(admin: dict = Depends(get_current_admin)):
+    from app.databases.active_orders_database import active_orders_db
+    locs = None
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        locs = admin.get('locations')
+    
+    orders = await active_orders_db.get_active_orders(locs)
+    for o in orders:
+        o['order_id'] = str(o['_id'])
+        del o['_id']
+        # Add location name
+        if o['location_id'] == 'NP': o['location_name'] = 'Нова Пошта'
+        else:
+            loc = await location_db.get_location_by_id(o['location_id'])
+            o['location_name'] = loc['name'] if loc else 'Web'
+    return orders
+
+@app.post('/api/admin/orders/{order_id}/complete')
+async def complete_order(order_id: str, admin: dict = Depends(get_current_admin)):
+    from app.databases.active_orders_database import active_orders_db
+    await active_orders_db.remove_order(order_id)
+    return {'status': 'ok'}
+
+# CRUD for Beans
+@app.get('/api/admin/beans')
+async def admin_get_beans(admin: dict = Depends(get_current_admin)):
+    beans = await coffee_beans_db.get_all_beans()
+    for b in beans: b['id'] = str(b['_id']); del b['_id']
+    return beans
+
+@app.post('/api/admin/beans')
+async def admin_add_bean(data: dict, admin: dict = Depends(get_current_admin)):
+    await coffee_beans_db.add_bean(**data)
+    return {'status': 'ok'}
+
+@app.post('/api/admin/beans/{bean_id}')
+async def admin_update_bean(bean_id: str, data: dict, admin: dict = Depends(get_current_admin)):
+    # Assuming update_bean exists or add it
+    db = await get_db()
+    from bson import ObjectId
+    await db.coffee_beans.update_one({'_id': ObjectId(bean_id)}, {'$set': data})
+    return {'status': 'ok'}
+
+@app.delete('/api/admin/beans/{bean_id}')
+async def admin_delete_bean(bean_id: str, admin: dict = Depends(get_current_admin)):
+    await coffee_beans_db.delete_bean(bean_id)
+    return {'status': 'ok'}
+
+# CRUD for Locations
+@app.get('/api/admin/locations')
+async def admin_get_locations(admin: dict = Depends(get_current_admin)):
+    locs = await location_db.get_all_locations()
+    for l in locs: l['id'] = str(l['_id']); del l['_id']
+    return locs
+
+@app.post('/api/admin/locations')
+async def admin_add_location(data: dict, admin: dict = Depends(get_current_admin)):
+    await location_db.add_location(**data)
+    return {'status': 'ok'}
+
+@app.post('/api/admin/locations/{loc_id}')
+async def admin_update_location(loc_id: str, data: dict, admin: dict = Depends(get_current_admin)):
+    db = await get_db()
+    from bson import ObjectId
+    await db.locations.update_one({'_id': ObjectId(loc_id)}, {'$set': data})
+    return {'status': 'ok'}
+
+@app.delete('/api/admin/locations/{loc_id}')
+async def admin_delete_location(loc_id: str, admin: dict = Depends(get_current_admin)):
+    db = await get_db()
+    from bson import ObjectId
+    await db.locations.delete_one({'_id': ObjectId(loc_id)})
+    return {'status': 'ok'}
+
+# CRUD for Contacts/Socials
+@app.get('/api/admin/socials')
+async def admin_get_socials(admin: dict = Depends(get_current_admin)):
+    socials = await contacts_db.get_all_contacts()
+    for s in socials: s['id'] = str(s['_id']); del s['_id']
+    return socials
+
+@app.post('/api/admin/socials')
+async def admin_add_social(data: dict, admin: dict = Depends(get_current_admin)):
+    await contacts_db.add_contact(data['name'], data['url'])
+    return {'status': 'ok'}
+
+@app.delete('/api/admin/socials/{sid}')
+async def admin_delete_social(sid: str, admin: dict = Depends(get_current_admin)):
+    await contacts_db.remove_contact(sid)
+    return {'status': 'ok'}
+
+# CRUD for Team/Staff
+@app.get('/api/admin/team')
+async def admin_get_team(admin: dict = Depends(get_current_admin)):
+    return await admin_db.get_admins_with_locations()
+
+@app.post('/api/admin/team')
+async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
+    await admin_db.add_admin(user_id=data['user_id'], username=data.get('username', ''), display_name=data['display_name'], added_by=admin['user_id'], role=data.get('role', 'admin'), locations=data.get('locations', []))
+    return {'status': 'ok'}
+
+@app.delete('/api/admin/team/{uid}')
+async def admin_delete_team(uid: int, admin: dict = Depends(get_current_admin)):
+    await admin_db.remove_admin(uid)
+    return {'status': 'ok'}
 
 if _site_dir:
     app.mount('/', StaticFiles(directory=str(_site_dir), html=True), name='site')

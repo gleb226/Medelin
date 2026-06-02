@@ -44,10 +44,18 @@ function renderCoffeeData(coffeeData) {
         art.className = 'product-card';
         let displayName = item.name.replace(/Blend Mixed/gi, '').trim();
 
+        // На картці має бути: Назва, Спосіб обробки, Дескриптори, Обсмаження
         art.innerHTML = `
             <div class="product-card__image" style="background-image: url('${item.image_url || defImg}');"></div>
             <div class="product-card__content">
                 <h3 class="product-card__title">${displayName}</h3>
+                
+                <div class="product-card__info-brief" style="margin-bottom: 1.5rem; font-size: 0.9rem; color: #6b4f3a;">
+                    ${item.processing ? `<div style="margin-bottom: 4px;"><strong>Обробка:</strong> ${item.processing}</div>` : ''}
+                    ${item.descriptors || item.taste ? `<div style="margin-bottom: 4px;"><strong>Дескриптори:</strong> ${item.descriptors || item.taste}</div>` : ''}
+                    ${item.roast ? `<div><strong>Обсмаження:</strong> ${item.roast}</div>` : ''}
+                </div>
+
                 <div class="product-card__price-row">
                     <span class="product-card__price">${item.price_250} ₴ / 250г</span>
                     <button class="btn-add-plus"><i class="fas fa-plus"></i></button>
@@ -115,7 +123,6 @@ function openBeanDetail(item, pushState = true) {
                 <div class="bean-full-view__info-side">
                     <h1 style="font-family: var(--font-accent); font-size: 3.5rem; line-height: 1.1; margin-bottom: 1rem; color: var(--color-dark-brown);">${displayName}</h1>
                     <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
-                         ${item.country ? `<span class="tag" style="background: var(--color-coffee); color: white; padding: 0.4rem 1rem; border-radius: 50px; font-weight: 700; font-size: 0.8rem; text-transform: uppercase;">${item.country}</span>` : ''}
                          ${item.cup_score ? `<span class="tag" style="background: #ef4444; color: white; padding: 0.4rem 1rem; border-radius: 50px; font-weight: 700; font-size: 0.8rem;">SCA: ${item.cup_score}</span>` : ''}
                     </div>
 
@@ -124,7 +131,12 @@ function openBeanDetail(item, pushState = true) {
                     <div class="bean-full-view__primary-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem; background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.04);">
                         ${item.species ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Склад</label><p style="font-size: 1.1rem; font-weight: 700;">${item.species}</p></div>` : ''}
                         ${item.roast ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Обсмаження</label><p style="font-size: 1.1rem; font-weight: 700;">${item.roast}</p></div>` : ''}
-                        ${item.taste ? `<div style="grid-column: span 2;"><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Дескриптори</label><p style="font-size: 1.2rem; font-weight: 700; color: var(--color-dark-brown);">${item.taste}</p></div>` : ''}
+                        ${item.descriptors || item.taste ? `<div style="grid-column: span 2;"><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Дескриптори</label><p style="font-size: 1.2rem; font-weight: 700; color: var(--color-dark-brown);">${item.descriptors || item.taste}</p></div>` : ''}
+                        
+                        ${item.variety ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Різновид</label><p style="font-size: 1.1rem; font-weight: 700;">${item.variety}</p></div>` : ''}
+                        ${item.altitude ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Висота зростання</label><p style="font-size: 1.1rem; font-weight: 700;">${item.altitude}</p></div>` : ''}
+                        ${item.processing ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Метод обробки</label><p style="font-size: 1.1rem; font-weight: 700;">${item.processing}</p></div>` : ''}
+                        ${item.harvest ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Період врожаю</label><p style="font-size: 1.1rem; font-weight: 700;">${item.harvest}</p></div>` : ''}
                     </div>
 
                     <div style="background: var(--color-dark-brown); color: white; padding: 2.5rem; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 15px 35px rgba(0,0,0,0.2);">
@@ -141,24 +153,6 @@ function openBeanDetail(item, pushState = true) {
                     </div>
                 </div>
             </div>
-
-            <div class="bean-full-view__details" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
-                ${item.region ? `<div style="background: #f9f9f9; padding: 1.5rem; border-radius: 16px;"><label style="display: block; font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #999; margin-bottom: 0.5rem;">Регіон</label><p style="font-weight: 600;">${item.region}</p></div>` : ''}
-                ${item.station ? `<div style="background: #f9f9f9; padding: 1.5rem; border-radius: 16px;"><label style="display: block; font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #999; margin-bottom: 0.5rem;">Станція / Ферма</label><p style="font-weight: 600;">${item.station}</p></div>` : ''}
-                ${item.variety ? `<div style="background: #f9f9f9; padding: 1.5rem; border-radius: 16px;"><label style="display: block; font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #999; margin-bottom: 0.5rem;">Різновид</label><p style="font-weight: 600;">${item.variety}</p></div>` : ''}
-                ${item.altitude ? `<div style="background: #f9f9f9; padding: 1.5rem; border-radius: 16px;"><label style="display: block; font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #999; margin-bottom: 0.5rem;">Висота зростання</label><p style="font-weight: 600;">${item.altitude}</p></div>` : ''}
-                ${item.processing ? `<div style="background: #f9f9f9; padding: 1.5rem; border-radius: 16px;"><label style="display: block; font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #999; margin-bottom: 0.5rem;">Метод обробки</label><p style="font-weight: 600;">${item.processing}</p></div>` : ''}
-                ${item.harvest ? `<div style="background: #f9f9f9; padding: 1.5rem; border-radius: 16px;"><label style="display: block; font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #999; margin-bottom: 0.5rem;">Період врожаю</label><p style="font-weight: 600;">${item.harvest}</p></div>` : ''}
-            </div>
-
-            ${item.recommendation ? `
-            <div class="bean-full-view__recommendation" style="margin-top: 3rem; background: #fff8f0; padding: 2.5rem; border-radius: 24px; border: 2px dashed rgba(139, 69, 19, 0.2);">
-                <h4 style="font-family: var(--font-accent); color: var(--color-dark-brown); margin-bottom: 1rem; display: flex; align-items: center;">
-                    <i class="fas fa-lightbulb" style="color: #f59e0b; margin-right: 15px; font-size: 1.5rem;"></i>
-                    Рекомендація бариста
-                </h4>
-                <p style="font-size: 1.1rem; line-height: 1.6; color: #5d4037;">${item.recommendation}</p>
-            </div>` : ''}
         </div>
     `;
 

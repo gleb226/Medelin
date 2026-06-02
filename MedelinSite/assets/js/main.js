@@ -707,14 +707,51 @@ window.openCheckoutModal = function () {
                                 <input type="hidden" name="np_city_name" id="np_city_name">
                                 <input type="hidden" name="delivery_type" value="nova_poshta">
 
-                                <div id="np_warehouse_search_wrap" class="np-warehouse-search" style="display:none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0,0,0,0.05);">
-                                    <p class="form-label">Відділення або поштомат (№ або вул):</p>
-                                    <div class="search-wrapper">
-                                        <input type="text" id="np_wh_input" placeholder="Наприклад: 1 або Головна">
-                                        <div id="np_wh_results" class="np-search-results"></div>
+                                <div class="form-group" style="margin-top: 1rem;">
+                                    <label class="form-label">Тип доставки НП:</label>
+                                    <div class="choice-grid" style="grid-template-columns: 1fr 1fr;">
+                                        <label class="choice-chip choice-chip--active" id="np_type_branch_label">
+                                            <input type="radio" name="np_delivery_mode" value="branch" checked style="display:none;" onchange="window.toggleNpMode('branch')">
+                                            <span class="choice-chip__label">Відділення</span>
+                                        </label>
+                                        <label class="choice-chip" id="np_type_courier_label">
+                                            <input type="radio" name="np_delivery_mode" value="courier" style="display:none;" onchange="window.toggleNpMode('courier')">
+                                            <span class="choice-chip__label">Кур'єр</span>
+                                        </label>
                                     </div>
-                                    <input type="hidden" name="np_warehouse" id="np_warehouse_final">
-                                    <div id="np_selected_wh_display" class="np-selected-display"></div>
+                                </div>
+
+                                <div id="np_branch_fields" style="display:block; margin-top: 1rem;">
+                                    <div id="np_warehouse_search_wrap" class="np-warehouse-search" style="display:none; padding-top: 1rem; border-top: 1px solid rgba(0,0,0,0.05);">
+                                        <p class="form-label">Відділення або поштомат (№ або вул):</p>
+                                        <div class="search-wrapper">
+                                            <input type="text" id="np_wh_input" placeholder="Наприклад: 1 або Головна">
+                                            <div id="np_wh_results" class="np-search-results"></div>
+                                        </div>
+                                        <input type="hidden" name="np_warehouse" id="np_warehouse_final">
+                                        <div id="np_selected_wh_display" class="np-selected-display"></div>
+                                    </div>
+                                </div>
+
+                                <div id="np_courier_fields" style="display:none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0,0,0,0.05);">
+                                    <div class="form-group">
+                                        <label class="form-label">Вулиця:</label>
+                                        <div class="search-wrapper">
+                                            <input type="text" id="np_street_search" placeholder="Почніть вводити назву вулиці...">
+                                            <div id="np_street_results" class="np-search-results"></div>
+                                        </div>
+                                        <input type="hidden" name="np_street_name" id="np_street_name">
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                                        <div class="form-group">
+                                            <label class="form-label">Будинок:</label>
+                                            <input type="text" name="np_house" placeholder="12А">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Кв./Офіс:</label>
+                                            <input type="text" name="np_flat" placeholder="45">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         `
@@ -809,11 +846,64 @@ function debounce(func, timeout = 300) {
     };
 }
 
+window.toggleNpMode = function(mode) {
+    const branchFields = document.getElementById('np_branch_fields');
+    const courierFields = document.getElementById('np_courier_fields');
+    const branchLabel = document.getElementById('np_type_branch_label');
+    const courierLabel = document.getElementById('np_type_courier_label');
+    
+    if (mode === 'courier') {
+        if (branchFields) branchFields.style.display = 'none';
+        if (courierFields) courierFields.style.display = 'block';
+        if (branchLabel) branchLabel.classList.remove('choice-chip--active');
+        if (courierLabel) courierLabel.classList.add('choice-chip--active');
+    } else {
+        if (branchFields) branchFields.style.display = 'block';
+        if (courierFields) courierFields.style.display = 'none';
+        if (branchLabel) branchLabel.classList.add('choice-chip--active');
+        if (courierLabel) courierLabel.classList.remove('choice-chip--active');
+    }
+};
+
 function initNovaPoshtaSearch() {
     const inp = document.getElementById('np_city_search');
     const res = document.getElementById('np_city_results');
-    const whWrap = document.getElementById('np_warehouse_search_wrap');
+    const branchWrap = document.getElementById('np_warehouse_search_wrap');
+    const courierWrap = document.getElementById('np_courier_fields');
     if (!inp) return;
+
+    const searchStreets = debounce((val) => {
+        const ref = document.getElementById('np_city_ref').value;
+        const streetRes = document.getElementById('np_street_results');
+        if (!ref || !streetRes) return;
+        if (val.length < 2) {
+            streetRes.style.display = 'none';
+            return;
+        }
+        streetRes.innerHTML = '<div class="np-result-item" style="opacity:0.5;">Шукаємо...</div>';
+        streetRes.style.display = 'block';
+        fetch(`${window.API_BASE_URL}/api/nova-poshta/streets?cityRef=${ref}&search=${encodeURIComponent(val)}`)
+            .then((r) => r.json())
+            .then((data) => {
+                streetRes.innerHTML = '';
+                const streets = Array.isArray(data) ? data : [];
+                if (streets.length === 0) {
+                    streetRes.innerHTML = '<div class="np-result-item">Нічого не знайдено</div>';
+                } else {
+                    streets.forEach((s) => {
+                        const item = document.createElement('div');
+                        item.className = 'np-result-item';
+                        item.textContent = s.Description;
+                        item.onclick = () => {
+                            document.getElementById('np_street_search').value = s.Description;
+                            document.getElementById('np_street_name').value = s.Description;
+                            streetRes.style.display = 'none';
+                        };
+                        streetRes.appendChild(item);
+                    });
+                }
+            });
+    }, 400);
 
     const searchWh = debounce((val) => {
         const ref = document.getElementById('np_city_ref').value;
@@ -825,27 +915,11 @@ function initNovaPoshtaSearch() {
             .then((r) => r.json())
             .then((data) => {
                 whRes.innerHTML = '';
-                if (!data || data.length === 0) {
+                const whs = Array.isArray(data) ? data : [];
+                if (whs.length === 0) {
                     whRes.innerHTML = '<div class="np-result-item">Нічого не знайдено</div>';
                 } else {
-                    if (val && val.length > 0) {
-                        const lowVal = val.toLowerCase();
-                        data.sort((a, b) => {
-                            const descA = a.Description.toLowerCase();
-                            const descB = b.Description.toLowerCase();
-                            const numRegex = new RegExp(`№\\s*${val}(\\D|$)`);
-                            const matchA = numRegex.test(a.Description);
-                            const matchB = numRegex.test(b.Description);
-                            if (matchA && !matchB) return -1;
-                            if (!matchA && matchB) return 1;
-                            const startsA = descA.includes(`№${lowVal}`) || descA.includes(`№ ${lowVal}`);
-                            const startsB = descB.includes(`№${lowVal}`) || descB.includes(`№ ${lowVal}`);
-                            if (startsA && !startsB) return -1;
-                            if (!startsA && startsB) return 1;
-                            return 0;
-                        });
-                    }
-                    data.forEach((w) => {
+                    whs.forEach((w) => {
                         const item = document.createElement('div');
                         item.className = 'np-result-item';
                         const icon = w.CategoryOfWarehouse === 'Postomat' ? 'fa-box' : 'fa-house-chimney';
@@ -871,9 +945,10 @@ function initNovaPoshtaSearch() {
         res.style.display = 'block';
         fetch(`${window.API_BASE_URL}/api/nova-poshta/cities?search=${encodeURIComponent(val)}`)
             .then((r) => r.json())
-            .then((cities) => {
+            .then((data) => {
                 res.innerHTML = '';
-                if (!cities || cities.length === 0) {
+                const cities = Array.isArray(data) ? data : [];
+                if (cities.length === 0) {
                     res.innerHTML = '<div class="np-result-item">Не знайдено</div>';
                 } else {
                     cities.forEach((c) => {
@@ -885,7 +960,7 @@ function initNovaPoshtaSearch() {
                             document.getElementById('np_city_ref').value = c.Ref;
                             document.getElementById('np_city_name').value = c.Present;
                             res.style.display = 'none';
-                            whWrap.style.display = 'block';
+                            if (branchWrap) branchWrap.style.display = 'block';
                             document.getElementById('np_wh_input').value = '';
                             searchWh('');
                         };
@@ -898,6 +973,8 @@ function initNovaPoshtaSearch() {
     inp.oninput = (e) => searchCities(e.target.value.trim());
     const whInp = document.getElementById('np_wh_input');
     if (whInp) whInp.oninput = (e) => searchWh(e.target.value.trim());
+    const stInp = document.getElementById('np_street_search');
+    if (stInp) stInp.oninput = (e) => searchStreets(e.target.value.trim());
 }
 
 window.goToPaymentStep = function () {
@@ -1006,6 +1083,10 @@ window.submitCheckout = function (method) {
             np_city_ref: fd.get('np_city_ref'),
             np_city_name: fd.get('np_city_name'),
             np_warehouse: fd.get('np_warehouse'),
+            np_delivery_mode: fd.get('np_delivery_mode'),
+            np_street_name: fd.get('np_street_name'),
+            np_house: fd.get('np_house'),
+            np_flat: fd.get('np_flat'),
         },
         cart_menu: activeCart,
         payment_method: method === 'cash' ? 'card' : method,

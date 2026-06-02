@@ -79,8 +79,9 @@ def get_beans_kb(items):
     keyboard = []
     row = []
     for item in items:
-        name = truncate(item[1], 18)
-        row.append(InlineKeyboardButton(text=f'☕️ {name}', callback_data=f'bean_{item[0]}'))
+        name = truncate(item.get('name', 'Без назви'), 18)
+        bid = str(item.get('_id') or item.get('id', ''))
+        row.append(InlineKeyboardButton(text=f'☕️ {name}', callback_data=f'bean_{bid}'))
         if len(row) == 2:
             keyboard.append(row)
             row = []

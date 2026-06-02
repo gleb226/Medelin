@@ -22,6 +22,7 @@ from app.databases.contacts_database import contacts_db
 from app.databases.coffee_beans_database import coffee_beans_db
 
 import app.keyboards.user_keyboards as kb
+import app.keyboards.admin_keyboards as akb
 
 from app.utils.time_utils import is_working_hours, get_closed_message
 
@@ -38,52 +39,22 @@ logger = logging.getLogger(__name__)
 user_router = Router()
 
 @user_router.message(F.text == '/start')
-
 async def cmd_start(message: Message, state: FSMContext):
-
     await state.clear()
-
-    await user_db.add_user(message.from_user.id, message.from_user.full_name, message.from_user.username)
-
     is_admin = await admin_db.is_admin(message.from_user.id)
-
-    welcome_text = '☕️ <b>ВІТАЄМО У MEDELIN!</b>\n\nМи обсмажуємо каву з 2015 року, щоб ви могли насолоджуватися ідеальним смаком щодня.\n\nОберіть цікавий вам розділ:'
-
-    await message.answer(welcome_text, reply_markup=kb.get_main_menu(is_admin), parse_mode='HTML')
-
-@user_router.message(F.text == kb.BTN_BEANS)
-
-async def show_beans(message: Message):
-
-    beans = await coffee_beans_db.get_all_beans()
-
-    if not beans:
-
-        await message.answer('Наразі кава в зернах відсутня.')
-
+    
+    if not is_admin:
+        await message.answer('🔒 <b>Цей бот призначений тільки для адміністраторів Medelin.</b>\n\nБудь ласка, використовуйте наш сайт для замовлення: medelin.com', parse_mode='HTML')
         return
 
-    text = '☕️ <b>КАВА В ЗЕРНАХ</b>\n\nОберіть сорт для замовлення або деталей:'
+    role = await admin_db.get_admin_role(message.from_user.id)
+    await message.answer(f'🔐 <b>ВІТАЄМО В АДМІН-ПАНЕЛІ!</b>\nВаша роль: <b>{role.upper()}</b>', reply_markup=akb.get_admin_main_kb(role), parse_mode='HTML')
 
-    await message.answer(text, reply_markup=kb.get_beans_kb(beans), parse_mode='HTML')
-
-@user_router.message(F.text == kb.BTN_LOCATIONS)
-
-async def show_locations(message: Message):
-
-    locs = await location_db.get_all_locations()
-
-    text = '📍 <b>НАШІ ЗАКЛАДИ</b>\n\nОберіть локацію, щоб дізнатися адресу та графік:'
-
-    await message.answer(text, reply_markup=await kb.get_locations_info_kb(), parse_mode='HTML')
-
-@user_router.message(F.text == kb.BTN_CONTACTS)
-
-async def show_contacts(message: Message):
-
-    text = '📞 <b>КОНТАКТИ ТА СОЦМЕРЕЖІ</b>\n\nМи завжди на зв’язку! Слідкуйте за нами в соцмережах або телефонуйте:'
-
-    await message.answer(text, reply_markup=await kb.get_contact_kb(), parse_mode='HTML')
+@user_router.message()
+async def block_all_other_messages(message: Message):
+    is_admin = await admin_db.is_admin(message.from_user.id)
+    if not is_admin:
+        await message.answer('🔒 <b>Цей бот призначений тільки для адміністраторів Medelin.</b>', parse_mode='HTML')
 
 @user_router.callback_query(F.data.startswith('locinfo_'))
 
@@ -174,12 +145,23 @@ async def show_bean_details(callback: CallbackQuery, state: FSMContext):
     text += f"{bean.get('description', '')}\n\n"
 
     if bean.get('species'): text += f"<b>Склад:</b> {bean['species']}\n"
-
     if bean.get('roast'): text += f"<b>Обсмаження:</b> {bean['roast']}\n"
+    if bean.get('descriptors') or bean.get('taste'): 
+        text += f"<b>Дескриптори:</b> {bean.get('descriptors') or bean['taste']}\n"
+    
+    # Смаковий профіль (scales)
+    scales = []
+    if bean.get('acidity'): scales.append(f"🍋 Кислинка: {'🌕' * int(bean['acidity'])}{'🌑' * (5 - int(bean['acidity']))}")
+    if bean.get('bitterness'): scales.append(f"☕️ Гірчинка: {'🌕' * int(bean['bitterness'])}{'🌑' * (5 - int(bean['bitterness']))}")
+    if bean.get('body'): scales.append(f"🌱 Насиченість: {'🌕' * int(bean['body'])}{'🌑' * (5 - int(bean['body']))}")
+    
+    if scales:
+        text += "\n<b>Смаковий профіль:</b>\n" + "\n".join(scales) + "\n"
 
-    if bean.get('taste'): text += f"<b>Смак:</b> {bean['taste']}\n"
-
-    if bean.get('country'): text += f"<b>Країна:</b> {bean['country']}\n"
+    if bean.get('variety'): text += f"<b>Різновид:</b> {bean['variety']}\n"
+    if bean.get('altitude'): text += f"<b>Висота зростання:</b> {bean['altitude']}\n"
+    if bean.get('processing'): text += f"<b>Метод обробки:</b> {bean['processing']}\n"
+    if bean.get('harvest'): text += f"<b>Період врожаю:</b> {bean['harvest']}\n"
     
     text += f"\n💰 <b>Ціна:</b> {bean.get('price_250', 0)} ₴ / 250г"
 
