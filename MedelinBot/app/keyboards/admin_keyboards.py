@@ -59,8 +59,6 @@ def get_main_admin_menu(is_on_shift: bool=False, role: str='admin'):
 
         keyboard.append([KeyboardButton(text='📍 ЛОКАЦІЇ'), KeyboardButton(text='📱 СОЦМЕРЕЖІ')])
 
-    keyboard.append([KeyboardButton(text='↩️ НА ГОЛОВНУ')])
-
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
 def get_active_types_kb():
