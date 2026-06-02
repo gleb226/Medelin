@@ -25,8 +25,6 @@ from app.databases.admin_database import admin_db
 
 from app.databases.user_database import user_db
 
-from app.databases.menu_database import menu_db
-
 from app.databases.location_database import location_db
 
 from app.databases.socials_database import socials_db
@@ -91,9 +89,10 @@ async def admin_start_cmd(message: Message, state: FSMContext):
 
     await state.clear()
 
-    from app.handlers.user_handlers import cmd_start
-
-    await cmd_start(message, state)
+    if await admin_db.is_admin(message.from_user.id):
+        await admin_panel_enter(message, state)
+    else:
+        await message.answer("🔒 <b>ДОСТУП ОБМЕЖЕНО</b>\nЦей бот призначений тільки для адміністрації.", parse_mode='HTML')
 
 class AdminStates(StatesGroup):
 
@@ -109,35 +108,17 @@ class AdminStates(StatesGroup):
 
     messaging_guest = State()
 
-class MenuStates(StatesGroup):
-
-    waiting_category = State()
-
-    waiting_new_category = State()
+class BeanStates(StatesGroup):
 
     waiting_name = State()
 
     waiting_price = State()
 
-    waiting_price_250 = State()
-
-    waiting_price_500 = State()
-
-    waiting_price_1000 = State()
-
     waiting_desc = State()
 
     waiting_volume = State()
 
-    waiting_calories = State()
-
     waiting_image = State()
-
-    waiting_confirm = State()
-
-    edit_select_item = State()
-
-    edit_waiting_field = State()
 
     edit_waiting_value = State()
 
@@ -215,9 +196,7 @@ async def restart_fsm_on_command(message: Message, state: FSMContext) -> bool:
 
     if text.split()[0].lower() == '/start':
 
-        from app.handlers.user_handlers import cmd_start
-
-        await cmd_start(message, state)
+        await admin_start_cmd(message, state)
 
     return True
 
@@ -264,23 +243,13 @@ async def deliver_guest_message(bot: Bot, order: dict | None, text_html: str, si
     # Залишаємо лише відправку в Telegram клієнту.
     return 'both' if telegram_target and telegram_ok else 'site'
 
-@admin_router.message(F.text == '📝 ПРИЙНЯТИ ЗАМОВЛЕННЯ')
-async def admin_take_order_start(message: Message, state: FSMContext):
-    # Адміністратор починає замовлення від імені клієнта (локально в боті)
-    await state.clear()
-    from app.handlers.user_handlers import open_menu
-    await message.answer('📝 <b>ПРИЙОМ ЗАМОВЛЕННЯ (РЕЖИМ АДМІНІСТРАТОРА)</b>\n\nОберіть категорію:', parse_mode='HTML')
-    await open_menu(message, state)
-
 @admin_router.message(F.text == '↩️ НА ГОЛОВНУ')
 
 async def back_to_main_from_admin(message: Message, state: FSMContext):
 
     await state.clear()
 
-    from app.handlers.user_handlers import cmd_start
-
-    await cmd_start(message, state)
+    await admin_panel_enter(message, state)
 
 @admin_router.callback_query(F.data == 'back_main_menu_only')
 
@@ -288,15 +257,11 @@ async def back_to_main_cb(callback: CallbackQuery, state: FSMContext):
 
     await state.clear()
 
-    from app.handlers.user_handlers import cmd_start
-
     try: await callback.message.delete()
 
     except: pass
 
-    callback.message.from_user = callback.from_user
-
-    await cmd_start(callback.message, state)
+    await admin_panel_enter(callback.message, state)
 
 @admin_router.message(F.text == '🔄 СИНХРОНІЗУВАТИ САЙТ')
 async def sync_website_handler(message: Message, state: FSMContext):
@@ -657,18 +622,6 @@ async def clear_support_chat(callback: CallbackQuery, state: FSMContext):
 async def back_to_support_list(callback: CallbackQuery, state: FSMContext):
     chats = await guest_messages_db.get_unique_chats()
     await safe_edit_message(callback.message, '💬 <b>ПІДТРИМКА / ЧАТИ З КОРИСТУВАЧАМИ</b>\nОберіть чат для перегляду:', reply_markup=akb.get_support_chats_kb(chats), parse_mode='HTML')
-
-@admin_router.message(F.text == '📋 МЕНЮ')
-
-async def show_menu_panel(message: Message, state: FSMContext):
-
-    if not await admin_db.is_admin(message.from_user.id): return
-
-    if await get_user_role(message.from_user.id) not in ('boss', 'owner', 'developer'): return
-
-    await state.clear()
-
-    await message.answer('📋 <b>КЕРУВАННЯ МЕНЮ</b>', reply_markup=akb.get_menu_manage_kb(), parse_mode='HTML')
 
 @admin_router.message(F.text == '☕ ЗЕРНО')
 
@@ -1145,56 +1098,6 @@ async def adm_remove_confirm_yes(callback: CallbackQuery):
 
 
 
-@admin_router.callback_query(F.data == 'menu_del')
-
-async def menu_del_start(callback: CallbackQuery):
-
-    cats = await menu_db.get_categories()
-
-    await safe_edit_message(callback.message, '🗑 Оберіть категорію для видалення позиції:', reply_markup=akb.get_category_selection_kb(cats, 'm_del_cat'), parse_mode='HTML')
-
-@admin_router.callback_query(F.data.startswith('m_del_cat_'))
-
-async def menu_del_items(callback: CallbackQuery):
-
-    cat_id = callback.data.replace('m_del_cat_', '')
-
-    cats = await menu_db.get_categories()
-    from app.keyboards.user_keyboards import cat_key
-    cat_name = next((c for c in cats if cat_key(str(c)) == cat_id), cat_id)
-
-    items = await menu_db.get_items_by_category(cat_name)
-
-    if not items:
-
-        await callback.answer('Порожньо.')
-
-        return
-
-    await safe_edit_message(callback.message, '🗑 Оберіть позицію для ВИДАЛЕННЯ:', reply_markup=akb.get_items_in_category_kb([(i[0], i[1]) for i in items], 'm_del_it'), parse_mode='HTML')
-
-@admin_router.callback_query(F.data.startswith('m_del_it_'))
-
-async def menu_del_confirm_ask(callback: CallbackQuery):
-
-    iid = callback.data.replace('m_del_it_', '')
-
-    item = await menu_db.get_item_by_id(iid)
-
-    await safe_edit_message(callback.message, f"❓ Ви впевнені, що хочете видалити <b>{item[2]}</b>?", reply_markup=akb.get_yes_no_kb(f'm_del_yes_{iid}', 'menu_del'), parse_mode='HTML')
-
-@admin_router.callback_query(F.data.startswith('m_del_yes_'))
-
-async def menu_del_confirm_yes(callback: CallbackQuery):
-
-    iid = callback.data.replace('m_del_yes_', '')
-
-    await menu_db.delete_item(iid)
-
-    await callback.answer('Видалено!')
-
-    await menu_del_start(callback)
-
 @admin_router.callback_query(F.data.startswith('beans_del_it_'))
 
 async def beans_del_confirm_ask(callback: CallbackQuery):
@@ -1311,64 +1214,19 @@ async def edit_social_value_save(message: Message, state: FSMContext):
 
     await state.clear()
 
-@admin_router.callback_query(F.data == 'menu_add')
+@admin_router.message(BeanStates.waiting_name)
 
-async def menu_add_start(callback: CallbackQuery, state: FSMContext):
-
-    cats = await menu_db.get_categories()
-
-    await safe_edit_message(callback.message, '📁 Оберіть категорію:', reply_markup=akb.get_category_selection_kb(cats, 'm_add_cat', include_new=False), parse_mode='HTML')
-
-@admin_router.callback_query(F.data.startswith('m_add_cat_'))
-
-async def menu_add_cat_chosen(callback: CallbackQuery, state: FSMContext):
-
-    cat_id = callback.data.replace('m_add_cat_', '')
-
-    if cat_id == 'NEW':
-
-        await callback.answer('❌ Категорії фіксовані. Оберіть існуючу.', show_alert=True)
-        return
-
-    else:
-
-        cats = await menu_db.get_categories()
-
-        from app.keyboards.user_keyboards import cat_key
-
-        cat_name = next((c for c in cats if cat_key(str(c)) == cat_id), cat_id)
-
-        await state.update_data(category=cat_name)
-
-        await callback.message.answer('📝 Введіть назву позиції:')
-
-        await state.set_state(MenuStates.waiting_name)
-
-    await callback.answer()
-
-@admin_router.message(MenuStates.waiting_new_category)
-
-async def menu_add_new_cat(message: Message, state: FSMContext):
-
-    await state.update_data(category=message.text)
-
-    await message.answer('📝 Введіть назву позиції:')
-
-    await state.set_state(MenuStates.waiting_name)
-
-@admin_router.message(MenuStates.waiting_name)
-
-async def menu_add_name(message: Message, state: FSMContext):
+async def bean_add_name(message: Message, state: FSMContext):
 
     await state.update_data(name=message.text)
 
-    await message.answer('💰 Введіть ціну (грн):')
+    await message.answer('💰 Введіть ціну за 250г (грн):')
 
-    await state.set_state(MenuStates.waiting_price)
+    await state.set_state(BeanStates.waiting_price)
 
-@admin_router.message(MenuStates.waiting_price)
+@admin_router.message(BeanStates.waiting_price)
 
-async def menu_add_price(message: Message, state: FSMContext):
+async def bean_add_price(message: Message, state: FSMContext):
 
     text = (message.text or '').strip().replace(',', '.')
 
@@ -1382,15 +1240,15 @@ async def menu_add_price(message: Message, state: FSMContext):
 
         await message.answer('📜 Введіть опис (або "ні"):')
 
-        await state.set_state(MenuStates.waiting_desc)
+        await state.set_state(BeanStates.waiting_desc)
 
     except ValueError:
 
         await message.answer('❌ Будь ласка, введіть коректне число (ціну). Наприклад: 120 або 150.50')
 
-@admin_router.message(MenuStates.waiting_desc)
+@admin_router.message(BeanStates.waiting_desc)
 
-async def menu_add_desc(message: Message, state: FSMContext):
+async def bean_add_desc(message: Message, state: FSMContext):
 
     val = (message.text or '').strip()
 
@@ -1398,11 +1256,11 @@ async def menu_add_desc(message: Message, state: FSMContext):
 
     await message.answer('⚖️ Обʼєм/Вага (н-р: 250 мл, або "ні"):')
 
-    await state.set_state(MenuStates.waiting_volume)
+    await state.set_state(BeanStates.waiting_volume)
 
-@admin_router.message(MenuStates.waiting_volume)
+@admin_router.message(BeanStates.waiting_volume)
 
-async def menu_add_volume(message: Message, state: FSMContext):
+async def bean_add_volume(message: Message, state: FSMContext):
 
     val = (message.text or '').strip()
 
@@ -1410,11 +1268,11 @@ async def menu_add_volume(message: Message, state: FSMContext):
 
     await message.answer('🖼 Надішліть фото (файл або посилання) або "ні":')
 
-    await state.set_state(MenuStates.waiting_image)
+    await state.set_state(BeanStates.waiting_image)
 
-@admin_router.message(MenuStates.waiting_image, F.photo | F.document | F.text)
+@admin_router.message(BeanStates.waiting_image, F.photo | F.document | F.text)
 
-async def menu_add_image(message: Message, state: FSMContext, bot: Bot):
+async def bean_add_image(message: Message, state: FSMContext, bot: Bot):
 
     if await restart_fsm_on_command(message, state): return
 
@@ -1428,230 +1286,33 @@ async def menu_add_image(message: Message, state: FSMContext, bot: Bot):
 
     data = await state.get_data()
 
-    text = f"🔍 <b>ПЕРЕВІРКА:</b>\n\n📁 {data['category']}\n✨ {data['name']}\n💰 {data['price']} грн"
+    text = f"🔍 <b>ПЕРЕВІРКА:</b>\n\n📁 {data.get('category', 'Зерно')}\n✨ {data['name']}\n💰 {data['price']} грн"
 
-    await message.answer(text, reply_markup=akb.get_yes_no_kb('m_save', 'menu_back'), parse_mode='HTML')
+    await message.answer(text, reply_markup=akb.get_yes_no_kb('m_save', 'beans_back'), parse_mode='HTML')
 
 @admin_router.callback_query(F.data == 'm_save')
 
-async def menu_add_save(callback: CallbackQuery, state: FSMContext):
+async def bean_add_save(callback: CallbackQuery, state: FSMContext):
 
     data = await state.get_data()
 
-    if data.get('bean_mode'):
-
-        await coffee_beans_db.add_bean(data['name'], data['price'], data.get('description', ''), '', '', '', image_url=data.get('image_url', ''), acidity=0, bitterness=0, body=0)
-
-        await public_data_cache.refresh('coffee')
-
-        await safe_edit_message(callback.message, '✅ ЗЕРНО ДОДАНО! Тепер ви можете доповнити деталі через редагування.', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
-
-    else:
-
-        await menu_db.add_item(data['category'], data['name'], data['price'], data.get('description', ''), data.get('volume', ''), 0, data.get('image_url', ''))
-
-        await public_data_cache.refresh('menu')
-
-        await safe_edit_message(callback.message, '✅ СТРАВУ ДОДАНО!', reply_markup=akb.get_menu_manage_kb(), parse_mode='HTML')
-
-    await state.clear()
-
-@admin_router.callback_query(F.data == 'menu_edit')
-
-async def menu_edit_start(callback: CallbackQuery):
-
-    cats = await menu_db.get_categories()
-
-    await safe_edit_message(callback.message, '✏️ Оберіть категорію:', reply_markup=akb.get_category_selection_kb(cats, 'm_edt_cat'), parse_mode='HTML')
-
-@admin_router.callback_query(F.data.startswith('m_edt_cat_'))
-
-async def menu_edit_items(callback: CallbackQuery):
-
-    cat_id = callback.data.replace('m_edt_cat_', '')
-
-    cats = await menu_db.get_categories()
-    from app.keyboards.user_keyboards import cat_key
-    cat_name = next((c for c in cats if cat_key(str(c)) == cat_id), cat_id)
-
-    items = await menu_db.get_items_by_category(cat_name)
-
-    if not items:
-
-        await callback.answer('Порожньо.')
-
-        return
-
-    await safe_edit_message(callback.message, '✏️ Оберіть позицію:', reply_markup=akb.get_items_in_category_kb([(i[0], i[1]) for i in items], 'm_edt_it'), parse_mode='HTML')
-
-@admin_router.callback_query(F.data.startswith('m_edt_it_'))
-
-async def menu_edit_fields(callback: CallbackQuery, state: FSMContext):
-
-    iid = callback.data.replace('m_edt_it_', '')
-
-    item = await menu_db.get_item_by_id(iid)
-
-    await state.update_data(edit_id=iid)
-
-    kb_edt = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='Назву', callback_data='ed_m_name'), InlineKeyboardButton(text='Ціну', callback_data='ed_m_price')],
-        [InlineKeyboardButton(text='Опис', callback_data='ed_m_description'), InlineKeyboardButton(text='🖼 Фото', callback_data='ed_m_image_url')],
-        [InlineKeyboardButton(text='Обʼєм', callback_data='ed_m_volume'), InlineKeyboardButton(text='Кал', callback_data='ed_m_calories')],
-        [InlineKeyboardButton(text='Склад', callback_data='ed_m_composition')],
-        [InlineKeyboardButton(text='Міцність (0-5)', callback_data='ed_m_strength'), InlineKeyboardButton(text='Солодкість (0-5)', callback_data='ed_m_sweetness')],
-        [InlineKeyboardButton(text='🗑 Видалити', callback_data='ed_m_del')],
-        [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='menu_edit')]
-    ])
-
-    await safe_edit_message(callback.message, f"Редагування <b>{item[2]}</b>", reply_markup=kb_edt, parse_mode='HTML')
-
-# Delete handler integrated into edit field start
-
-@admin_router.callback_query(F.data.startswith('ed_m_'))
-async def menu_edit_field_start(callback: CallbackQuery, state: FSMContext):
-    field = callback.data.replace('ed_m_', '')
-    if field == 'del':
-        data = await state.get_data()
-        iid = data.get('edit_id')
-        if not iid:
-            await callback.answer('❌ Не вказано елемент для видалення.', show_alert=True)
-            return
-        await menu_db.delete_item(iid)
-        await public_data_cache.refresh('menu')
-        await callback.answer('✅ Позицію видалено.', show_alert=True)
-        await state.clear()
-        await menu_edit_start(callback)
-        return
-    # Otherwise, proceed with normal edit flow
-    await state.update_data(edit_field=field)
-    await callback.message.answer('✏️ Введіть нове значення:')
-    await state.set_state(MenuStates.edit_waiting_value)
-    await callback.answer()
-
-@admin_router.callback_query(F.data == 'beans_add')
-
-async def beans_add_start(callback: CallbackQuery, state: FSMContext):
-
-    await state.set_state(MenuStates.waiting_name)
-
-    await state.update_data(bean_mode=True, category="Кава в зернах")
-
-    await callback.message.answer('📝 Введіть назву сорту (н-р: Brazil Santos):')
-
-    await callback.answer()
-
-@admin_router.callback_query(F.data == 'beans_list')
-
-async def beans_list(callback: CallbackQuery):
-
-    beans = await coffee_beans_db.get_all_beans()
-
-    if not beans:
-
-        await callback.answer('Порожньо.')
-
-        return
-
-    text = '☕ <b>СПИСОК ЗЕРНА:</b>\n\n' + '\n'.join([f"▫️ {b['name']} - {b['price_250']} грн" for b in beans])
-
-    await safe_edit_message(callback.message, text, reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
-
-@admin_router.callback_query(F.data == 'beans_del')
-
-async def beans_del_start(callback: CallbackQuery):
-
-    beans = await coffee_beans_db.get_all_beans()
-
-    if not beans:
-
-        await callback.answer('Порожньо.')
-
-        return
-
-    await safe_edit_message(callback.message, '🗑 Оберіть зерно для ВИДАЛЕННЯ:', reply_markup=akb.get_beans_list_kb(beans, 'beans_del_it'), parse_mode='HTML')
-
-@admin_router.callback_query(F.data.startswith('beans_del_it_'))
-
-async def beans_del_confirm(callback: CallbackQuery):
-
-    bid = callback.data.replace('beans_del_it_', '')
-
-    await coffee_beans_db.delete_bean(bid)
+    await coffee_beans_db.add_bean(data['name'], data['price'], data.get('description', ''), '', '', '', image_url=data.get('image_url', ''), acidity=0, bitterness=0, body=0)
 
     await public_data_cache.refresh('coffee')
 
-    await callback.answer('Видалено!')
+    await safe_edit_message(callback.message, '✅ ЗЕРНО ДОДАНО! Тепер ви можете доповнити деталі через редагування.', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
 
-    await beans_del_start(callback)
+    await state.clear()
 
-@admin_router.callback_query(F.data == 'beans_edit')
+@admin_router.message(BeanStates.edit_waiting_value, F.photo | F.document | F.text)
 
-async def beans_edit_start(callback: CallbackQuery):
-
-    beans = await coffee_beans_db.get_all_beans()
-
-    if not beans:
-
-        await callback.answer('Порожньо.')
-
-        return
-
-    await safe_edit_message(callback.message, '✏️ Оберіть зерно для редагування:', reply_markup=akb.get_beans_list_kb(beans, 'beans_edt_it'), parse_mode='HTML')
-
-@admin_router.callback_query(F.data.startswith('beans_edt_it_'))
-
-async def beans_edit_sel(callback: CallbackQuery, state: FSMContext):
-
-    bid = callback.data.replace('beans_edt_it_', '')
-
-    bean = await coffee_beans_db.get_bean_by_id(bid)
-
-    await state.update_data(edit_bean_id=bid)
-
-    kb_edit = InlineKeyboardMarkup(inline_keyboard=[
-
-        [InlineKeyboardButton(text='Назву', callback_data='ed_b_name'), InlineKeyboardButton(text='Ціну 250г', callback_data='ed_b_price_250')],
-
-        [InlineKeyboardButton(text='Опис', callback_data='ed_b_description'), InlineKeyboardButton(text='🖼 Фото', callback_data='ed_b_image_url')],
-        
-        [InlineKeyboardButton(text='Склад', callback_data='ed_b_sort'), InlineKeyboardButton(text='Смак', callback_data='ed_b_taste')],
-        
-        [InlineKeyboardButton(text='Обсмажка', callback_data='ed_b_roast')],
-        
-        [InlineKeyboardButton(text='Кисл (0-5)', callback_data='ed_b_acidity'), InlineKeyboardButton(text='Гірк (0-5)', callback_data='ed_b_bitterness')],
-        
-        [InlineKeyboardButton(text='Тіло (0-5)', callback_data='ed_b_body')],
-
-        [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='beans_edit')]
-
-    ])
-
-    await safe_edit_message(callback.message, f"Редагування <b>{bean['name']}</b>", reply_markup=kb_edit, parse_mode='HTML')
-
-@admin_router.callback_query(F.data.startswith('ed_b_'))
-
-async def beans_edit_field_start(callback: CallbackQuery, state: FSMContext):
-
-    field = callback.data.replace('ed_b_', '')
-
-    await state.update_data(edit_field=field, bean_edit_mode=True)
-
-    await callback.message.answer('✏️ Введіть нове значення:')
-
-    await state.set_state(MenuStates.edit_waiting_value)
-
-    await callback.answer()
-
-@admin_router.message(MenuStates.edit_waiting_value, F.photo | F.document | F.text)
-
-async def admin_edit_value_save(message: Message, state: FSMContext, bot: Bot):
+async def bean_edit_value_save(message: Message, state: FSMContext, bot: Bot):
 
     if await restart_fsm_on_command(message, state): return
 
     data = await state.get_data()
 
-    field, is_bean = data.get('edit_field'), (data.get('bean_edit_mode') or data.get('bean_mode'))
+    field = data.get('edit_field')
 
     val = (await process_photo(message, bot)) if field == 'image_url' else (message.text or '').strip()
 
@@ -1659,62 +1320,36 @@ async def admin_edit_value_save(message: Message, state: FSMContext, bot: Bot):
         await message.answer('❌ Значення не може бути порожнім.')
         return
 
-    if is_bean:
+    bid = data.get('edit_bean_id')
 
-        bid = data.get('edit_bean_id')
+    if bid:
 
-        if bid:
-
-            upd = {field: val}
-
-            if field == 'price_250':
-
-                try:
-
-                    val_f = float(val.replace(',', '.'))
-                    p = coffee_beans_db.calculate_prices(val_f)
-
-                    upd = {'price_250': p['250'], 'price_500': p['500'], 'price_1000': p['1000']}
-
-                except ValueError:
-                    await message.answer('❌ Введіть коректне число для ціни.')
-                    return
-            
-            elif field in ('acidity', 'bitterness', 'body'):
-                try: upd[field] = int(val)
-                except ValueError:
-                    await message.answer('❌ Введіть ціле число (0-5).')
-                    return
-
-            await coffee_beans_db.update_bean(bid, upd)
-
-            await public_data_cache.refresh('coffee')
-
-            await message.answer('✅ Оновлено зерно!', reply_markup=akb.get_beans_manage_kb())
-
-    else:
-
-        iid = data.get('edit_id')
-        
         upd = {field: val}
-        
-        if field in ('strength', 'sweetness', 'calories'):
-            try: upd[field] = int(val)
-            except ValueError:
-                await message.answer('❌ Введіть ціле число.')
-                return
-        elif field == 'price':
-            try: 
-                upd[field] = float(val.replace(',', '.'))
+
+        if field == 'price_250':
+
+            try:
+
+                val_f = float(val.replace(',', '.'))
+                p = coffee_beans_db.calculate_prices(val_f)
+
+                upd = {'price_250': p['250'], 'price_500': p['500'], 'price_1000': p['1000']}
+
             except ValueError:
                 await message.answer('❌ Введіть коректне число для ціни.')
                 return
+        
+        elif field in ('acidity', 'bitterness', 'body'):
+            try: upd[field] = int(val)
+            except ValueError:
+                await message.answer('❌ Введіть ціле число (0-5).')
+                return
 
-        await menu_db.update_item(iid, upd)
+        await coffee_beans_db.update_bean(bid, upd)
 
-        await public_data_cache.refresh('menu')
+        await public_data_cache.refresh('coffee')
 
-        await message.answer('✅ Оновлено страву!', reply_markup=akb.get_menu_manage_kb())
+        await message.answer('✅ Оновлено зерно!', reply_markup=akb.get_beans_manage_kb())
 
     await state.clear()
 

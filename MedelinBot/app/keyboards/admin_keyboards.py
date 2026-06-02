@@ -45,9 +45,6 @@ def get_main_admin_menu(is_on_shift: bool=False, role: str='admin'):
         shift_text = '🔴 ЗАВЕРШИТИ ЗМІНУ' if is_on_shift else '🟢 ПОЧАТИ ЗМІНУ'
 
         keyboard.append([KeyboardButton(text=shift_text)])
-        
-        if is_on_shift:
-            keyboard.append([KeyboardButton(text='📝 ПРИЙНЯТИ ЗАМОВЛЕННЯ')])
 
     if role in ('boss', 'owner', 'developer', 'admin', 'delivery_manager', 'super'):
         keyboard.append([KeyboardButton(text='🆕 НОВІ ЗАПИТИ'), KeyboardButton(text='⚡️ АКТИВНІ')])
@@ -58,7 +55,7 @@ def get_main_admin_menu(is_on_shift: bool=False, role: str='admin'):
 
     if role in ('boss', 'owner', 'developer'):
 
-        keyboard.append([KeyboardButton(text='📋 МЕНЮ'), KeyboardButton(text='☕ ЗЕРНО')])
+        keyboard.append([KeyboardButton(text='☕ ЗЕРНО')])
 
         keyboard.append([KeyboardButton(text='📍 ЛОКАЦІЇ'), KeyboardButton(text='📱 СОЦМЕРЕЖІ')])
 
@@ -200,15 +197,6 @@ def get_admins_to_remove_kb(admins):
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_menu_categories_manage_kb():
-
-    # Керування категоріями вимкнено (категорії фіксовані)
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='menu_back')]])
-
-def get_menu_manage_kb():
-
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='✨ ДОДАТИ ПОЗИЦІЮ', callback_data='menu_add')], [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ ПОЗИЦІЮ', callback_data='menu_edit')], [InlineKeyboardButton(text='🗑 ВИДАЛИТИ ПОЗИЦІЮ', callback_data='menu_del')], [InlineKeyboardButton(text='⬅️ В АДМІН-ПАНЕЛЬ', callback_data='menu_back')]])
-
 def get_beans_manage_kb():
 
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='✨ ДОДАТИ ЗЕРНО', callback_data='beans_add')], [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ ЗЕРНО', callback_data='beans_edit')], [InlineKeyboardButton(text='🗑 ВИДАЛИТИ ЗЕРНО', callback_data='beans_del')], [InlineKeyboardButton(text='📋 СПИСОК ЗЕРНА', callback_data='beans_list')], [InlineKeyboardButton(text='⬅️ В АДМІН-ПАНЕЛЬ', callback_data='beans_back')]])
@@ -224,38 +212,6 @@ def get_socials_manage_kb():
 def get_yes_no_kb(yes_cb: str, no_cb: str='menu_no'):
 
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='✅ ПІДТВЕРДИТИ', callback_data=yes_cb), InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data=no_cb)]])
-
-def get_category_selection_kb(categories, prefix, include_new=False, back_cb='menu_back'):
-
-    keyboard = []
-
-    from app.keyboards.user_keyboards import cat_key
-
-    for cat in categories:
-
-        title = get_cat_with_emoji(cat)
-
-        keyboard.append([InlineKeyboardButton(text=title, callback_data=f'{prefix}_{cat_key(cat)}')])
-
-    if include_new:
-
-        keyboard.append([InlineKeyboardButton(text='➕ Нова категорія', callback_data=f'{prefix}_NEW')])
-
-    keyboard.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data=back_cb)])
-
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
-
-def get_items_in_category_kb(items, prefix, back_cb='menu_back'):
-
-    keyboard = []
-
-    for item_id, name in items:
-
-        keyboard.append([InlineKeyboardButton(text=name, callback_data=f'{prefix}_{item_id}')])
-
-    keyboard.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data=back_cb)])
-
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 def get_beans_list_kb(beans, prefix='beans_delete'):
 
