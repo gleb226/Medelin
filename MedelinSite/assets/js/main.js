@@ -893,10 +893,14 @@ function initNovaPoshtaSearch() {
                     streets.forEach((s) => {
                         const item = document.createElement('div');
                         item.className = 'np-result-item';
-                        item.textContent = s.Description;
+                        // NP returns street in different fields depending on method
+                        const desc = s.Description || s.SettlementStreetDescription;
+                        const type = s.StreetsType || s.SettlementStreetDescriptionTyp;
+                        const full = type ? `${type} ${desc}` : desc;
+                        item.textContent = full;
                         item.onclick = () => {
-                            document.getElementById('np_street_search').value = s.Description;
-                            document.getElementById('np_street_name').value = s.Description;
+                            document.getElementById('np_street_search').value = full;
+                            document.getElementById('np_street_name').value = full;
                             streetRes.style.display = 'none';
                         };
                         streetRes.appendChild(item);

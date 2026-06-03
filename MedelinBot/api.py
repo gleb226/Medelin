@@ -227,7 +227,7 @@ async def process_checkout(req: CheckoutRequest):
             "currency": "UAH",
             "description": f"Замовлення #{str(oid)[-6:]} в Medelin",
             "order_id": str(oid),
-            "result_url": f"{WEB_APP_URL}/beans.html?payment=success&order_id={oid}" if order_type == 'nova_poshta' else f"{WEB_APP_URL}/index.html?payment=success&order_id={oid}",
+            "result_url": f"{WEB_APP_URL}/beans.html?payment=success" if order_type == 'nova_poshta' else f"{WEB_APP_URL}/index.html?payment=success",
             "server_url": f"{WEB_APP_URL}/api/liqpay-callback",
             "paytypes": paytypes
         }
