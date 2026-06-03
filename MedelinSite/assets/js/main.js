@@ -1089,7 +1089,7 @@ window.submitCheckout = function (method) {
             np_flat: fd.get('np_flat'),
         },
         cart_menu: activeCart,
-        payment_method: method === 'cash' ? 'card' : method,
+        payment_method: method,
     };
     if (btn) {
         btn.disabled = true;

@@ -25,17 +25,13 @@ BEANS_DATA = [
         'roast': 'Espresso',
         'taste': 'Мускатний горіх, спеції, шоколад, тютюнові ноти',
         'description': 'Унікальна кава, що проходить обробку мусонними вітрами на узбережжі Індії. Має низьку кислотність та густе тіло.',
-        'country': 'Індія',
         'altitude': '900-1200м',
         'processing': 'Monsooned',
         'descriptors': 'Спеції, горіх, тютюн',
         'acidity': 1, 'bitterness': 3, 'body': 5,
         'variety': 'Kents, S.795',
         'cup_score': '82',
-        'harvest': 'Жовтень - Лютий',
-        'recommendation': 'Ідеально для джезви та гейзерної кавоварки.',
-        'region': 'Malabar Coast',
-        'station': 'Local smallholders'
+        'harvest': 'Жовтень - Лютий'
     },
     {
         'name': 'Ефіопія Йергачіф',
@@ -44,17 +40,13 @@ BEANS_DATA = [
         'roast': 'Filter',
         'taste': 'Бергамот, лимонна цедра, жасмин, чайні ноти',
         'description': 'Класика африканської кави з яскравим квітковим ароматом та витонченою цитрусовою кислинкою.',
-        'country': 'Ефіопія',
         'altitude': '1800-2100м',
         'processing': 'Washed',
         'descriptors': 'Цитрус, квіти, бергамот',
         'acidity': 4, 'bitterness': 1, 'body': 2,
         'variety': 'Heirloom',
         'cup_score': '86.5',
-        'harvest': 'Листопад - Січень',
-        'recommendation': 'Найкраще розкривається у фільтрі та пуровері.',
-        'region': 'Yirgacheffe',
-        'station': 'Koke station'
+        'harvest': 'Листопад - Січень'
     },
     {
         'name': 'Бразилія Сантос',
@@ -63,17 +55,13 @@ BEANS_DATA = [
         'roast': 'Espresso',
         'taste': 'Смажений горіх, молочний шоколад, карамель',
         'description': 'Найпопулярніша бразильська кава. Ідеально збалансований смак без зайвої кислотності.',
-        'country': 'Бразилія',
         'altitude': '1100м',
         'processing': 'Natural',
         'descriptors': 'Горіх, шоколад, карамель',
         'acidity': 2, 'bitterness': 2, 'body': 3,
         'variety': 'Bourbon, Catuai',
         'cup_score': '81',
-        'harvest': 'Травень - Вересень',
-        'recommendation': 'Універсальний вибір для еспресо-машин.',
-        'region': 'Sul de Minas',
-        'station': 'Santos port'
+        'harvest': 'Травень - Вересень'
     },
     {
         'name': 'Колумбія Ексельсо',
@@ -82,17 +70,13 @@ BEANS_DATA = [
         'roast': 'Filter',
         'taste': 'Червоне яблуко, тростинний цукор, какао',
         'description': 'Класична колумбійська кава з приємною фруктовою кислинкою та солодким післясмаком.',
-        'country': 'Колумбія',
         'altitude': '1400-1600м',
         'processing': 'Washed',
         'descriptors': 'Яблуко, карамель, какао',
         'acidity': 3, 'bitterness': 2, 'body': 3,
         'variety': 'Caturra, Typica',
         'cup_score': '83.5',
-        'harvest': 'Березень - Червень',
-        'recommendation': 'Чудово підходить для автоматичних кавомашин.',
-        'region': 'Huila',
-        'station': 'Cooperative'
+        'harvest': 'Березень - Червень'
     },
     {
         'name': 'Італьяно (Купаж)',
@@ -101,17 +85,13 @@ BEANS_DATA = [
         'roast': 'Espresso',
         'taste': 'Темний шоколад, підсмажений тост, стійка пінка',
         'description': 'Авторська суміш для ідеального еспресо. Міцна, насичена та надзвичайно бадьора.',
-        'country': 'Blend',
         'altitude': 'Різна',
         'processing': 'Mixed',
         'descriptors': 'Шоколад, тост, міцність',
         'acidity': 1, 'bitterness': 4, 'body': 5,
         'variety': 'Blend',
         'cup_score': '78',
-        'harvest': 'Круглий рік',
-        'recommendation': 'Для тих, хто любить міцну каву з густою пінкою.',
-        'region': 'Global',
-        'station': 'Medelin Roastery'
+        'harvest': 'Круглий рік'
     },
     
 ]
@@ -147,7 +127,6 @@ async def seed():
             taste=b['taste'], 
             roast=b['roast'], 
             image_url=PHOTO_URL_BEANS, 
-            country=b['country'], 
             altitude=b['altitude'], 
             processing=b['processing'], 
             descriptors=b.get('descriptors', ''),
@@ -156,10 +135,7 @@ async def seed():
             body=b['body'], 
             variety=b['variety'], 
             cup_score=b['cup_score'], 
-            harvest=b['harvest'], 
-            recommendation=b['recommendation'],
-            region=b.get('region', ''),
-            station=b.get('station', '')
+            harvest=b['harvest']
         )
 
     for l in LOCATIONS_DATA:

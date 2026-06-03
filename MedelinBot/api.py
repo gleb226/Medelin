@@ -131,6 +131,7 @@ async def get_np_warehouses(cityRef: str, search: str = Query('')):
 async def get_np_streets(cityRef: str = Query(None), city_ref: str = Query(None), search: str = Query('')):
     ref = cityRef or city_ref
     if not ref or len(search) < 2: return []
+    # Nova Poshta street search typically needs the city ref
     return await call_np("Address", "getStreets", {"CityRef": ref, "FindByString": search, "Limit": "20"})
 
 @app.get('/api/coffee')
@@ -210,6 +211,14 @@ async def process_checkout(req: CheckoutRequest):
     # LiqPay Integration
     from app.common.config import LIQPAY_PUBLIC_KEY, LIQPAY_PRIVATE_KEY
     if LIQPAY_PUBLIC_KEY and LIQPAY_PRIVATE_KEY:
+        paytype_map = {
+            'card': 'card',
+            'applepay': 'apay',
+            'googlepay': 'gpay',
+            'privatpay': 'privat24'
+        }
+        paytypes = paytype_map.get(data.get('payment_method'), 'card')
+        
         liqpay_params = {
             "public_key": LIQPAY_PUBLIC_KEY,
             "version": "3",
@@ -219,7 +228,8 @@ async def process_checkout(req: CheckoutRequest):
             "description": f"Замовлення #{str(oid)[-6:]} в Medelin",
             "order_id": str(oid),
             "result_url": f"{WEB_APP_URL}/beans.html?payment=success&order_id={oid}" if order_type == 'nova_poshta' else f"{WEB_APP_URL}/index.html?payment=success&order_id={oid}",
-            "server_url": f"{WEB_APP_URL}/api/liqpay-callback"
+            "server_url": f"{WEB_APP_URL}/api/liqpay-callback",
+            "paytypes": paytypes
         }
         json_params = json.dumps(liqpay_params).encode()
         data_b64 = base64.b64encode(json_params).decode()

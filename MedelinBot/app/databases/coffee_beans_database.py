@@ -11,27 +11,23 @@ class CoffeeBeansDatabase:
 
         await get_db()
 
-    async def add_bean(self, name, price_250=0, image_url='', country='', station='', processing='', descriptors='', species='', variety='', region='', altitude='', roast='', taste='', description='', cup_score='', harvest='', recommendation='', acidity=0, bitterness=0, body=0, **extra):
+    async def add_bean(self, name, price_250=0, image_url='', processing='', descriptors='', species='', variety='', altitude='', roast='', taste='', description='', cup_score='', harvest='', acidity=0, bitterness=0, body=0, **extra):
 
         db = await get_db()
 
         res = await db.coffee_beans.insert_one({
             'name': name,
             'image_url': image_url or '',
-            'country': country or '',
-            'station': station or '',
             'processing': processing or '',
             'descriptors': descriptors or '',
             'species': species or '',
             'variety': variety or '',
-            'region': region or '',
             'altitude': altitude or '',
             'roast': roast or '',
             'taste': taste or '',
             'description': description or '',
             'cup_score': cup_score or '',
             'harvest': harvest or '',
-            'recommendation': recommendation or '',
             'acidity': acidity or 0,
             'bitterness': bitterness or 0,
             'body': body or 0,
