@@ -184,7 +184,8 @@
                 <a href="index.html" class="sidebar__logo">MEDELIN</a>
             </div>
             <nav class="sidebar__nav">
-                <a class="nav-item nav-item--active" data-section="orders"><i class="fas fa-shopping-bag"></i> Замовлення</a>
+                <a class="nav-item nav-item--active" data-section="new_orders"><i class="fas fa-bell"></i> Нові</a>
+                <a class="nav-item" data-section="orders"><i class="fas fa-shopping-bag"></i> Активні</a>
                 <a class="nav-item" data-section="beans"><i class="fas fa-coffee"></i> Зерно</a>
                 <a class="nav-item" data-section="locations"><i class="fas fa-map-marker-alt"></i> Локації</a>
                 <a class="nav-item" data-section="socials"><i class="fas fa-share-nodes"></i> Соцмережі</a>
@@ -295,11 +296,26 @@
                 return resp.ok ? await resp.json() : null;
             }
 
+            async function loadNewOrders() {
+                showLoader(true);
+                const orders = await apiFetch('new-orders');
+                const list = document.getElementById('items-list');
+                list.innerHTML = orders?.length ? '' : '<p style="text-align:center; padding:2rem;">Немає нових замовлень</p>';
+                orders?.forEach(o => {
+                    const div = document.createElement('div');
+                    div.className = 'order-item';
+                    const date = new Date(o.timestamp).toLocaleString('uk-UA');
+                    div.innerHTML = `<div class="order-info"><div class="order-title">#${String(o.order_id).slice(-6)} — ${o.fullname}</div><div class="order-meta">${date} | ${o.phone}</div><div class="order-items">${o.cart || ''} <br><br> <i>${o.wishes || ''}</i></div></div>`;
+                    list.appendChild(div);
+                });
+                showLoader(false);
+            }
+
             async function loadOrders() {
                 showLoader(true);
                 const orders = await apiFetch('active-orders');
                 const list = document.getElementById('items-list');
-                list.innerHTML = orders?.length ? '' : '<p style="text-align:center; padding:2rem;">Немає замовлень</p>';
+                list.innerHTML = orders?.length ? '' : '<p style="text-align:center; padding:2rem;">Немає активних замовлень</p>';
                 orders?.forEach(o => {
                     const div = document.createElement('div');
                     div.className = 'order-item';
@@ -312,6 +328,7 @@
             async function completeOrder(oid) { if (confirm('Виконано?')) { await apiFetch(`orders/${oid}/complete`, 'POST'); loadOrders(); } }
 
             function refreshData() {
+                if (currentSection === 'new_orders') loadNewOrders();
                 if (currentSection === 'orders') loadOrders();
                 if (currentSection === 'beans') loadBeans();
                 if (currentSection === 'locations') loadLocations();

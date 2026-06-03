@@ -128,9 +128,10 @@ async def get_np_warehouses(cityRef: str, search: str = Query('')):
     return await call_np("Address", "getWarehouses", params)
 
 @app.get('/api/nova-poshta/streets')
-async def get_np_streets(cityRef: str, search: str = Query('')):
-    if len(search) < 2: return []
-    return await call_np("Address", "getStreets", {"CityRef": cityRef, "FindByString": search, "Limit": "20"})
+async def get_np_streets(cityRef: str = Query(None), city_ref: str = Query(None), search: str = Query('')):
+    ref = cityRef or city_ref
+    if not ref or len(search) < 2: return []
+    return await call_np("Address", "getStreets", {"CityRef": ref, "FindByString": search, "Limit": "20"})
 
 @app.get('/api/coffee')
 async def get_coffee(): return await public_data_cache.refresh_coffee()
@@ -270,6 +271,16 @@ async def admin_verify(user_id: int):
         admin = await admin_db.get_admin_by_id(user_id)
         return {'status': 'ok', 'token': token, 'admin': admin}
     return {'status': 'pending'}
+
+@app.get('/api/admin/new-orders')
+async def get_new_orders(admin: dict = Depends(get_current_admin)):
+    # Returns all orders from orders_db that are not yet marked as finished in sales_db
+    # For now, let's just return the last 50 orders
+    orders = await orders_db.get_last_orders(50)
+    for o in orders:
+        o['order_id'] = str(o['_id'])
+        del o['_id']
+    return orders
 
 @app.get('/api/admin/active-orders')
 async def get_active_orders(admin: dict = Depends(get_current_admin)):

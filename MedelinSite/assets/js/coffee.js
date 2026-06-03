@@ -44,9 +44,11 @@ function renderCoffeeData(coffeeData) {
         art.className = 'product-card';
         let displayName = item.name.replace(/Blend Mixed/gi, '').trim();
 
-        // На картці має бути: Назва, Спосіб обробки, Дескриптори, Обсмаження
+        // На картці має бути: Назва, Спосіб обробки, Дескриптори, Обсмаження, Оцінка
         art.innerHTML = `
-            <div class="product-card__image" style="background-image: url('${item.image_url || defImg}');"></div>
+            <div class="product-card__image" style="background-image: url('${item.image_url || defImg}');">
+                ${item.cup_score ? `<span style="position: absolute; top: 1rem; right: 1rem; background: #ef4444; color: white; padding: 0.3rem 0.8rem; border-radius: 50px; font-weight: 800; font-size: 0.75rem; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">SCA: ${item.cup_score}</span>` : ''}
+            </div>
             <div class="product-card__content">
                 <h3 class="product-card__title">${displayName}</h3>
                 
