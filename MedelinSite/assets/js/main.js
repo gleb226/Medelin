@@ -954,11 +954,11 @@ function initNovaPoshtaSearch() {
                     cities.forEach((c) => {
                         const item = document.createElement('div');
                         item.className = 'np-result-item';
-                        item.textContent = c.Present;
+                        item.textContent = c.Description;
                         item.onclick = () => {
-                            inp.value = c.Present;
+                            inp.value = c.Description;
                             document.getElementById('np_city_ref').value = c.Ref;
-                            document.getElementById('np_city_name').value = c.Present;
+                            document.getElementById('np_city_name').value = c.Description;
                             res.style.display = 'none';
                             if (branchWrap) branchWrap.style.display = 'block';
                             document.getElementById('np_wh_input').value = '';

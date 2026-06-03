@@ -206,7 +206,56 @@ async def process_checkout(req: CheckoutRequest):
         msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 {user.get("name")}\n📞 {phone}\n💰 {total} грн\n💳 Оплата: <b>ПІСЛЯПЛАТА</b>\n\n🛒 {items_text}'
         await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, user_id or -1), location_id=loc_id)
         return {'status': 'ok', 'manual': True, 'order_id': oid}
+
+    # LiqPay Integration
+    from app.common.config import LIQPAY_PUBLIC_KEY, LIQPAY_PRIVATE_KEY
+    if LIQPAY_PUBLIC_KEY and LIQPAY_PRIVATE_KEY:
+        liqpay_params = {
+            "public_key": LIQPAY_PUBLIC_KEY,
+            "version": "3",
+            "action": "pay",
+            "amount": str(total),
+            "currency": "UAH",
+            "description": f"Замовлення #{str(oid)[-6:]} в Medelin",
+            "order_id": str(oid),
+            "result_url": f"{WEB_APP_URL}/beans.html?payment=success&order_id={oid}" if order_type == 'nova_poshta' else f"{WEB_APP_URL}/index.html?payment=success&order_id={oid}",
+            "server_url": f"{WEB_APP_URL}/api/liqpay-callback"
+        }
+        json_params = json.dumps(liqpay_params).encode()
+        data_b64 = base64.b64encode(json_params).decode()
+        sig_str = LIQPAY_PRIVATE_KEY + data_b64 + LIQPAY_PRIVATE_KEY
+        signature = base64.b64encode(hashlib.sha1(sig_str.encode()).digest()).decode()
+        return {'status': 'ok', 'data': data_b64, 'signature': signature, 'order_id': oid}
+
     return {'status': 'ok', 'order_id': oid, 'manual': False}
+
+@app.post('/api/liqpay-callback')
+async def liqpay_callback(request: Request):
+    try:
+        fd = await request.form()
+        data_b64 = fd.get('data')
+        signature = fd.get('signature')
+        if not data_b64 or not signature: return {'status': 'error'}
+        
+        from app.common.config import LIQPAY_PRIVATE_KEY
+        sig_check = base64.b64encode(hashlib.sha1((LIQPAY_PRIVATE_KEY + data_b64 + LIQPAY_PRIVATE_KEY).encode()).digest()).decode()
+        if sig_check != signature: return {'status': 'error'}
+        
+        data = json.loads(base64.b64decode(data_b64).decode())
+        if data.get('status') in ('success', 'wait_accept'):
+            oid = data.get('order_id')
+            order = await orders_db.get_order_by_id(oid)
+            if order and order.get('status') != 'paid':
+                await orders_db.update_order_status(oid, 'paid')
+                # Add to active orders
+                from app.databases.active_orders_database import active_orders_db
+                await active_orders_db.add_active_order(oid, order.get('user_id'), order.get('fullname'), order.get('phone'), order.get('location_id'), order.get('cart'), order.get('order_type'), order.get('table_number'), order.get('total_amount'), 'pay_now', order.get('wishes'))
+                msg = f'💰 <b>ОПЛАЧЕНО ЗАМОВЛЕННЯ</b>\n\n👤 {order.get("fullname")}\n📞 {order.get("phone")}\n💰 {order.get("total_amount")} грн\n💳 Оплата: <b>LiqPay</b>\n\n🛒 {order.get("cart")}'
+                await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, order.get('user_id') or -1), location_id=order.get('location_id'))
+        return {'status': 'ok'}
+    except Exception as e:
+        logger.error(f"LiqPay callback error: {e}")
+        return {'status': 'error'}
 
 @app.get('/api/orders/{order_id}')
 async def get_order(order_id: str):
