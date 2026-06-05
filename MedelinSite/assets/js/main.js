@@ -894,8 +894,12 @@ function initNovaPoshtaSearch() {
                         const item = document.createElement('div');
                         item.className = 'np-result-item';
                         // NP returns street in different fields depending on method
-                        const desc = s.Description || s.SettlementStreetDescription;
-                        const type = s.StreetsType || s.SettlementStreetDescriptionTyp;
+                        let desc = s.Description || s.SettlementStreetDescription || '';
+                        const type = s.StreetsType || s.SettlementStreetDescriptionTyp || '';
+                        
+                        // Remove technical IDs (GUIDs) like 0f1d7fbb-4bba-11e4-ab6d-005056801329
+                        desc = desc.replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\s*/gi, '').trim();
+                        
                         const full = type ? `${type} ${desc}` : desc;
                         item.textContent = full;
                         item.onclick = () => {
