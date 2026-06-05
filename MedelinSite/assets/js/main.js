@@ -890,25 +890,25 @@ function initNovaPoshtaSearch() {
                 if (streets.length === 0) {
                     streetRes.innerHTML = '<div class="np-result-item">Нічого не знайдено</div>';
                 } else {
-                    streets.forEach((s) => {
-                        const item = document.createElement('div');
-                        item.className = 'np-result-item';
-                        // NP returns street in different fields depending on method
-                        let desc = s.Description || s.SettlementStreetDescription || '';
-                        const type = s.StreetsType || s.SettlementStreetDescriptionTyp || '';
-                        
-                        // Remove technical IDs (GUIDs) like 0f1d7fbb-4bba-11e4-ab6d-005056801329
-                        desc = desc.replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\s*/gi, '').trim();
-                        
-                        const full = type ? `${type} ${desc}` : desc;
-                        item.textContent = full;
-                        item.onclick = () => {
-                            document.getElementById('np_street_search').value = full;
-                            document.getElementById('np_street_name').value = full;
-                            streetRes.style.display = 'none';
-                        };
-                        streetRes.appendChild(item);
-                    });
+                        streets.forEach((s) => {
+                            const item = document.createElement('div');
+                            item.className = 'np-result-item';
+                            // fields for searchSettlementStreets
+                            let desc = s.Description || s.SettlementStreetDescription || '';
+                            const type = s.StreetsType || s.SettlementStreetDescriptionTyp || '';
+                            
+                            // Remove technical IDs (GUIDs) or any words containing long hex-dash strings
+                            desc = desc.split(' ').filter(word => !/[a-f0-9]{8}-[a-f0-9]{4}/i.test(word) && word.length < 30).join(' ').trim();
+                            
+                            const full = type ? `${type} ${desc}` : desc;
+                            item.textContent = full;
+                            item.onclick = () => {
+                                document.getElementById('np_street_search').value = full;
+                                document.getElementById('np_street_name').value = full;
+                                streetRes.style.display = 'none';
+                            };
+                            streetRes.appendChild(item);
+                        });
                 }
             });
     }, 400);
@@ -998,8 +998,13 @@ window.goToPaymentStep = function () {
     if (!f || !f.reportValidity()) return;
     const isBeans = window.location.pathname.includes('beans.html');
     if (isBeans && f.elements['delivery_type'].value === 'nova_poshta') {
-        if (!document.getElementById('np_warehouse_final').value) {
+        const mode = f.elements['np_delivery_mode'] ? f.elements['np_delivery_mode'].value : 'branch';
+        if (mode === 'branch' && !document.getElementById('np_warehouse_final').value) {
             window.showToast('Будь ласка, оберіть відділення Нової Пошти', 'error');
+            return;
+        }
+        if (mode === 'courier' && !document.getElementById('np_street_name').value) {
+            window.showToast('Будь ласка, оберіть вулицю для доставки', 'error');
             return;
         }
     }
