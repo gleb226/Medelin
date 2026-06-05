@@ -958,11 +958,18 @@ function initNovaPoshtaSearch() {
                     cities.forEach((c) => {
                         const item = document.createElement('div');
                         item.className = 'np-result-item';
+                        // searchSettlements returns Present (m. Kyiv, Kyivska obl)
                         const cityName = c.Present || c.Description;
-                        item.textContent = cityName;
+                        const area = c.AreaDescription || '';
+                        const region = c.RegionsDescription || '';
+                        
+                        item.innerHTML = `<div style="font-weight:700;">${cityName}</div>${area ? `<div style="font-size:0.75rem; opacity:0.7;">${area} обл., ${region}</div>` : ''}`;
+                        
                         item.onclick = () => {
                             inp.value = cityName;
-                            document.getElementById('np_city_ref').value = c.Ref;
+                            // For searchSettlements, 'Ref' is the SettlementRef (used for streets)
+                            // 'CityRef' is the CityRef (used for warehouses)
+                            document.getElementById('np_city_ref').value = c.Ref || c.CityRef;
                             document.getElementById('np_city_name').value = cityName;
                             res.style.display = 'none';
                             if (branchWrap) branchWrap.style.display = 'block';

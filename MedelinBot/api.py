@@ -119,34 +119,35 @@ async def call_np(model: str, method: str, params: dict):
 @app.get('/api/nova-poshta/cities')
 async def get_np_cities(search: str = Query('')):
     if len(search) < 2: return []
-    # searchSettlements gives better results for courier delivery (includes villages)
-    res = await call_np("Address", "searchSettlements", {"StreetName": search, "Limit": "20"})
-    # searchSettlements returns {"TotalCount": X, "Addresses": [...]}
+    # Try searchSettlements first
+    res = await call_np("Address", "searchSettlements", {"CityName": search, "Limit": "20"})
     if isinstance(res, list) and len(res) > 0 and 'Addresses' in res[0]:
         return res[0]['Addresses']
-    elif isinstance(res, dict) and 'Addresses' in res:
-         return res['Addresses']
+    # Fallback to getCities
+    res = await call_np("Address", "getCities", {"FindByString": search, "Limit": "20"})
     return res
 
 @app.get('/api/nova-poshta/warehouses')
 async def get_np_warehouses(cityRef: str, search: str = Query('')):
-    # getWarehouses needs CityRef or CityName. searchSettlements returns Ref which is SettlementRef.
-    # For warehouses, we might still need getWarehouses with CityRef.
+    # Try with provided ref (could be CityRef or SettlementRef)
     params = {"CityRef": cityRef, "Limit": "50"}
     if search: params["FindByString"] = search
-    return await call_np("Address", "getWarehouses", params)
+    res = await call_np("Address", "getWarehouses", params)
+    if not res:
+        # Try as SettlementRef
+        params = {"SettlementRef": cityRef, "Limit": "50"}
+        if search: params["FindByString"] = search
+        res = await call_np("Address", "getWarehouses", params)
+    return res
 
 @app.get('/api/nova-poshta/streets')
 async def get_np_streets(cityRef: str = Query(None), city_ref: str = Query(None), search: str = Query('')):
     ref = cityRef or city_ref
     if not ref or len(search) < 2: return []
-    # searchSettlementStreets is better for courier
     res = await call_np("Address", "searchSettlementStreets", {"StreetName": search, "SettlementRef": ref, "Limit": "20"})
     if isinstance(res, list) and len(res) > 0 and 'Addresses' in res[0]:
         return res[0]['Addresses']
-    elif isinstance(res, dict) and 'Addresses' in res:
-         return res['Addresses']
-    return res
+    return []
 
 @app.get('/api/coffee')
 async def get_coffee(): return await public_data_cache.refresh_coffee()
