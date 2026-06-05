@@ -28,9 +28,8 @@ BEANS_DATA = [
         'altitude': '900-1200м',
         'processing': 'Monsooned',
         'descriptors': 'Спеції, горіх, тютюн',
-        'acidity': 1, 'bitterness': 3, 'body': 5,
         'variety': 'Kents, S.795',
-        'cup_score': '82',
+        'quality_score': '82',
         'harvest': 'Жовтень - Лютий'
     },
     {
@@ -43,9 +42,8 @@ BEANS_DATA = [
         'altitude': '1800-2100м',
         'processing': 'Washed',
         'descriptors': 'Цитрус, квіти, бергамот',
-        'acidity': 4, 'bitterness': 1, 'body': 2,
         'variety': 'Heirloom',
-        'cup_score': '86.5',
+        'quality_score': '86.5',
         'harvest': 'Листопад - Січень'
     },
     {
@@ -58,9 +56,8 @@ BEANS_DATA = [
         'altitude': '1100м',
         'processing': 'Natural',
         'descriptors': 'Горіх, шоколад, карамель',
-        'acidity': 2, 'bitterness': 2, 'body': 3,
         'variety': 'Bourbon, Catuai',
-        'cup_score': '81',
+        'quality_score': '81',
         'harvest': 'Травень - Вересень'
     },
     {
@@ -73,9 +70,8 @@ BEANS_DATA = [
         'altitude': '1400-1600м',
         'processing': 'Washed',
         'descriptors': 'Яблуко, карамель, какао',
-        'acidity': 3, 'bitterness': 2, 'body': 3,
         'variety': 'Caturra, Typica',
-        'cup_score': '83.5',
+        'quality_score': '83.5',
         'harvest': 'Березень - Червень'
     },
     {
@@ -88,12 +84,10 @@ BEANS_DATA = [
         'altitude': 'Різна',
         'processing': 'Mixed',
         'descriptors': 'Шоколад, тост, міцність',
-        'acidity': 1, 'bitterness': 4, 'body': 5,
         'variety': 'Blend',
-        'cup_score': '78',
+        'quality_score': '78',
         'harvest': 'Круглий рік'
     },
-    
 ]
 
 LOCATIONS_DATA = [
@@ -130,11 +124,8 @@ async def seed():
             altitude=b['altitude'], 
             processing=b['processing'], 
             descriptors=b.get('descriptors', ''),
-            acidity=b['acidity'], 
-            bitterness=b['bitterness'], 
-            body=b['body'], 
             variety=b['variety'], 
-            cup_score=b['cup_score'], 
+            quality_score=b['quality_score'], 
             harvest=b['harvest']
         )
 

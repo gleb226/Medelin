@@ -119,10 +119,19 @@ async def call_np(model: str, method: str, params: dict):
 @app.get('/api/nova-poshta/cities')
 async def get_np_cities(search: str = Query('')):
     if len(search) < 2: return []
-    return await call_np("Address", "getCities", {"FindByString": search, "Limit": "20"})
+    # searchSettlements gives better results for courier delivery (includes villages)
+    res = await call_np("Address", "searchSettlements", {"StreetName": search, "Limit": "20"})
+    # searchSettlements returns {"TotalCount": X, "Addresses": [...]}
+    if isinstance(res, list) and len(res) > 0 and 'Addresses' in res[0]:
+        return res[0]['Addresses']
+    elif isinstance(res, dict) and 'Addresses' in res:
+         return res['Addresses']
+    return res
 
 @app.get('/api/nova-poshta/warehouses')
 async def get_np_warehouses(cityRef: str, search: str = Query('')):
+    # getWarehouses needs CityRef or CityName. searchSettlements returns Ref which is SettlementRef.
+    # For warehouses, we might still need getWarehouses with CityRef.
     params = {"CityRef": cityRef, "Limit": "50"}
     if search: params["FindByString"] = search
     return await call_np("Address", "getWarehouses", params)
@@ -131,8 +140,13 @@ async def get_np_warehouses(cityRef: str, search: str = Query('')):
 async def get_np_streets(cityRef: str = Query(None), city_ref: str = Query(None), search: str = Query('')):
     ref = cityRef or city_ref
     if not ref or len(search) < 2: return []
-    # Nova Poshta street search typically needs the city ref
-    return await call_np("Address", "getStreets", {"CityRef": ref, "FindByString": search, "Limit": "20"})
+    # searchSettlementStreets is better for courier
+    res = await call_np("Address", "searchSettlementStreets", {"StreetName": search, "SettlementRef": ref, "Limit": "20"})
+    if isinstance(res, list) and len(res) > 0 and 'Addresses' in res[0]:
+        return res[0]['Addresses']
+    elif isinstance(res, dict) and 'Addresses' in res:
+         return res['Addresses']
+    return res
 
 @app.get('/api/coffee')
 async def get_coffee(): return await public_data_cache.refresh_coffee()

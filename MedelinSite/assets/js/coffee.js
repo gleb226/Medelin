@@ -44,18 +44,17 @@ function renderCoffeeData(coffeeData) {
         art.className = 'product-card';
         let displayName = item.name.replace(/Blend Mixed/gi, '').trim();
 
-        // На картці має бути: Назва, Спосіб обробки, Дескриптори, Обсмаження, Оцінка
+        // На картці має бути: Назва, Спосіб обробки, Дескриптори, Обсмаження, Оцінка якості
         art.innerHTML = `
-            <div class="product-card__image" style="background-image: url('${item.image_url || defImg}');">
-                ${item.cup_score ? `<span style="position: absolute; top: 1rem; right: 1rem; background: #ef4444; color: white; padding: 0.3rem 0.8rem; border-radius: 50px; font-weight: 800; font-size: 0.75rem; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">SCA: ${item.cup_score}</span>` : ''}
-            </div>
+            <div class="product-card__image" style="background-image: url('${item.image_url || defImg}');"></div>
             <div class="product-card__content">
                 <h3 class="product-card__title">${displayName}</h3>
                 
                 <div class="product-card__info-brief" style="margin-bottom: 1.5rem; font-size: 0.9rem; color: #6b4f3a;">
                     ${item.processing ? `<div style="margin-bottom: 4px;"><strong>Обробка:</strong> ${item.processing}</div>` : ''}
                     ${item.descriptors || item.taste ? `<div style="margin-bottom: 4px;"><strong>Дескриптори:</strong> ${item.descriptors || item.taste}</div>` : ''}
-                    ${item.roast ? `<div><strong>Обсмаження:</strong> ${item.roast}</div>` : ''}
+                    ${item.roast ? `<div style="margin-bottom: 4px;"><strong>Обсмаження:</strong> ${item.roast}</div>` : ''}
+                    ${item.quality_score || item.cup_score ? `<div><strong>Оцінка якості:</strong> ${item.quality_score || item.cup_score}</div>` : ''}
                 </div>
 
                 <div class="product-card__price-row">
@@ -93,21 +92,6 @@ function openBeanDetail(item, pushState = true) {
 
     let displayName = item.name.replace(/Blend Mixed/gi, '').trim();
 
-    const renderScale = (val, iconClass) => {
-        let n = Math.min(Math.round(parseFloat(val || 0)), 5);
-        if (n <= 0) return null;
-        let html = '';
-        for (let i = 0; i < 5; i++) {
-            const opacity = i < n ? 1 : 0.2;
-            html += `<i class="fas ${iconClass}" style="opacity: ${opacity}; margin-right: 4px; font-size: 1rem; color: var(--color-coffee);"></i>`;
-        }
-        return html;
-    };
-
-    const acidity = renderScale(item.acidity, 'fa-lemon');
-    const bitterness = renderScale(item.bitterness, 'fa-mug-hot');
-    const body = renderScale(item.body, 'fa-seedling');
-
     detailContent.innerHTML = `
         <div class="bean-full-view">
             <div style="margin-bottom: 2rem;">
@@ -118,19 +102,12 @@ function openBeanDetail(item, pushState = true) {
             <div class="bean-full-view__main" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 3rem; align-items: start; margin-bottom: 3rem;">
                 <div class="bean-full-view__image-side">
                     <img src="${item.image_url || defImg}" alt="${displayName}" style="width: 100%; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.12); margin-bottom: 2rem;">
-                    
-                    <div class="bean-full-view__scales" style="background: #fdfaf7; padding: 2rem; border-radius: 20px; border: 1px solid rgba(139, 69, 19, 0.1);">
-                        <h4 style="font-family: var(--font-accent); color: var(--color-dark-brown); margin-bottom: 1.5rem; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 0.5rem;">Смаковий профіль</h4>
-                        ${acidity ? `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;"><span style="font-weight: 600;">Кислинка</span> <div>${acidity}</div></div>` : ''}
-                        ${bitterness ? `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;"><span style="font-weight: 600;">Гірчинка</span> <div>${bitterness}</div></div>` : ''}
-                        ${body ? `<div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-weight: 600;">Насиченість</span> <div>${body}</div></div>` : ''}
-                    </div>
                 </div>
 
                 <div class="bean-full-view__info-side">
                     <h1 style="font-family: var(--font-accent); font-size: 3.5rem; line-height: 1.1; margin-bottom: 1rem; color: var(--color-dark-brown);">${displayName}</h1>
                     <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
-                         ${item.cup_score ? `<span class="tag" style="background: #ef4444; color: white; padding: 0.4rem 1rem; border-radius: 50px; font-weight: 700; font-size: 0.8rem;">SCA: ${item.cup_score}</span>` : ''}
+                         ${item.quality_score || item.cup_score ? `<span class="tag" style="background: #ef4444; color: white; padding: 0.4rem 1rem; border-radius: 50px; font-weight: 700; font-size: 0.8rem;">Оцінка якості: ${item.quality_score || item.cup_score}</span>` : ''}
                     </div>
 
                     <p style="font-size: 1.25rem; line-height: 1.7; color: #4a3728; margin-bottom: 2.5rem; font-weight: 400;">${item.description || 'Преміальна свіжообсмажена кава Medelin, створена для справжніх поціновувачів.'}</p>

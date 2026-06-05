@@ -958,15 +958,16 @@ function initNovaPoshtaSearch() {
                     cities.forEach((c) => {
                         const item = document.createElement('div');
                         item.className = 'np-result-item';
-                        item.textContent = c.Description;
+                        const cityName = c.Present || c.Description;
+                        item.textContent = cityName;
                         item.onclick = () => {
-                            inp.value = c.Description;
+                            inp.value = cityName;
                             document.getElementById('np_city_ref').value = c.Ref;
-                            document.getElementById('np_city_name').value = c.Description;
+                            document.getElementById('np_city_name').value = cityName;
                             res.style.display = 'none';
                             if (branchWrap) branchWrap.style.display = 'block';
                             document.getElementById('np_wh_input').value = '';
-                            searchWh('');
+                            if (typeof searchWh === 'function') searchWh('');
                         };
                         res.appendChild(item);
                     });

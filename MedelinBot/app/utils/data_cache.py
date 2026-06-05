@@ -111,16 +111,10 @@ class PublicDataCache:
                 'processing': i.get('processing', ''),
                 'roast': i.get('roast', ''),
                 'variety': i.get('variety', ''),
-                'cup_score': i.get('cup_score', ''),
+                'quality_score': i.get('quality_score') or i.get('cup_score', ''),
                 'harvest': i.get('harvest', ''),
                 'taste': i.get('taste', ''),
-                'country': i.get('country', ''),
-                'region': i.get('region', ''),
-                'station': i.get('station', ''),
-                'recommendation': i.get('recommendation', ''),
-                'acidity': i.get('acidity', 0),
-                'bitterness': i.get('bitterness', 0),
-                'body': i.get('body', 0)
+                'descriptors': i.get('descriptors', '')
             })
 
         return self.set('coffee', formatted)

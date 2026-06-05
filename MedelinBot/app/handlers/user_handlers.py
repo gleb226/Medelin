@@ -146,18 +146,9 @@ async def show_bean_details(callback: CallbackQuery, state: FSMContext):
 
     if bean.get('species'): text += f"<b>Склад:</b> {bean['species']}\n"
     if bean.get('roast'): text += f"<b>Обсмаження:</b> {bean['roast']}\n"
-    if bean.get('descriptors') or bean.get('taste'): 
-        text += f"<b>Дескриптори:</b> {bean.get('descriptors') or bean['taste']}\n"
+    if bean.get('quality_score') or bean.get('cup_score'): 
+        text += f"<b>Оцінка якості:</b> {bean.get('quality_score') or bean['cup_score']}\n"
     
-    # Смаковий профіль (scales)
-    scales = []
-    if bean.get('acidity'): scales.append(f"🍋 Кислинка: {'🌕' * int(bean['acidity'])}{'🌑' * (5 - int(bean['acidity']))}")
-    if bean.get('bitterness'): scales.append(f"☕️ Гірчинка: {'🌕' * int(bean['bitterness'])}{'🌑' * (5 - int(bean['bitterness']))}")
-    if bean.get('body'): scales.append(f"🌱 Насиченість: {'🌕' * int(bean['body'])}{'🌑' * (5 - int(bean['body']))}")
-    
-    if scales:
-        text += "\n<b>Смаковий профіль:</b>\n" + "\n".join(scales) + "\n"
-
     if bean.get('variety'): text += f"<b>Різновид:</b> {bean['variety']}\n"
     if bean.get('altitude'): text += f"<b>Висота зростання:</b> {bean['altitude']}\n"
     if bean.get('processing'): text += f"<b>Метод обробки:</b> {bean['processing']}\n"

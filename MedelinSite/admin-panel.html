@@ -364,10 +364,7 @@
                             <div class="admin-field"><label>Склад (Арабіка/Робуста)</label><input name="species" value="${b?.species || ''}"></div>
                             <div class="admin-field"><label>Обсмаження</label><input name="roast" value="${b?.roast || ''}"></div>
                             <div class="admin-field"><label>Дескриптори</label><input name="descriptors" value="${b?.descriptors || b?.taste || ''}"></div>
-                            <div class="admin-field"><label>SCA Score</label><input name="cup_score" value="${b?.cup_score || ''}"></div>
-                            <div class="admin-field"><label>Кислинка (1-5)</label><input type="number" name="acidity" min="0" max="5" value="${b?.acidity || ''}"></div>
-                            <div class="admin-field"><label>Гірчинка (1-5)</label><input type="number" name="bitterness" min="0" max="5" value="${b?.bitterness || ''}"></div>
-                            <div class="admin-field"><label>Насиченість (1-5)</label><input type="number" name="body" min="0" max="5" value="${b?.body || ''}"></div>
+                            <div class="admin-field"><label>Оцінка якості</label><input name="quality_score" value="${b?.quality_score || b?.cup_score || ''}"></div>
                             <div class="admin-field"><label>Різновид</label><input name="variety" value="${b?.variety || ''}"></div>
                             <div class="admin-field"><label>Висота</label><input name="altitude" value="${b?.altitude || ''}"></div>
                             <div class="admin-field"><label>Обробка</label><input name="processing" value="${b?.processing || ''}"></div>
