@@ -12,23 +12,26 @@ if (isLocal && _port === '8000') {
 }
 
 window.fetchMedelinData = async function (key) {
+    console.log(`[Medelin] Fetching ${key}...`);
     const fileName = `${key}.json`;
-    const endpoints = [
-        `${window.API_BASE_URL}/api/${key}`,
-        `/api/${key}`,
-        `${window.API_BASE_URL}/assets/data/${fileName}`
-    ];
+    const endpoints = [];
+    
+    if (window.API_BASE_URL) endpoints.push(`${window.API_BASE_URL}/api/${key}`);
+    endpoints.push(`/api/${key}`);
     
     const isRoot = !window.location.pathname.includes('/pages/');
     const dataPath = isRoot ? `./assets/data/${fileName}` : `../assets/data/${fileName}`;
     endpoints.push(dataPath);
+    endpoints.push(`${window.API_BASE_URL}/assets/data/${fileName}`);
     endpoints.push(`/assets/data/${fileName}`);
 
-    let lastError = '';
-    for (const url of endpoints) {
+    const uniqueEndpoints = [...new Set(endpoints.filter(Boolean))];
+
+    for (const url of uniqueEndpoints) {
         try {
+            console.log(`[Medelin] Trying endpoint: ${url}`);
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 12000);
+            const timeoutId = setTimeout(() => controller.abort(), 6000); 
             
             const finalUrl = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`;
             const response = await fetch(finalUrl, { 
@@ -39,21 +42,20 @@ window.fetchMedelinData = async function (key) {
 
             if (response.ok) {
                 const data = await response.json();
-                if (Array.isArray(data)) return data;
-                else {
-                    console.error(`[Medelin] Endpoint ${url} returned non-array:`, data);
-                    lastError = `Non-array data from ${url}`;
+                if (Array.isArray(data)) {
+                    console.log(`[Medelin] Successfully loaded ${key} from ${url} (${data.length} items)`);
+                    return data;
                 }
+                console.error(`[Medelin] Endpoint ${url} returned non-array:`, data);
             } else {
                 console.warn(`[Medelin] Endpoint ${url} failed with status ${response.status}`);
-                lastError = `Status ${response.status} from ${url}`;
             }
         } catch (e) {
             console.warn(`[Medelin] Failed to fetch from ${url}:`, e.message);
-            lastError = e.message;
         }
     }
-    window.reportClientError(`Failed to load ${key}`, `All endpoints failed. Last error: ${lastError}`);
+    console.error(`[Medelin] All endpoints failed for ${key}`);
+    window.reportClientError(`Failed to load ${key}`, 'All data endpoints failed');
     return null;
 };
 
@@ -903,8 +905,12 @@ function initNovaPoshtaSearch() {
                             let desc = s.Description || s.SettlementStreetDescription || '';
                             const type = s.StreetsType || s.SettlementStreetDescriptionTyp || '';
                             
-                            // Remove technical IDs (GUIDs) or any words containing long hex-dash strings
-                            desc = desc.split(' ').filter(word => !/[a-f0-9]{8}-[a-f0-9]{4}/i.test(word) && word.length < 30).join(' ').trim();
+                            // Aggressively remove GUIDs or any words that look like technical IDs
+                            // We remove words with many hyphens or long hex strings
+                            desc = desc.split(' ').filter(word => {
+                                const isId = /[a-f0-9]{8}-[a-f0-9]{4}/i.test(word) || word.length > 20 || /^[a-f0-9]{15,}$/i.test(word);
+                                return !isId;
+                            }).join(' ').trim();
                             
                             const full = type ? `${type} ${desc}` : desc;
                             item.textContent = full;
@@ -1045,7 +1051,6 @@ window.backToDetails = function () {
 
 window.submitCheckout = function (method) {
     const btn = window.event ? window.event.target.closest('button') : null;
-    const container = document.getElementById('checkout-modal-container');
     
     if (window.CURRENT_ORDER_ID) {
         if (btn) {
@@ -1061,12 +1066,6 @@ window.submitCheckout = function (method) {
         .then(r => r.json())
         .then(res => {
             if (res.status === 'ok') {
-                cart_menu.length = 0;
-                cart_beans.length = 0;
-                localStorage.removeItem('cart_menu');
-                localStorage.removeItem('cart_beans');
-                updateCartBadge();
-
                 if (res.url) window.location.href = res.url;
                 else if (res.data && res.signature) {
                     const form = document.createElement('form');
@@ -1176,35 +1175,27 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.setupMobileMenu) window.setupMobileMenu();
     if (typeof window.syncPastOrders === 'function') window.syncPastOrders();
 
-    // Додаємо клас .js-enabled для активації анімацій через CSS
     document.body.classList.add('js-enabled');
 
-    // Перевірка успішної оплати через URL параметр
     const paymentStatus = window.getURLParameter('payment');
     if (paymentStatus === 'success') {
         if (typeof clearCart === 'function') clearCart();
         window.showToast('Оплату успішно проведено! Дякуємо за замовлення.', 'success');
-        // Очищаємо параметри з URL
         const url = new URL(window.location);
         url.searchParams.delete('payment');
         url.searchParams.delete('order_id');
         window.history.replaceState({}, document.title, url.pathname + url.search);
     }
     
-    // Ініціалізація анімацій появи
     const initRevealAnimations = () => {
         const revealObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('revealable--active');
-                    // Після активації можна припинити спостереження
                     revealObserver.unobserve(entry.target);
                 }
             });
-        }, { 
-            threshold: 0.05, // Починаємо анімацію раніше
-            rootMargin: '0px 0px -50px 0px' 
-        });
+        }, { threshold: 0.05, rootMargin: '0px 0px -50px 0px' });
 
         const revealElements = document.querySelectorAll('.revealable, .product-card, .promo-card, .category, .menu-item');
         revealElements.forEach(el => {
@@ -1212,7 +1203,6 @@ document.addEventListener('DOMContentLoaded', () => {
             revealObserver.observe(el);
         });
 
-        // Запасний механізм: активуємо всі елементи, що видимі при завантаженні
         setTimeout(() => {
             revealElements.forEach(el => {
                 const rect = el.getBoundingClientRect();
@@ -1224,11 +1214,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     initRevealAnimations();
-
-    // Повторна ініціалізація після динамічного завантаження даних
-    window.refreshAnimations = () => {
-        initRevealAnimations();
-    };
+    window.refreshAnimations = () => { initRevealAnimations(); };
 
     const orderId = window.getURLParameter('order_id');
     if (orderId && paymentStatus !== 'success') {
@@ -1246,12 +1232,7 @@ document.addEventListener('DOMContentLoaded', () => {
             container.classList.add('cart-modal--active');
             
             fetch(`${window.API_BASE_URL}/api/orders/${orderId}`)
-                .then(r => {
-                    if (!r.ok) {
-                        return r.json().catch(() => ({ detail: 'Сервер повернув помилку' }));
-                    }
-                    return r.json();
-                })
+                .then(r => r.ok ? r.json() : { detail: 'Помилка' })
                 .then(order => {
                     if (order && order.order_id) {
                         container.innerHTML = `
@@ -1311,8 +1292,5 @@ window.toggleTableInput = function (v) {
     const tableWrap = document.getElementById('chk_table_wrap');
     const paymentModeSection = document.getElementById('payment-mode-section');
     if (tableWrap) tableWrap.style.display = v === 'in_house' ? 'block' : 'none';
-    if (paymentModeSection) paymentModeSection.style.display = v === 'in_house' ? 'block' : 'none';
-};
- : 'none';
     if (paymentModeSection) paymentModeSection.style.display = v === 'in_house' ? 'block' : 'none';
 };
