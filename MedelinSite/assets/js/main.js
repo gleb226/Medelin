@@ -24,11 +24,11 @@ window.fetchMedelinData = async function (key) {
     endpoints.push(dataPath);
     endpoints.push(`/assets/data/${fileName}`);
 
+    let lastError = '';
     for (const url of endpoints) {
         try {
             const controller = new AbortController();
-            // Збільшуємо таймаут до 10 секунд для холодного старту на Render
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
             
             const finalUrl = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`;
             const response = await fetch(finalUrl, { 
@@ -39,15 +39,21 @@ window.fetchMedelinData = async function (key) {
 
             if (response.ok) {
                 const data = await response.json();
-                if (Array.isArray(data)) {
-                    return data;
+                if (Array.isArray(data)) return data;
+                else {
+                    console.error(`[Medelin] Endpoint ${url} returned non-array:`, data);
+                    lastError = `Non-array data from ${url}`;
                 }
+            } else {
+                console.warn(`[Medelin] Endpoint ${url} failed with status ${response.status}`);
+                lastError = `Status ${response.status} from ${url}`;
             }
         } catch (e) {
             console.warn(`[Medelin] Failed to fetch from ${url}:`, e.message);
+            lastError = e.message;
         }
     }
-    window.reportClientError(`Failed to load ${key}`, `all data endpoints failed for ${key}`);
+    window.reportClientError(`Failed to load ${key}`, `All endpoints failed. Last error: ${lastError}`);
     return null;
 };
 

@@ -19,15 +19,17 @@ async function initLocations() {
 
     try {
         const data = await window.loadMedelinData('locations', (fresh) => {
-            renderLocations(fresh);
+            if (Array.isArray(fresh)) renderLocations(fresh);
         });
-        if (data) {
+        if (data && Array.isArray(data)) {
             renderLocations(data);
         } else {
+            console.error('initLocations: Data is not an array or null', data);
             gridRoot.innerHTML = '<div class="error-msg">Не вдалося завантажити список локацій. <br><button type="button" data-action="reload-page" class="btn btn--sm btn--mt-md">Оновити сторінку</button></div>';
         }
     } catch (err) {
-        console.error('initLocations error:', err);
+        console.error('initLocations critical error:', err);
+        window.reportClientError('initLocations critical error', err.stack || err.message);
         gridRoot.innerHTML = '<div class="error-msg">Критична помилка завантаження локацій.</div>';
     }
 }

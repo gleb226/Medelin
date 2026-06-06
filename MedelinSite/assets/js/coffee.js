@@ -8,20 +8,24 @@ async function fetchCoffee() {
 
     try {
         const data = await window.loadMedelinData('coffee', (fresh) => {
-            allCoffeeData = fresh;
-            renderCoffeeData(fresh);
-            checkUrlForBean();
+            if (Array.isArray(fresh)) {
+                allCoffeeData = fresh;
+                renderCoffeeData(fresh);
+                checkUrlForBean();
+            }
         });
-        if (data) {
+        if (data && Array.isArray(data)) {
             allCoffeeData = data;
             renderCoffeeData(data);
             checkUrlForBean();
         } else {
-            root.innerHTML = `<div class="error-msg">Помилка завантаження даних про каву. <br><button type="button" data-action="reload-page" class="btn btn--sm btn--mt-md">Оновити сторінку</button></div>`;
+            console.error('fetchCoffee: Data is not an array or null', data);
+            root.innerHTML = `<div class="error-msg">Помилка формату даних. <br><button type="button" data-action="reload-page" class="btn btn--sm btn--mt-md">Оновити</button></div>`;
         }
     } catch (err) {
-        console.error('fetchCoffee error:', err);
-        root.innerHTML = '<div class="error-msg">Критична помилка завантаження.</div>';
+        console.error('fetchCoffee critical error:', err);
+        window.reportClientError('fetchCoffee critical error', err.stack || err.message);
+        root.innerHTML = '<div class="error-msg">Критична помилка завантаження даних.</div>';
     }
 }
 

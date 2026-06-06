@@ -28,7 +28,7 @@ from app.databases.mongo_client import get_db, close_client
 from app.utils.data_cache import public_data_cache
 from app.utils.phone_utils import format_phone
 from app.common.config import WEB_APP_URL, NP_API_KEY
-from app.utils.admin_notifications import send_admin_notification
+from app.utils.admin_notifications import send_admin_notification, send_developer_error
 import app.keyboards.admin_keyboards as akb
 
 # Налаштування логування
@@ -37,12 +37,22 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await get_db()
-    asyncio.create_task(public_data_cache.warm_all())
+    try:
+        await get_db()
+        asyncio.create_task(public_data_cache.warm_all())
+    except Exception as e:
+        logger.error(f"Startup error: {e}")
     yield
     await close_client()
 
 app = FastAPI(lifespan=lifespan)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    error_msg = f"🌐 <b>SERVER ERROR</b>\n\n<b>Path:</b> {request.url.path}\n<b>Error:</b> {str(exc)}"
+    logger.error(f"Global Exception: {exc}", exc_info=True)
+    await send_developer_error(error_msg)
+    return JSONResponse(status_code=500, content={"detail": "Внутрішня помилка сервера"})
 
 app.add_middleware(
     CORSMiddleware,
@@ -150,13 +160,22 @@ async def get_np_streets(cityRef: str = Query(None), city_ref: str = Query(None)
     return []
 
 @app.get('/api/coffee')
-async def get_coffee(): return await public_data_cache.refresh_coffee()
+async def get_coffee(): 
+    data = public_data_cache.get('coffee')
+    if data: return data
+    return await public_data_cache.refresh_coffee()
 
 @app.get('/api/locations')
-async def get_locations(): return await public_data_cache.refresh_locations()
+async def get_locations(): 
+    data = public_data_cache.get('locations')
+    if data: return data
+    return await public_data_cache.refresh_locations()
 
 @app.get('/api/socials')
-async def get_socials(): return await public_data_cache.refresh_socials()
+async def get_socials(): 
+    data = public_data_cache.get('socials')
+    if data: return data
+    return await public_data_cache.refresh_socials()
 
 @app.post('/api/checkout')
 async def process_checkout(req: CheckoutRequest):
@@ -288,19 +307,28 @@ async def get_order(order_id: str):
     if not order: raise HTTPException(status_code=404, detail='Замовлення не знайдено')
     return {'order_id': str(order['_id']), 'total': order.get('total_amount', 0), 'status': order.get('status')}
 
+@app.get('/api/health')
+async def health_check():
+    try:
+        db = await get_db()
+        await db.command('ping')
+        from app.common.bot_instance import bot
+        bot_info = await bot.get_me()
+        return {'status': 'ok', 'db': 'connected', 'bot': bot_info.username}
+    except Exception as e:
+        return {'status': 'error', 'detail': str(e)}
+
 @app.post('/api/client-error')
 async def report_error(req: Request):
     try:
         data = await req.json()
         logger.error(f"CLIENT ERROR: {data}")
-        msg = f"🛠 <b>DEVELOPER ALERT</b>\n\n🌐 <b>SITE CLIENT ERROR</b>\n\n<b>Source:</b> {data.get('source')}\n<b>Message:</b>\n{data.get('message')}"
-        from app.common.config import DEVELOPER_IDS
-        from app.common.bot_instance import bot
-        for dev_id in DEVELOPER_IDS:
-            try: await bot.send_message(dev_id, msg, parse_mode='HTML')
-            except: pass
+        msg = f"🌐 <b>SITE CLIENT ERROR</b>\n\n<b>Source:</b> {data.get('source')}\n<b>Path:</b> {data.get('path')}\n\n<b>Message:</b>\n{data.get('message')}\n\n<b>Context:</b>\n{data.get('context')}"
+        await send_developer_error(msg)
         return {'status': 'ok'}
-    except: return {'status': 'error'}
+    except Exception as e:
+        logger.error(f"Failed to report error: {e}")
+        return {'status': 'error'}
 
 # --- Admin API ---
 class LoginRequest(BaseModel):
