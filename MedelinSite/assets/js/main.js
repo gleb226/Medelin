@@ -1176,7 +1176,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Перевірка успішної оплати через URL параметр
     const paymentStatus = window.getURLParameter('payment');
     if (paymentStatus === 'success') {
-        clearCart();
+        if (typeof clearCart === 'function') clearCart();
         window.showToast('Оплату успішно проведено! Дякуємо за замовлення.', 'success');
         // Очищаємо параметри з URL
         const url = new URL(window.location);
@@ -1305,5 +1305,8 @@ window.toggleTableInput = function (v) {
     const tableWrap = document.getElementById('chk_table_wrap');
     const paymentModeSection = document.getElementById('payment-mode-section');
     if (tableWrap) tableWrap.style.display = v === 'in_house' ? 'block' : 'none';
+    if (paymentModeSection) paymentModeSection.style.display = v === 'in_house' ? 'block' : 'none';
+};
+ : 'none';
     if (paymentModeSection) paymentModeSection.style.display = v === 'in_house' ? 'block' : 'none';
 };

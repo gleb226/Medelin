@@ -102,10 +102,10 @@ function openBeanDetail(item, pushState = true) {
             </div>
             
             <div class="bean-full-view__main" style="display: flex; flex-wrap: wrap; gap: 3rem; align-items: stretch; margin-bottom: 3rem;">
-                <div class="bean-full-view__image-side" style="flex: 1.3; min-width: 320px; display: flex; flex-direction: column; gap: 2rem;">
-                    <img src="${item.image_url || defImg}" alt="${displayName}" style="width: 100%; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.12); object-fit: cover; flex-grow: 1; max-height: 550px;">
+                <div class="bean-full-view__image-side" style="flex: 1.2; min-width: 320px; display: flex; flex-direction: column;">
+                    <img src="${item.image_url || defImg}" alt="${displayName}" style="width: 100%; height: 480px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.12); object-fit: cover; margin-bottom: 2rem;">
                     
-                    <div style="background: var(--color-dark-brown); color: white; padding: 2.2rem; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 15px 35px rgba(0,0,0,0.2);">
+                    <div style="background: var(--color-dark-brown); color: white; padding: 2.2rem; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 15px 35px rgba(0,0,0,0.2); margin-top: auto;">
                         <div>
                             <span style="display: block; font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.2rem;">Ціна за 250г</span>
                             <span style="font-size: 2.5rem; font-weight: 800; font-family: var(--font-accent);">${item.price_250} ₴</span>
