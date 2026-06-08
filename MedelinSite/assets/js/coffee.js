@@ -105,11 +105,20 @@ function openBeanDetail(item, pushState = true) {
                 </button>
             </div>
             
-            <div class="bean-full-view__main" style="display: flex; flex-wrap: wrap; gap: 3rem; align-items: stretch; margin-bottom: 3rem;">
-                <div class="bean-full-view__image-side" style="flex: 1.2; min-width: 320px; display: flex; flex-direction: column;">
-                    <img src="${item.image_url || defImg}" alt="${displayName}" style="width: 100%; height: 520px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.12); object-fit: cover; margin-bottom: 2rem;">
-                    
-                    <div style="background: var(--color-dark-brown); color: white; padding: 2.2rem; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 15px 35px rgba(0,0,0,0.2); margin-top: auto; height: 120px;">
+            <div class="bean-full-view__main" style="display: flex; flex-wrap: wrap; gap: 3rem; margin-bottom: 2rem;">
+                <div class="bean-full-view__left-col" style="flex: 1.2; min-width: 320px;">
+                    <img src="${item.image_url || defImg}" alt="${displayName}" style="width: 100%; height: 580px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.12); object-fit: cover;">
+                </div>
+
+                <div class="bean-full-view__right-col" style="flex: 1; min-width: 300px; display: flex; flex-direction: column;">
+                    <h1 style="font-family: var(--font-accent); font-size: 3.5rem; line-height: 1.1; margin-bottom: 1.5rem; color: var(--color-dark-brown);">${displayName}</h1>
+                    <p style="font-size: 1.2rem; line-height: 1.6; color: #4a3728; margin-bottom: 2rem; font-weight: 400;">${item.description || 'Преміальна свіжообсмажена кава Medelin, створена для справжніх поціновувачів.'}</p>
+                </div>
+            </div>
+
+            <div class="bean-full-view__footer-row" style="display: flex; flex-wrap: wrap; gap: 3rem; align-items: stretch; margin-bottom: 3rem;">
+                <div style="flex: 1.2; min-width: 320px;">
+                    <div style="background: var(--color-dark-brown); color: white; padding: 2.2rem; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 15px 35px rgba(0,0,0,0.2); height: 100%; min-height: 120px;">
                         <div>
                             <span style="display: block; font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.2rem;">Ціна за 250г</span>
                             <span style="font-size: 2.5rem; font-weight: 800; font-family: var(--font-accent);">${item.price_250} ₴</span>
@@ -120,11 +129,8 @@ function openBeanDetail(item, pushState = true) {
                     </div>
                 </div>
 
-                <div class="bean-full-view__info-side" style="flex: 1; min-width: 300px; display: flex; flex-direction: column;">
-                    <h1 style="font-family: var(--font-accent); font-size: 3.5rem; line-height: 1.1; margin-bottom: 1.5rem; color: var(--color-dark-brown);">${displayName}</h1>
-                    <p style="font-size: 1.2rem; line-height: 1.6; color: #4a3728; margin-bottom: 2rem; font-weight: 400;">${item.description || 'Преміальна свіжообсмажена кава Medelin, створена для справжніх поціновувачів.'}</p>
-                    
-                    <div class="bean-full-view__primary-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; background: white; padding: 2.5rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid rgba(139, 94, 60, 0.05); flex-grow: 1; align-content: start;">
+                <div style="flex: 1; min-width: 300px;">
+                    <div class="bean-full-view__primary-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; background: white; padding: 2.5rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid rgba(139, 94, 60, 0.05); height: 100%; align-content: start;">
                         ${item.species ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Склад</label><p style="font-size: 1.1rem; font-weight: 700;">${item.species}</p></div>` : ''}
                         ${item.roast ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Обсмаження</label><p style="font-size: 1.1rem; font-weight: 700;">${item.roast}</p></div>` : ''}
                         ${score ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Оцінка якості</label><p style="font-size: 1.1rem; font-weight: 700;">${score}</p></div>` : ''}

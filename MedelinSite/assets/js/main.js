@@ -460,6 +460,7 @@ function clearCart() {
     window.CURRENT_ORDER_ID = null;
     updateCartBadge();
 }
+window.clearCart = clearCart;
 
 function clearPendingPayment() {
     localStorage.removeItem('medelin_pending_order_id');
@@ -907,6 +908,7 @@ function initNovaPoshtaSearch() {
                             
                             // Aggressively remove GUIDs or any words that look like technical IDs
                             // We remove words with many hyphens or long hex strings
+                            desc = desc.replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi, '').trim();
                             desc = desc.split(' ').filter(word => {
                                 const isId = /[a-f0-9]{8}-[a-f0-9]{4}/i.test(word) || word.length > 20 || /^[a-f0-9]{15,}$/i.test(word);
                                 return !isId;
