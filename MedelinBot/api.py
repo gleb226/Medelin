@@ -290,7 +290,7 @@ async def liqpay_callback(request: Request):
             oid = data.get('order_id')
             order = await orders_db.get_order_by_id(oid)
             if order and order.get('status') != 'paid':
-                await orders_db.update_order_status(oid, 'paid')
+                await orders_db.update_status(oid, 'paid')
                 # Add to active orders
                 from app.databases.active_orders_database import active_orders_db
                 await active_orders_db.add_active_order(oid, order.get('user_id'), order.get('fullname'), order.get('phone'), order.get('location_id'), order.get('cart'), order.get('order_type'), order.get('table_number'), order.get('total_amount'), 'pay_now', order.get('wishes'))
@@ -376,13 +376,43 @@ async def admin_verify(user_id: int):
 
 @app.get('/api/admin/new-orders')
 async def get_new_orders(admin: dict = Depends(get_current_admin)):
-    # Returns all orders from orders_db that are not yet marked as finished in sales_db
-    # For now, let's just return the last 50 orders
-    orders = await orders_db.get_last_orders(50)
+    # Returns only orders with status 'new'
+    orders = await orders_db.get_new_orders()
     for o in orders:
         o['order_id'] = str(o['_id'])
         del o['_id']
     return orders
+
+@app.post('/api/admin/orders/{order_id}/confirm')
+async def confirm_order(order_id: str, admin: dict = Depends(get_current_admin)):
+    order = await orders_db.get_order_by_id(order_id)
+    if not order: return {'status': 'error', 'message': 'Order not found'}
+    
+    await orders_db.update_status(order_id, 'confirmed')
+    
+    # Also add to active_orders_db if not already there
+    from app.databases.active_orders_database import active_orders_db
+    existing_active = await active_orders_db.get_active_order_by_id(order_id)
+    if not existing_active:
+        await active_orders_db.add_active_order(
+            order_id=order_id,
+            user_id=order.get('user_id'),
+            fullname=order.get('fullname'),
+            phone=order.get('phone'),
+            location_id=order.get('location_id'),
+            cart=order.get('cart'),
+            order_type=order.get('order_type'),
+            table_number=order.get('table_number', ''),
+            total=order.get('total_amount', 0),
+            payment_mode=order.get('payment_mode', ''),
+            wishes=order.get('wishes', '')
+        )
+    return {'status': 'ok'}
+
+@app.post('/api/admin/orders/{order_id}/reject')
+async def reject_order(order_id: str, admin: dict = Depends(get_current_admin)):
+    await orders_db.update_status(order_id, 'rejected')
+    return {'status': 'ok'}
 
 @app.get('/api/admin/active-orders')
 async def get_active_orders(admin: dict = Depends(get_current_admin)):

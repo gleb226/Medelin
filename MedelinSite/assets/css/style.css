@@ -1179,6 +1179,13 @@ h4 {
     box-shadow: 0 6px 15px rgba(139, 94, 60, 0.25);
 }
 
+.choice-chip--active:hover {
+    background: var(--color-coffee-soft) !important;
+    color: var(--color-white) !important;
+    transform: translateY(-2px);
+    border-color: var(--color-coffee-soft);
+}
+
 .choice-chip--active .choice-chip__label,
 .choice-chip--active .choice-chip__price {
     color: var(--color-white) !important;

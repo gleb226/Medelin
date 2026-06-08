@@ -181,7 +181,7 @@
 
         <aside class="sidebar" id="sidebar">
             <div class="sidebar__header">
-                <a href="index.html" class="sidebar__logo">MEDELIN</a>
+                <span class="sidebar__logo">MEDELIN</span>
             </div>
             <nav class="sidebar__nav">
                 <a class="nav-item nav-item--active" data-section="new_orders"><i class="fas fa-bell"></i> Нові</a>
@@ -191,15 +191,13 @@
                 <a class="nav-item" data-section="socials"><i class="fas fa-share-nodes"></i> Соцмережі</a>
                 <a class="nav-item" data-section="team"><i class="fas fa-users-gear"></i> Команда</a>
             </nav>
-            <div style="padding: 2rem; border-top: 1px solid rgba(255,255,255,0.05);">
-                <a href="index.html" class="nav-item" style="padding: 0;"><i class="fas fa-arrow-left"></i> На сайт</a>
-            </div>
+
         </aside>
 
         <main class="main-content" id="main-content">
             <header class="header">
                 <div>
-                    <h2 class="header__title" id="section-title">Замовлення</h2>
+                    <h2 class="header__title" id="section-title">Нові замовлення</h2>
                     <p id="admin-info" style="font-size:0.85rem; color:var(--color-coffee); font-weight:700;"></p>
                 </div>
                 <div class="header__actions">
@@ -216,7 +214,7 @@
         <script>
             let sessionToken = localStorage.getItem('medelin_admin_token') || '';
             let currentAdmin = JSON.parse(localStorage.getItem('medelin_admin_user') || 'null');
-            let currentSection = 'orders';
+            let currentSection = 'new_orders';
             let verifyInterval = null;
 
             const menuToggle = document.getElementById('menu-toggle');
@@ -304,12 +302,34 @@
                 orders?.forEach(o => {
                     const div = document.createElement('div');
                     div.className = 'order-item';
-                    const date = new Date(o.timestamp).toLocaleString('uk-UA');
-                    div.innerHTML = `<div class="order-info"><div class="order-title">#${String(o.order_id).slice(-6)} — ${o.fullname}</div><div class="order-meta">${date} | ${o.phone}</div><div class="order-items">${o.cart || ''} <br><br> <i>${o.wishes || ''}</i></div></div>`;
+                    const date = o.created_at ? new Date(o.created_at).toLocaleString('uk-UA') : '—';
+                    const typeMap = { takeaway: 'З собою', in_house: 'В закладі', nova_poshta: 'Нова Пошта' };
+                    const deliveryType = typeMap[o.order_type] || o.order_type || '—';
+                    
+                    div.innerHTML = `
+                        <div class="order-info">
+                            <div class="order-title">#${String(o.order_id).slice(-6)} — ${o.fullname}</div>
+                            <div class="order-meta">${date} | <b>${o.phone}</b></div>
+                            <div style="margin-top:0.5rem; font-size:0.9rem;">
+                                <b>Тип:</b> ${deliveryType} ${o.table_number ? `(Стіл #${o.table_number})` : ''}
+                            </div>
+                            <div class="order-items">
+                                ${o.cart || ''}
+                                ${o.wishes ? `<br><br><div style="border-top:1px solid rgba(0,0,0,0.1); padding-top:0.5rem; color:#d63031;"><b>Побажання/Адреса:</b><br>${o.wishes.replace(/\\n/g, '<br>')}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="order-actions">
+                            <button class="btn btn--success btn--sm" onclick="confirmOrder('${o.order_id}')">Підтвердити</button>
+                            <button class="btn btn--danger btn--sm" onclick="rejectOrder('${o.order_id}')">Відхилити</button>
+                        </div>
+                    `;
                     list.appendChild(div);
                 });
                 showLoader(false);
             }
+
+            async function confirmOrder(oid) { if (confirm('Підтвердити замовлення?')) { await apiFetch(`orders/${oid}/confirm`, 'POST'); refreshData(); } }
+            async function rejectOrder(oid) { if (confirm('Відхилити замовлення?')) { await apiFetch(`orders/${oid}/reject`, 'POST'); refreshData(); } }
 
             async function loadOrders() {
                 showLoader(true);
@@ -326,15 +346,6 @@
             }
 
             async function completeOrder(oid) { if (confirm('Виконано?')) { await apiFetch(`orders/${oid}/complete`, 'POST'); loadOrders(); } }
-
-            function refreshData() {
-                if (currentSection === 'new_orders') loadNewOrders();
-                if (currentSection === 'orders') loadOrders();
-                if (currentSection === 'beans') loadBeans();
-                if (currentSection === 'locations') loadLocations();
-                if (currentSection === 'socials') loadSocials();
-                if (currentSection === 'team') loadTeam();
-            }
 
             async function loadBeans() {
                 showLoader(true);
@@ -381,7 +392,6 @@
             async function saveBean(id) {
                 const fd = new FormData(document.getElementById('bean-form'));
                 const data = Object.fromEntries(fd.entries());
-                const method = id ? 'POST' : 'POST';
                 const endpoint = id ? `beans/${id}` : 'beans';
                 await apiFetch(endpoint, 'POST', data);
                 closeAdminModal(); refreshData();
@@ -518,6 +528,7 @@
             function closeAdminModal() { document.getElementById('admin-modal').classList.remove('admin-modal--active'); }
 
             function refreshData() {
+                if (currentSection === 'new_orders') loadNewOrders();
                 if (currentSection === 'orders') loadOrders();
                 if (currentSection === 'beans') loadBeans();
                 if (currentSection === 'locations') loadLocations();

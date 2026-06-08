@@ -28,7 +28,7 @@ def get_admin_main_kb(role='boss'):
         keyboard.append([KeyboardButton(text='👤 ПЕРСОНАЛ'), KeyboardButton(text='📊 СТАТИСТИКА')])
     
     # 4. Settings/Info Block
-    keyboard.append([KeyboardButton(text='🏠 ГОЛОВНЕ МЕНЮ')])
+    # keyboard.append([KeyboardButton(text='🏠 ГОЛОВНЕ МЕНЮ')])
     
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 

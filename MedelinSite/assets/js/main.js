@@ -695,10 +695,6 @@ window.openCheckoutModal = function () {
                         </div>
                         ` : ''}
                         <div class="form-group">
-                            <label class="form-label">Telegram (@username) — опційно</label>
-                            <input type="text" name="tg" placeholder="Telegram (@username) — опційно" value="${userData.tg || ''}">
-                        </div>
-                        <div class="form-group">
                             <label class="form-label">Побажання чи уточнення — опційно</label>
                             <textarea name="comment" placeholder="Ваші побажання до замовлення..." rows="2"></textarea>
                         </div>
@@ -1099,13 +1095,11 @@ window.submitCheckout = function (method) {
     window.setUserData({
         name: fd.get('name'),
         phone: fd.get('phone'),
-        tg: fd.get('tg'),
     });
     const data = {
         user_details: {
             name: fd.get('name'),
             phone: fd.get('phone'),
-            tg: fd.get('tg'),
             comment: fd.get('comment'),
             location: fd.get('location'),
             type: fd.get('type'),
@@ -1300,3 +1294,45 @@ window.toggleTableInput = function (v) {
     if (tableWrap) tableWrap.style.display = v === 'in_house' ? 'block' : 'none';
     if (paymentModeSection) paymentModeSection.style.display = v === 'in_house' ? 'block' : 'none';
 };
+
+// Order status polling and notifications
+(function initOrderStatusPolling() {
+    const pollStatuses = async () => {
+        const pastOrders = window.getPastOrders();
+        if (!pastOrders || pastOrders.length === 0) return;
+        
+        // Poll only latest 3 orders
+        const latest = pastOrders.slice(0, 3);
+        const knownStatuses = JSON.parse(localStorage.getItem('medelin_order_statuses') || '{}');
+        let changed = false;
+
+        for (const order of latest) {
+            if (!order.id) continue;
+            // Don't poll if it's already completed or rejected long ago
+            if (knownStatuses[order.id] === 'confirmed' || knownStatuses[order.id] === 'rejected') continue;
+
+            try {
+                const resp = await fetch(`${window.API_BASE_URL}/api/orders/${order.id}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.status && data.status !== knownStatuses[order.id]) {
+                        knownStatuses[order.id] = data.status;
+                        changed = true;
+                        if (data.status === 'confirmed') {
+                            window.showToast(`Ваше замовлення #${String(order.id).slice(-6)} підтверджено!`, 'success');
+                        } else if (data.status === 'rejected') {
+                            window.showToast(`Замовлення #${String(order.id).slice(-6)} відхилено.`, 'error');
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
+
+        if (changed) {
+            localStorage.setItem('medelin_order_statuses', JSON.stringify(knownStatuses));
+        }
+    };
+
+    setInterval(pollStatuses, 15000); // Poll every 15s
+    setTimeout(pollStatuses, 2000); // Initial poll
+})();

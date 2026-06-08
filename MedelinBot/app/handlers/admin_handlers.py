@@ -141,11 +141,6 @@ async def show_stats_msg(message: Message):
     if role not in ('owner', 'developer'): return
     await message.answer('📊 <b>СТАТИСТИКА ПРОДАЖІВ:</b>\n(Розділ знаходиться в розробці)', parse_mode='HTML')
 
-@admin_router.message(F.text == '🏠 ГОЛОВНЕ МЕНЮ')
-async def back_to_user_main(message: Message):
-    from app.keyboards.user_keyboards import get_main_kb
-    await message.answer('🏠 Повертаємось до головного меню.', reply_markup=get_main_kb())
-
 @admin_router.callback_query(F.data == 'beans_manage')
 async def manage_beans_cb(callback: CallbackQuery):
     await safe_edit_message(callback.message, '☕️ <b>КЕРУВАННЯ ЗЕРНАМИ:</b>', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
