@@ -46,7 +46,7 @@ body::-webkit-scrollbar {
 }
 
 :root {
-    --color-cream: #f7f3e9;
+    --color-cream: #f3e9dc;
     --color-dark-brown: #3c2f2f;
     --color-coffee: #8b5e3c;
     --color-coffee-soft: #a67c52;
@@ -58,7 +58,7 @@ body::-webkit-scrollbar {
     --color-text: var(--color-dark-brown);
     --color-muted: #5d5656;
     --color-white: #ffffff;
-    --color-light-gray: #eeeeee;
+    --color-light-gray: #ebe0d4;
     --color-gold: #c9a96e;
     --color-overlay-nav: rgba(60, 47, 47, 0.95);
     --color-overlay-burger: rgba(60, 47, 47, 0.85);
