@@ -112,7 +112,7 @@ function openBeanDetail(item, pushState = true) {
             
             <div class="bean-full-view__container" style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 4rem; align-items: stretch; margin-bottom: 3rem;">
                 <div class="bean-full-view__left-col" style="display: flex; flex-direction: column;">
-                    <img src="${item.image_url || defImg}" alt="${displayName}" style="width: 100%; height: 520px; border-radius: 32px; box-shadow: 0 25px 50px rgba(0,0,0,0.15); object-fit: cover; margin-bottom: 2rem;">
+                    <img src="${item.image_url || defImg}" alt="${displayName}" style="width: 100%; height: 600px; border-radius: 32px; box-shadow: 0 25px 50px rgba(0,0,0,0.15); object-fit: cover; margin-bottom: 1.2rem;">
                     
                     <div style="background: var(--color-dark-brown); color: white; padding: 2.2rem; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 15px 35px rgba(0,0,0,0.2); margin-top: auto;">
                         <div>
