@@ -61,19 +61,41 @@ async def get_user_role(user_id: int) -> str:
 async def show_admin_panel(message: Message):
     role = await get_user_role(message.from_user.id)
     if role == 'user': return
-    await message.answer(f'🔐 <b>АДМІН-ПАНЕЛЬ</b>\nВаша роль: <b>{role.upper()}</b>', reply_markup=akb.get_admin_main_kb(role), parse_mode='HTML')
+    await message.answer(f'🔐 <b>АДМІН-ПАНЕЛЬ</b>\nВаша роль: <b>{role.upper()}</b>\n\nВиберіть розділ керування:', reply_markup=akb.get_admin_main_kb(role), parse_mode='HTML')
 
 @admin_router.callback_query(F.data == 'admin_panel_back')
 async def back_to_admin_main(callback: CallbackQuery):
     role = await get_user_role(callback.from_user.id)
-    await safe_edit_message(callback.message, f'🔐 <b>АДМІН-ПАНЕЛЬ</b>\nВаша роль: <b>{role.upper()}</b>', reply_markup=akb.get_admin_main_kb(role), parse_mode='HTML')
+    await safe_edit_message(callback.message, f'🔐 <b>АДМІН-ПАНЕЛЬ</b>\nВаша роль: <b>{role.upper()}</b>\n\nВиберіть розділ керування:', reply_markup=akb.get_admin_main_kb(role), parse_mode='HTML')
 
-@admin_router.callback_query(F.data == 'active_panel')
-async def show_active_panel(callback: CallbackQuery):
-    await safe_edit_message(callback.message, '🛍 <b>КЕРУВАННЯ ЗАМОВЛЕННЯМИ:</b>', reply_markup=akb.get_active_types_kb(), parse_mode='HTML')
+# --- ORDERS BLOCK ---
+
+@admin_router.message(F.text == '🆕 НОВІ ЗАМОВЛЕННЯ')
+async def list_new_orders_msg(message: Message):
+    if not await admin_db.is_admin(message.from_user.id): return
+    # Placeholder for new orders logic (e.g. pending payment or approval)
+    await message.answer('🆕 <b>НОВІ ЗАМОВЛЕННЯ:</b>\nТут будуть замовлення, що очікують підтвердження або оплати.', parse_mode='HTML')
+
+@admin_router.message(F.text == '📦 АКТИВНІ ЗАМОВЛЕННЯ')
+async def list_active_orders_msg(message: Message):
+    if not await admin_db.is_admin(message.from_user.id): return
+    role = await get_user_role(message.from_user.id)
+    locs = None
+    if role not in ('boss', 'owner', 'developer'):
+        locs = await admin_db.get_locations_for_admin(message.from_user.id)
+    
+    orders = await active_orders_db.get_active_orders(locs)
+    if not orders:
+        await message.answer('📦 <b>АКТИВНІ ЗАМОВЛЕННЯ:</b>\nНаразі немає замовлень у роботі.', parse_mode='HTML')
+        return
+    await message.answer('📦 <b>АКТИВНІ ЗАМОВЛЕННЯ:</b>\nНатисніть на замовлення, щоб завершити його:', reply_markup=akb.get_active_orders_list_kb(orders), parse_mode='HTML')
+
+@admin_router.callback_query(F.data == 'new_orders')
+async def list_new_orders_cb(callback: CallbackQuery):
+    await callback.answer('Функція в розробці...')
 
 @admin_router.callback_query(F.data == 'active_orders')
-async def list_active_orders(callback: CallbackQuery):
+async def list_active_orders_cb(callback: CallbackQuery):
     role = await get_user_role(callback.from_user.id)
     locs = None
     if role not in ('boss', 'owner', 'developer'):
@@ -83,39 +105,50 @@ async def list_active_orders(callback: CallbackQuery):
     if not orders:
         await callback.answer('Немає активних замовлень.')
         return
-    await safe_edit_message(callback.message, '🛍 <b>АКТИВНІ ЗАМОВЛЕННЯ:</b>\nНатисніть для завершення:', reply_markup=akb.get_active_orders_list_kb(orders), parse_mode='HTML')
+    await safe_edit_message(callback.message, '📦 <b>АКТИВНІ ЗАМОВЛЕННЯ:</b>\nНатисніть для завершення:', reply_markup=akb.get_active_orders_list_kb(orders), parse_mode='HTML')
 
-@admin_router.callback_query(F.data.startswith('finish_order_'))
-async def finish_order(callback: CallbackQuery):
-    oid = callback.data.replace('finish_order_', '')
-    await active_orders_db.remove_order(oid)
-    await callback.answer('Замовлення виконано!')
-    await list_active_orders(callback)
-
-@admin_router.message(F.text == '🛍 АКТИВНІ ЗАМОВЛЕННЯ')
-async def show_active_panel_msg(message: Message):
-    if not await admin_db.is_admin(message.from_user.id): return
-    await message.answer('🛍 <b>КЕРУВАННЯ ЗАМОВЛЕННЯМИ:</b>', reply_markup=akb.get_active_types_kb(), parse_mode='HTML')
+# --- CONTENT MANAGEMENT BLOCK ---
 
 @admin_router.message(F.text == '☕️ КЕРУВАННЯ ЗЕРНАМИ')
 async def manage_beans_msg(message: Message):
-    if not await admin_db.is_admin(message.from_user.id): return
-    await message.answer('☕️ <b>КЕРУВАННЯ ЗЕРНАМИ:</b>', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
+    role = await get_user_role(message.from_user.id)
+    if role not in ('owner', 'developer', 'boss'): return
+    await message.answer('☕️ <b>КЕРУВАННЯ ЗЕРНАМИ:</b>\nДодавайте або редагуйте асортимент кави.', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
 
 @admin_router.message(F.text == '📍 ЛОКАЦІЇ')
 async def manage_locations_msg(message: Message):
-    if not await admin_db.is_admin(message.from_user.id): return
-    await message.answer('📍 <b>КЕРУВАННЯ ЛОКАЦІЯМИ:</b>', reply_markup=akb.get_locations_manage_kb(), parse_mode='HTML')
+    role = await get_user_role(message.from_user.id)
+    if role not in ('owner', 'developer', 'boss'): return
+    await message.answer('📍 <b>КЕРУВАННЯ ЛОКАЦІЯМИ:</b>\nНалаштування кав\'ярень та точок видачі.', reply_markup=akb.get_locations_manage_kb(), parse_mode='HTML')
 
 @admin_router.message(F.text == '📞 КОНТАКТИ')
 async def manage_contacts_msg(message: Message):
-    if not await admin_db.is_admin(message.from_user.id): return
-    await message.answer('📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>', reply_markup=akb.get_contacts_manage_kb(), parse_mode='HTML')
+    role = await get_user_role(message.from_user.id)
+    if role not in ('owner', 'developer', 'boss'): return
+    await message.answer('📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>\nРедагування посилань на соцмережі та контакти.', reply_markup=akb.get_contacts_manage_kb(), parse_mode='HTML')
+
+# --- SYSTEM MANAGEMENT BLOCK ---
 
 @admin_router.message(F.text == '👤 ПЕРСОНАЛ')
 async def manage_staff_msg(message: Message):
-    if not await admin_db.is_admin(message.from_user.id): return
-    await message.answer('👤 <b>КЕРУВАННЯ ПЕРСОНАЛОМ:</b>', reply_markup=akb.get_staff_manage_kb(), parse_mode='HTML')
+    role = await get_user_role(message.from_user.id)
+    if role not in ('owner', 'developer'): return
+    await message.answer('👤 <b>КЕРУВАННЯ ПЕРСОНАЛОМ:</b>\nДодавання адміністраторів та менеджерів.', reply_markup=akb.get_staff_manage_kb(), parse_mode='HTML')
+
+@admin_router.message(F.text == '📊 СТАТИСТИКА')
+async def show_stats_msg(message: Message):
+    role = await get_user_role(message.from_user.id)
+    if role not in ('owner', 'developer'): return
+    await message.answer('📊 <b>СТАТИСТИКА ПРОДАЖІВ:</b>\n(Розділ знаходиться в розробці)', parse_mode='HTML')
+
+@admin_router.message(F.text == '🏠 ГОЛОВНЕ МЕНЮ')
+async def back_to_user_main(message: Message):
+    from app.keyboards.user_keyboards import get_main_kb
+    await message.answer('🏠 Повертаємось до головного меню.', reply_markup=get_main_kb())
+
+@admin_router.callback_query(F.data == 'beans_manage')
+async def manage_beans_cb(callback: CallbackQuery):
+    await safe_edit_message(callback.message, '☕️ <b>КЕРУВАННЯ ЗЕРНАМИ:</b>', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
 
 @admin_router.callback_query(F.data == 'locations_manage')
 async def manage_locations_cb(callback: CallbackQuery):

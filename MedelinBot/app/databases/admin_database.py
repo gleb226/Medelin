@@ -192,7 +192,7 @@ class AdminDatabase:
 
             return []
 
-        role_rank = {'developer': 5, 'owner': 4, 'boss': 4, 'admin': 3}
+        role_rank = {'developer': 5, 'owner': 4, 'boss': 4, 'delivery_manager': 3, 'admin': 2}
 
         rows.sort(key=lambda r: (-role_rank.get(r.get('role') or 'admin', 1), int(r.get('user_id') or 0)))
 
@@ -208,7 +208,7 @@ class AdminDatabase:
 
             return []
 
-        role_rank = {'developer': 5, 'owner': 4, 'boss': 4, 'admin': 3}
+        role_rank = {'developer': 5, 'owner': 4, 'boss': 4, 'delivery_manager': 3, 'admin': 2}
 
         rows.sort(key=lambda r: (-role_rank.get(r.get('role') or 'admin', 1), int(r.get('user_id') or 0)))
 
