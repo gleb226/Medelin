@@ -902,17 +902,21 @@ function initNovaPoshtaSearch() {
                         streets.forEach((s) => {
                             const item = document.createElement('div');
                             item.className = 'np-result-item';
-                            // fields for searchSettlementStreets
-                            let desc = s.Description || s.SettlementStreetDescription || '';
-                            const type = s.StreetsType || s.SettlementStreetDescriptionTyp || '';
                             
-                            // Aggressively remove GUIDs or any words that look like technical IDs
-                            // We remove words with many hyphens or long hex strings
-                            desc = desc.replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi, '').trim();
-                            desc = desc.split(' ').filter(word => {
-                                const isId = /[a-f0-9]{8}-[a-f0-9]{4}/i.test(word) || word.length > 20 || /^[a-f0-9]{15,}$/i.test(word);
-                                return !isId;
-                            }).join(' ').trim();
+                            const cleanText = (text) => {
+                                if (!text) return '';
+                                // Remove UUIDs: 8-4-4-4-12 hex chars
+                                let cleaned = text.replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi, '');
+                                // Remove any words that look like hex IDs or are too long/weird
+                                cleaned = cleaned.split(/[\s,]+/).filter(word => {
+                                    const isId = /[a-f0-9]{8,}/i.test(word) || word.length > 20 || /^[a-f0-9-]{15,}$/i.test(word);
+                                    return !isId;
+                                }).join(' ').trim();
+                                return cleaned.replace(/^[\s,]+|[\s,]+$/g, '');
+                            };
+
+                            let desc = cleanText(s.Description || s.SettlementStreetDescription || '');
+                            const type = cleanText(s.StreetsType || s.SettlementStreetDescriptionTyp || '');
                             
                             const full = type ? `${type} ${desc}` : desc;
                             item.textContent = full;
