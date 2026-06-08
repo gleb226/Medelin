@@ -47,21 +47,21 @@ body::-webkit-scrollbar {
 
 :root {
     --color-cream: #f3e9dc;
-    --color-dark-brown: #3c2f2f;
-    --color-coffee: #8b5e3c;
-    --color-coffee-soft: #a67c52;
-    --color-coffee-light: #c69468;
+    --color-dark-brown: #2b1b14;
+    --color-coffee: #6f4e37;
+    --color-coffee-soft: #8b6a55;
+    --color-coffee-light: #c9b19c;
     --color-olive: #5c6447;
     --color-olive-soft: #7a845e;
     --color-olive-light: #8ca06c;
     --color-olive-deep: #3f4732;
     --color-text: var(--color-dark-brown);
-    --color-muted: #5d5656;
+    --color-muted: #4a3728;
     --color-white: #ffffff;
     --color-light-gray: #ebe0d4;
     --color-gold: #c9a96e;
-    --color-overlay-nav: rgba(60, 47, 47, 0.95);
-    --color-overlay-burger: rgba(60, 47, 47, 0.85);
+    --color-overlay-nav: rgba(43, 27, 20, 0.95);
+    --color-overlay-burger: rgba(43, 27, 20, 0.85);
     --font-main: 'Jost', sans-serif;
     --font-accent: 'Montserrat', sans-serif;
     --font-logo: 'Oswald', sans-serif;
@@ -86,13 +86,13 @@ body::-webkit-scrollbar {
     --shadow-btn-hover: 0 16px 35px rgba(0, 0, 0, 0.26);
     --shadow-cta: 0 15px 35px rgba(0, 0, 0, 0.3);
     --shadow-cta-hover: 0 20px 45px rgba(0, 0, 0, 0.4);
-    --ring-focus: 0 0 0 3px rgba(139, 94, 60, 0.25);
+    --ring-focus: 0 0 0 3px rgba(111, 78, 55, 0.25);
     --transition-base: 0.25s ease;
     --transition-slow: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    --overlay-dark: rgba(60, 47, 47, 0.52);
-    --overlay-deeper: rgba(60, 47, 47, 0.7);
-    --overlay-popup: rgba(60, 47, 47, 0.88);
-    --border-light: rgba(60, 47, 47, 0.08);
+    --overlay-dark: rgba(43, 27, 20, 0.52);
+    --overlay-deeper: rgba(43, 27, 20, 0.7);
+    --overlay-popup: rgba(43, 27, 20, 0.88);
+    --border-light: rgba(43, 27, 20, 0.08);
     --border-white: rgba(255, 255, 255, 0.12);
 }
 
