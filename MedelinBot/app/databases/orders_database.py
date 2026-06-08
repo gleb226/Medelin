@@ -56,7 +56,7 @@ class OrdersDatabase:
 
         db = await get_db()
 
-        cur = db.orders.find({'status': 'new'}).sort('created_at', -1)
+        cur = db.orders.find({'status': {'$in': ['new', 'paid']}}).sort('created_at', -1)
 
         return await cur.to_list(length=None)
 
@@ -68,7 +68,7 @@ class OrdersDatabase:
 
         db = await get_db()
 
-        cur = db.orders.find({'status': 'new', 'location_id': {'$in': [str(x) for x in location_ids]}}).sort('created_at', -1)
+        cur = db.orders.find({'status': {'$in': ['new', 'paid']}, 'location_id': {'$in': [str(x) for x in location_ids]}}).sort('created_at', -1)
 
         return await cur.to_list(length=None)
 
@@ -126,7 +126,7 @@ class OrdersDatabase:
 
         db = await get_db()
 
-        cur = db.orders.find({'status': 'new', 'location_id': {'$in': [str(x) for x in location_ids]}, 'notified_admin_ids': {'$ne': int(admin_id)}}).sort('created_at', -1)
+        cur = db.orders.find({'status': {'$in': ['new', 'paid']}, 'location_id': {'$in': [str(x) for x in location_ids]}, 'notified_admin_ids': {'$ne': int(admin_id)}}).sort('created_at', -1)
 
         return await cur.to_list(length=None)
 

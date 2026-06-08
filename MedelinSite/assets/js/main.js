@@ -1130,6 +1130,7 @@ window.submitCheckout = function (method) {
         .then((res) => {
             if (res.status === 'ok') {
                 window.addPastOrder({
+                    id: res.order_id,
                     items: [...activeCart],
                     total: activeCart.reduce((s, i) => s + i.price, 0),
                     type: isBeans ? 'beans' : 'menu',

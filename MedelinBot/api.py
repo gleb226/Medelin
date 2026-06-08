@@ -238,7 +238,17 @@ async def process_checkout(req: CheckoutRequest):
     if payment_mode == 'pay_at_checkout' or data.get('payment_method') == 'cash':
         from app.databases.active_orders_database import active_orders_db
         await active_orders_db.add_active_order(oid, user_id, user.get('name', '—'), phone, loc_id, items_text, order_type, user.get('table_number', ''), total, payment_mode, wishes_str)
-        msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 {user.get("name")}\n📞 {phone}\n💰 {total} грн\n💳 Оплата: <b>ПІСЛЯПЛАТА</b>\n\n🛒 {items_text}'
+        
+        type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Нова Пошта' }
+        delivery_type_str = type_map.get(order_type, order_type)
+        
+        msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 {user.get("name")}\n📞 {phone}\n🚚 Тип: <b>{delivery_type_str}</b>'
+        if order_type == 'in_house' and user.get('table_number'): msg += f' (Стіл #{user.get("table_number")})'
+        msg += f'\n💰 {total} грн\n💳 Оплата: <b>ПІСЛЯПЛАТА</b>\n\n🛒 {items_text}'
+        
+        if wishes_str: 
+            msg += f'\n\n📝 <b>ПОБАЖАННЯ/АДРЕСА:</b>\n{wishes_str}'
+        
         await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, user_id or -1), location_id=loc_id)
         return {'status': 'ok', 'manual': True, 'order_id': oid}
 
@@ -294,7 +304,13 @@ async def liqpay_callback(request: Request):
                 # Add to active orders
                 from app.databases.active_orders_database import active_orders_db
                 await active_orders_db.add_active_order(oid, order.get('user_id'), order.get('fullname'), order.get('phone'), order.get('location_id'), order.get('cart'), order.get('order_type'), order.get('table_number'), order.get('total_amount'), 'pay_now', order.get('wishes'))
-                msg = f'💰 <b>ОПЛАЧЕНО ЗАМОВЛЕННЯ</b>\n\n👤 {order.get("fullname")}\n📞 {order.get("phone")}\n💰 {order.get("total_amount")} грн\n💳 Оплата: <b>LiqPay</b>\n\n🛒 {order.get("cart")}'
+                type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Нова Пошта' }
+                delivery_type_str = type_map.get(order.get('order_type'), order.get('order_type'))
+                
+                msg = f'💰 <b>ОПЛАЧЕНО ЗАМОВЛЕННЯ</b>\n\n👤 {order.get("fullname")}\n📞 {order.get("phone")}\n🚚 Тип: <b>{delivery_type_str}</b>'
+                if order.get('order_type') != 'nova_poshta' and order.get('table_number'): msg += f' (Стіл #{order.get("table_number")})'
+                msg += f'\n💰 {order.get("total_amount")} грн\n💳 Оплата: <b>LiqPay</b>\n\n🛒 {order.get("cart")}'
+                if order.get('wishes'): msg += f'\n\n📝 <b>ПОБАЖАННЯ/АДРЕСА:</b>\n{order.get("wishes")}'
                 await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, order.get('user_id') or -1), location_id=order.get('location_id'))
         return {'status': 'ok'}
     except Exception as e:
@@ -376,10 +392,20 @@ async def admin_verify(user_id: int):
 
 @app.get('/api/admin/new-orders')
 async def get_new_orders(admin: dict = Depends(get_current_admin)):
-    # Returns only orders with status 'new'
-    orders = await orders_db.get_new_orders()
+    # Returns only orders with status 'new' or 'paid'
+    locs = None
+    if admin.get('role') not in ('boss', 'owner', 'developer'):
+        locs = admin.get('locations')
+    
+    if locs:
+        orders = await orders_db.get_new_orders_by_locations(locs)
+    else:
+        orders = await orders_db.get_new_orders()
+
     for o in orders:
         o['order_id'] = str(o['_id'])
+        if 'created_at' in o and o['created_at']:
+            o['created_at'] = o['created_at'].isoformat()
         del o['_id']
     return orders
 
@@ -424,6 +450,8 @@ async def get_active_orders(admin: dict = Depends(get_current_admin)):
     orders = await active_orders_db.get_active_orders(locs)
     for o in orders:
         o['order_id'] = str(o['_id'])
+        if 'created_at' in o and o['created_at']:
+            o['created_at'] = o['created_at'].isoformat()
         del o['_id']
         # Add location name
         if o['location_id'] == 'NP': o['location_name'] = 'Нова Пошта'

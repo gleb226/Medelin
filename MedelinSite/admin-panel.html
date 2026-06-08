@@ -296,14 +296,29 @@
 
             async function loadNewOrders() {
                 showLoader(true);
+                console.log('[Admin] Fetching new orders...');
                 const orders = await apiFetch('new-orders');
+                console.log('[Admin] Received orders:', orders);
                 const list = document.getElementById('items-list');
-                list.innerHTML = orders?.length ? '' : '<p style="text-align:center; padding:2rem;">Немає нових замовлень</p>';
-                orders?.forEach(o => {
+                
+                if (!orders || orders.length === 0) {
+                    list.innerHTML = '<p style="text-align:center; padding:2rem;">Немає нових замовлень</p>';
+                    showLoader(false);
+                    return;
+                }
+                
+                list.innerHTML = '';
+                orders.forEach(o => {
                     const div = document.createElement('div');
                     div.className = 'order-item';
                     const date = o.created_at ? new Date(o.created_at).toLocaleString('uk-UA') : '—';
-                    const typeMap = { takeaway: 'З собою', in_house: 'В закладі', nova_poshta: 'Нова Пошта' };
+                    const typeMap = { 
+                        takeaway: 'З собою', 
+                        in_house: 'В закладі', 
+                        nova_poshta: 'Нова Пошта',
+                        beans_delivery: 'Кава (Доставка)',
+                        beans_booking: 'Кава (Бронювання)'
+                    };
                     const deliveryType = typeMap[o.order_type] || o.order_type || '—';
                     
                     div.innerHTML = `
@@ -312,10 +327,11 @@
                             <div class="order-meta">${date} | <b>${o.phone}</b></div>
                             <div style="margin-top:0.5rem; font-size:0.9rem;">
                                 <b>Тип:</b> ${deliveryType} ${o.table_number ? `(Стіл #${o.table_number})` : ''}
+                                <span style="margin-left:10px; padding:2px 6px; border-radius:4px; background:#ffeaa7; font-weight:700;">${o.status === 'paid' ? 'ОПЛАЧЕНО' : 'НОВЕ'}</span>
                             </div>
                             <div class="order-items">
                                 ${o.cart || ''}
-                                ${o.wishes ? `<br><br><div style="border-top:1px solid rgba(0,0,0,0.1); padding-top:0.5rem; color:#d63031;"><b>Побажання/Адреса:</b><br>${o.wishes.replace(/\\n/g, '<br>')}</div>` : ''}
+                                ${o.wishes ? `<br><br><div style="border-top:1px solid rgba(0,0,0,0.1); padding-top:0.5rem; color:#d63031;"><b>Побажання/Адреса:</b><br>${o.wishes.replace(/\n/g, '<br>')}</div>` : ''}
                             </div>
                         </div>
                         <div class="order-actions">
