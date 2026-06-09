@@ -426,6 +426,23 @@ async def seed():
     await contacts_db.clear_contacts()
 
     for b in BEANS_DATA:
+        score = 0
+        try:
+            score = float(b.get('quality_score') or 0)
+        except:
+            pass
+        roast = (b.get('roast') or '').lower()
+        
+        # Determine category image
+        if not b.get('quality_score') or score < 80:
+            img_url = '../Photos/Comercial.png'
+        elif roast == 'espresso':
+            img_url = '../Photos/Espresso.png'
+        elif roast == 'filter':
+            img_url = '../Photos/Filter.png'
+        else:
+            img_url = '../Photos/Comercial.png'
+
         await coffee_beans_db.add_bean(
             name=b['name'], 
             price_250=b['price_250'], 
@@ -433,7 +450,7 @@ async def seed():
             species=b['species'], 
             taste=b['taste'], 
             roast=b['roast'], 
-            image_url=PHOTO_URL_BEANS, 
+            image_url=img_url, 
             altitude=b['altitude'], 
             processing=b['processing'], 
             descriptors=b.get('descriptors', ''),
