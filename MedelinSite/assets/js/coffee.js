@@ -30,25 +30,39 @@ async function fetchCoffee() {
 }
 
 function renderCoffeeData(coffeeData) {
-    const root = document.getElementById('coffee-root');
-    if (!root) return;
+    const commercialRoot = document.getElementById('commercial-root');
+    const specialtyEspressoRoot = document.getElementById('specialty-espresso-root');
+    const specialtyFilterRoot = document.getElementById('specialty-filter-root');
+    const coffeeRoot = document.getElementById('coffee-root');
 
-    root.innerHTML = '';
+    if (!commercialRoot || !specialtyEspressoRoot || !specialtyFilterRoot) return;
+
+    commercialRoot.innerHTML = '';
+    specialtyEspressoRoot.innerHTML = '';
+    specialtyFilterRoot.innerHTML = '';
+    if (coffeeRoot) coffeeRoot.innerHTML = '';
+
     if (!coffeeData || !coffeeData.length) {
-        root.innerHTML = '<div class="no-data">Наразі кава в зернах відсутня в базі</div>';
+        if (coffeeRoot) coffeeRoot.innerHTML = '<div class="no-data">Наразі кава в зернах відсутня в базі</div>';
         return;
     }
 
+    // Apply background colors to sections
+    const commercialSection = document.getElementById('commercial-section');
+    const specialtyEspressoSection = document.getElementById('specialty-espresso-section');
+    const specialtyFilterSection = document.getElementById('specialty-filter-section');
+
+    if (commercialSection) commercialSection.style.backgroundColor = 'rgba(44, 115, 109, 0.06)';
+    if (specialtyEspressoSection) specialtyEspressoSection.style.backgroundColor = 'rgba(249, 194, 15, 0.06)';
+    if (specialtyFilterSection) specialtyFilterSection.style.backgroundColor = 'rgba(248, 102, 3, 0.06)';
+
     const defImg = 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?q=80&w=1061&auto=format&fit=crop';
-    const grid = document.createElement('div');
-    grid.className = 'products-grid';
 
     coffeeData.forEach((item) => {
         const art = document.createElement('article');
         art.className = 'product-card';
         let displayName = item.name.replace(/Blend Mixed/gi, '').trim();
 
-        // На картці має бути: Назва, Спосіб обробки, Дескриптори, Обсмаження, Оцінка якості
         art.innerHTML = `
             <div class="product-card__image" style="background-image: url('${item.image_url || defImg}');"></div>
             <div class="product-card__content">
@@ -58,7 +72,7 @@ function renderCoffeeData(coffeeData) {
                     ${item.processing ? `<div style="margin-bottom: 4px;"><strong>Обробка:</strong> ${item.processing}</div>` : ''}
                     ${item.descriptors || item.taste ? `<div style="margin-bottom: 4px;"><strong>Дескриптори:</strong> ${item.descriptors || item.taste}</div>` : ''}
                     ${item.roast ? `<div style="margin-bottom: 4px;"><strong>Обсмаження:</strong> ${item.roast}</div>` : ''}
-                    ${item.quality_score || item.cup_score ? `<div><strong>Оцінка якості:</strong> ${item.quality_score || item.cup_score}</div>` : ''}
+                    ${item.quality_score ? `<div><strong>SCA:</strong> ${item.quality_score}</div>` : ''}
                 </div>
 
                 <div class="product-card__price-row">
@@ -72,9 +86,26 @@ function renderCoffeeData(coffeeData) {
                 </div>
             </div>`;
         art.onclick = () => openBeanDetail(item);
-        grid.appendChild(art);
+
+        // Categorization logic
+        const score = parseFloat(item.quality_score);
+        const roast = (item.roast || '').toLowerCase();
+
+        if (!item.quality_score || score < 80) {
+            commercialRoot.appendChild(art);
+        } else if (roast === 'espresso') {
+            specialtyEspressoRoot.appendChild(art);
+        } else if (roast === 'filter') {
+            specialtyFilterRoot.appendChild(art);
+        } else {
+            commercialRoot.appendChild(art); // Default to commercial
+        }
     });
-    root.appendChild(grid);
+
+    // Hide sections if empty
+    if (!commercialRoot.children.length && commercialSection) commercialSection.style.display = 'none';
+    if (!specialtyEspressoRoot.children.length && specialtyEspressoSection) specialtyEspressoSection.style.display = 'none';
+    if (!specialtyFilterRoot.children.length && specialtyFilterSection) specialtyFilterSection.style.display = 'none';
 }
 
 function checkUrlForBean() {
@@ -140,11 +171,6 @@ function openBeanDetail(item, pushState = true) {
                         <input type="radio" name="bean_weight_${item.id || item._id}" value="250" data-price="${item.price_250}" checked>
                     </div>
                 </div>
-            </div>
-            <div class="bean-full-view__footer" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid rgba(0,0,0,0.06); text-align: center;">
-                <button class="btn btn--outline" onclick="closeBeanDetail()" style="border-radius: 12px; padding: 0.8rem 2rem;">
-                    <i class="fas fa-arrow-left" style="margin-right: 8px;"></i> Назад до списку
-                </button>
             </div>
         </div>
     `;
