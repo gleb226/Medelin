@@ -54,10 +54,10 @@ function renderCoffeeData(coffeeData) {
     const specialtyFilterSection = document.getElementById('specialty-filter-section');
 
     if (commercialSection) {
-        commercialSection.style.backgroundColor = '#769487'; 
+        commercialSection.style.backgroundColor = '#91BFB2'; 
     }
-    if (specialtyEspressoSection) specialtyEspressoSection.style.backgroundColor = '#F0CC75';
-    if (specialtyFilterSection) specialtyFilterSection.style.backgroundColor = '#FC9A4C';
+    if (specialtyEspressoSection) specialtyEspressoSection.style.backgroundColor = '#f7c212';
+    if (specialtyFilterSection) specialtyFilterSection.style.backgroundColor = '#FAC9A5';
 
     const defImg = 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?q=80&w=1061&auto=format&fit=crop';
 
