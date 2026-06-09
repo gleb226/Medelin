@@ -209,9 +209,6 @@ async def process_checkout(req: CheckoutRequest):
     order_num = order.get('order_number', 0)
 
     if payment_mode == 'pay_at_checkout' or data.get('payment_method') == 'cash':
-        from app.databases.active_orders_database import active_orders_db
-        await active_orders_db.add_active_order(oid, user_id, user.get('name', '—'), phone, loc_id, items_text, order_type, user.get('table_number', ''), total, payment_mode, wishes_str)
-        
         pay_label = "Накладний платіж" if order_type == 'nova_poshta' else "ПІСЛЯПЛАТА"
         
         msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ #{order_num}</b>\n\n👤 {user.get("name")}\n📞 <code>{phone}</code>\n🚚 Куди: <b>{type_label} {delivery_info}</b>'
@@ -259,9 +256,6 @@ async def liqpay_callback(request: Request):
             order = await orders_db.get_order_by_id(oid)
             if order and order.get('status') != 'paid':
                 await orders_db.update_status(oid, 'paid')
-                # Add to active orders
-                from app.databases.active_orders_database import active_orders_db
-                await active_orders_db.add_active_order(oid, order.get('user_id'), order.get('fullname'), order.get('phone'), order.get('location_id'), order.get('cart'), order.get('order_type'), order.get('table_number'), order.get('total_amount'), 'pay_now', order.get('wishes'))
                 
                 type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Доставка', 'beans_delivery': 'Доставка', 'beans_booking': 'Самовивіз' }
                 order_type = order.get('order_type')

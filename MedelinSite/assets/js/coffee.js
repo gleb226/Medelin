@@ -141,6 +141,11 @@ function openBeanDetail(item, pushState = true) {
                     </div>
                 </div>
             </div>
+            <div class="bean-full-view__footer" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid rgba(0,0,0,0.06); text-align: center;">
+                <button class="btn btn--outline" onclick="closeBeanDetail()" style="border-radius: 12px; padding: 0.8rem 2rem;">
+                    <i class="fas fa-arrow-left" style="margin-right: 8px;"></i> Назад до списку
+                </button>
+            </div>
         </div>
     `;
 
