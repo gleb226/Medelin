@@ -21,19 +21,36 @@ class OrdersDatabase:
 
         return
 
-    async def add_order(self, user_id, username, fullname, phone, location_id, wishes, cart, date_time=None, people_count=None, order_type='order', payment_mode='cashier', table_number='', total_amount=0):
+    async def get_next_order_number(self) -> int:
+        db = await get_db()
+        ret = await db.counters.find_one_and_update(
+            {'_id': 'order_number'},
+            {'$inc': {'seq': 1}},
+            upsert=True,
+            return_document=True
+        )
+        seq = ret.get('seq', 1)
+        if seq > 1000:
+            await db.counters.update_one({'_id': 'order_number'}, {'$set': {'seq': 1}})
+            return 1
+        return seq
+
+    async def add_order(self, user_id, username, fullname, phone, location_id, wishes, cart, date_time=None, people_count=None, order_type='order', payment_mode='cashier', table_number='', total_amount=0, delivery_info=''):
         db = await get_db()
         digits = normalize_phone(phone)
         oid = ObjectId()
+        order_num = await self.get_next_order_number()
         doc = {
             '_id': oid, 
             'order_id': str(oid), 
+            'order_number': order_num,
             'user_id': int(user_id) if user_id is not None else None, 
             'username': username, 
             'fullname': fullname, 
             'phone': phone, 
             'phone_digits': digits, 
             'location_id': str(location_id), 
+            'delivery_info': delivery_info,
             'date_time': date_time, 
             'people_count': people_count, 
             'wishes': wishes, 

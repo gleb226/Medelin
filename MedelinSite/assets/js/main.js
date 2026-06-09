@@ -810,7 +810,7 @@ window.openCheckoutModal = function () {
                             <i class="fas fa-university"></i> <span>PrivatPay</span>
                         </button>
                         <button class="payment-btn" type="button" data-action="submit-checkout" data-method="cash">
-                            <i class="fas fa-truck-ramp-box"></i> <span>Наложений платіж</span>
+                            <i class="fas fa-truck-ramp-box"></i> <span>НАКЛАДЕНИЙ ПЛАТІЖ</span>
                         </button>
                     </div>
                     <div style="padding: 0 1.5rem 1.5rem;">
@@ -931,7 +931,6 @@ function initNovaPoshtaSearch() {
         const ref = document.getElementById('np_city_ref').value;
         const whRes = document.getElementById('np_wh_results');
         if (!ref || !whRes) return;
-        if (val.length > 0 && val.length < 2) return;
         
         whRes.innerHTML = '<div class="np-result-item" style="opacity:0.5;">Шукаємо...</div>';
         whRes.style.display = 'block';
@@ -941,7 +940,11 @@ function initNovaPoshtaSearch() {
                 whRes.innerHTML = '';
                 const whs = Array.isArray(data) ? data : [];
                 if (whs.length === 0) {
-                    whRes.innerHTML = '<div class="np-result-item">Нічого не знайдено</div>';
+                    if (!val) {
+                        whRes.innerHTML = '<div class="np-result-item" style="opacity:0.6;">Введіть номер або назву...</div>';
+                    } else {
+                        whRes.innerHTML = '<div class="np-result-item">Нічого не знайдено</div>';
+                    }
                 } else {
                     whs.forEach((w) => {
                         const item = document.createElement('div');

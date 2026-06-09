@@ -170,13 +170,13 @@ async def process_checkout(req: CheckoutRequest):
         np_city = (user.get('np_city_name') or '').strip()
         np_mode = user.get('np_delivery_mode')
         if np_mode == 'courier':
-            type_label = "Кур'єр (НП)"
+            type_label = "Кур'єр"
             np_st = user.get('np_street_name', '')
             np_h = user.get('np_house', '')
             np_f = user.get('np_flat', '')
             delivery_info = f"{np_city}, вул. {np_st}, буд. {np_h}, кв. {np_f}"
         else:
-            type_label = "Відділення (НП)"
+            type_label = "Відділення"
             np_warehouse = (user.get('np_warehouse') or '').strip()
             delivery_info = f"{np_city}, {np_warehouse}"
     else:
@@ -204,20 +204,22 @@ async def process_checkout(req: CheckoutRequest):
     except Exception as e:
         logger.error(f"User sync failed: {e}")
 
-    oid = await orders_db.add_order(user_id=user_id, username=tg_nick, fullname=user.get('name', '—'), phone=phone, location_id=loc_id, wishes=wishes_str, cart=items_text, order_type=order_type, payment_mode=payment_mode, table_number=user.get('table_number', ''), total_amount=total)
-    
+    oid = await orders_db.add_order(user_id=user_id, username=tg_nick, fullname=user.get('name', '—'), phone=phone, location_id=loc_id, wishes=wishes_str, cart=items_text, order_type=order_type, payment_mode=payment_mode, table_number=user.get('table_number', ''), total_amount=total, delivery_info=delivery_info)
+    order = await orders_db.get_order_by_id(oid)
+    order_num = order.get('order_number', 0)
+
     if payment_mode == 'pay_at_checkout' or data.get('payment_method') == 'cash':
         from app.databases.active_orders_database import active_orders_db
         await active_orders_db.add_active_order(oid, user_id, user.get('name', '—'), phone, loc_id, items_text, order_type, user.get('table_number', ''), total, payment_mode, wishes_str)
         
         pay_label = "НАКЛАДЕНИЙ ПЛАТІЖ" if order_type == 'nova_poshta' else "ПІСЛЯПЛАТА"
         
-        msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 {user.get("name")}\n📞 <code>{phone}</code>\n🚚 Куди: <b>{type_label} {delivery_info}</b>'
+        msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ #{order_num}</b>\n\n👤 {user.get("name")}\n📞 <code>{phone}</code>\n🚚 Куди: <b>{type_label} {delivery_info}</b>'
         msg += f'\n💰 <b>{total} грн</b>\n💳 Оплата: <b>{pay_label}</b>\n\n🛒 {items_text}'
         msg += f'\n\n📝 ПОБАЖАННЯ: <b>{wishes_str}</b>'
         
         await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, user_id or -1), location_id=loc_id)
-        return {'status': 'ok', 'manual': True, 'order_id': oid}
+        return {'status': 'ok', 'manual': True, 'order_id': oid, 'order_number': order_num}
 
     # LiqPay Integration
     from app.common.config import LIQPAY_PUBLIC_KEY, LIQPAY_PRIVATE_KEY
@@ -227,7 +229,7 @@ async def process_checkout(req: CheckoutRequest):
         
         liqpay_params = {
             "public_key": LIQPAY_PUBLIC_KEY, "version": "3", "action": "pay",
-            "amount": str(total), "currency": "UAH", "description": f"Замовлення #{str(oid)[-6:]} в Medelin",
+            "amount": str(total), "currency": "UAH", "description": f"Замовлення #{order_num} в Medelin",
             "order_id": str(oid), "result_url": f"{WEB_APP_URL}/index.html?payment=success",
             "server_url": f"{WEB_APP_URL}/api/liqpay-callback", "paytypes": paytypes
         }
@@ -261,24 +263,25 @@ async def liqpay_callback(request: Request):
                 from app.databases.active_orders_database import active_orders_db
                 await active_orders_db.add_active_order(oid, order.get('user_id'), order.get('fullname'), order.get('phone'), order.get('location_id'), order.get('cart'), order.get('order_type'), order.get('table_number'), order.get('total_amount'), 'pay_now', order.get('wishes'))
                 
-                type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'НП' }
+                type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Доставка', 'beans_delivery': 'Доставка', 'beans_booking': 'Самовивіз' }
                 order_type = order.get('order_type')
-                type_label = type_map.get(order_type, order_type)
                 
-                delivery_info = order.get('table_number') if order_type == 'in_house' else ""
-                if order_type == 'nova_poshta':
-                    # For NP we might have stored address in wishes or it's empty in this simple flow
-                    # But if it came from site, we should check if we can reconstruct it.
-                    # In process_checkout we don't store delivery_info separately in the order doc.
-                    # Let's use wishes for now as details if it contains address-like info.
-                    delivery_info = order.get('wishes', '')
-                    wishes_str = "—"
-                else:
-                    wishes_str = order.get('wishes') or '—'
+                type_label = type_map.get(order_type, order_type)
+                if order_type == 'nova_poshta' or order_type == 'beans_delivery':
+                    # Determine if it's courier or branch from delivery_info
+                    di = order.get('delivery_info', '')
+                    if 'вул.' in di: type_label = "Кур'єр"
+                    else: type_label = "Відділення"
+                
+                delivery_info = order.get('delivery_info') or ""
+                if not delivery_info and order_type == 'in_house':
+                    delivery_info = f"Стіл #{order.get('table_number')}"
+                
+                order_num = order.get('order_number', 0)
 
-                msg = f'💰 <b>ОПЛАЧЕНО ЗАМОВЛЕННЯ</b>\n\n👤 {order.get("fullname")}\n📞 <code>{order.get("phone")}</code>\n🚚 Куди: <b>{type_label} {delivery_info}</b>'
+                msg = f'💰 <b>ОПЛАЧЕНО ЗАМОВЛЕННЯ #{order_num}</b>\n\n👤 {order.get("fullname")}\n📞 <code>{order.get("phone")}</code>\n🚚 Куди: <b>{type_label} {delivery_info}</b>'
                 msg += f'\n💰 <b>{order.get("total_amount")} грн</b>\n💳 Оплата: <b>ОПЛАЧЕНО</b>\n\n🛒 {order.get("cart")}'
-                msg += f'\n\n📝 ПОБАЖАННЯ: <b>{wishes_str if order_type != "nova_poshta" else "—"}</b>'
+                msg += f'\n\n📝 ПОБАЖАННЯ: <b>{order.get("wishes") or "—"}</b>'
                 
                 await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, order.get('user_id') or -1), location_id=order.get('location_id'))
         return {'status': 'ok'}

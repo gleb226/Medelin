@@ -37,6 +37,8 @@ import logging
 
 import html
 
+import time
+
 logger = logging.getLogger(__name__)
 
 admin_router = Router()
@@ -86,15 +88,76 @@ async def show_new_orders(message: Message):
         await message.answer('🆕 <b>НОВІ ЗАМОВЛЕННЯ:</b>\nНаразі нових замовлень немає.', parse_mode='HTML')
         return
     
-    text = "🆕 <b>НОВІ ЗАМОВЛЕННЯ:</b>\n\n"
     for o in orders:
         oid = str(o['_id'])
-        user = o.get('fullname', 'Гість')
-        total = o.get('total_amount', 0)
-        created = o.get('created_at').strftime('%H:%M') if o.get('created_at') else '??'
-        text += f"🕒 {created} | 📦 <b>{user}</b> - {total} ₴\nПереглянути: /view_order_{oid}\n\n"
+        order_num = o.get('order_number', '—')
+        status_label = "НОВЕ" if o.get('status') == 'new' else "ОПЛАЧЕНО"
+        
+        type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Доставка', 'beans_delivery': 'Зерна', 'beans_booking': 'Зерна (Самовивіз)' }
+        order_type = o.get('order_type')
+        type_label = type_map.get(order_type, order_type)
+        if order_type in ('nova_poshta', 'beans_delivery'):
+            di = o.get('delivery_info', '')
+            if 'вул.' in di: type_label = "Кур'єр"
+            else: type_label = "Відділення"
+
+        pay_mode = o.get('payment_mode', '—')
+        if pay_mode == 'pay_now': pay_label = "ОПЛАЧЕНО" if o.get('status') == 'paid' else "КАРТКА (Очікується)"
+        elif pay_mode == 'pay_at_checkout': pay_label = "НАКЛАДЕНИЙ ПЛАТІЖ" if order_type in ('nova_poshta', 'beans_delivery') else "НА КАСІ"
+        else: pay_label = pay_mode
+
+        msg = f"📦 <b>ЗАМОВЛЕННЯ #{order_num}</b> ({status_label})\n\n"
+        msg += f"👤 <b>{o.get('fullname')}</b>\n"
+        msg += f"📞 <code>{o.get('phone')}</code>\n"
+        msg += f"🚚 Куди: <b>{type_label} {o.get('delivery_info', '')}</b>\n"
+        msg += f"💰 Сума: <b>{o.get('total_amount')} ₴</b>\n"
+        msg += f"💳 Оплата: <b>{pay_label}</b>\n\n"
+        msg += f"🛒 {o.get('cart')}\n\n"
+        msg += f"📝 ПОБАЖАННЯ: <b>{o.get('wishes') or '—'}</b>"
+        
+        await message.answer(msg, reply_markup=akb.get_booking_manage_kb(oid, o.get('user_id') or -1), parse_mode='HTML')
+
+@admin_router.message(F.text == '📦 АКТИВНІ ЗАМОВЛЕННЯ')
+async def list_active_orders_msg(message: Message):
+    if not await admin_db.is_admin(message.from_user.id): return
+    await show_active_orders(message)
+
+@admin_router.callback_query(F.data == 'active_orders')
+async def list_active_orders_cb(callback: CallbackQuery):
+    await show_active_orders(callback.message)
+    await callback.answer()
+
+async def show_active_orders(message: Message):
+    orders = await active_orders_db.get_all_active_orders()
+    if not orders:
+        await message.answer('📦 <b>АКТИВНІ ЗАМОВЛЕННЯ:</b>\nНаразі активних замовлень немає.', parse_mode='HTML')
+        return
     
-    await message.answer(text, parse_mode='HTML')
+    for o in orders:
+        oid = o.get('order_id')
+        # Get full order data to have order_number
+        full_o = await orders_db.get_order_by_id(oid)
+        order_num = full_o.get('order_number', '—') if full_o else '—'
+        
+        type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Доставка', 'beans_delivery': 'Зерна', 'beans_booking': 'Зерна (Самовивіз)' }
+        order_type = o.get('order_type')
+        type_label = type_map.get(order_type, order_type)
+        if order_type in ('nova_poshta', 'beans_delivery'):
+            di = o.get('wishes', '') # In active orders wishes often contains delivery info
+            if 'вул.' in di: type_label = "Кур'єр"
+            else: type_label = "Відділення"
+
+        msg = f"📦 <b>АКТИВНЕ #{order_num}</b>\n\n"
+        msg += f"👤 <b>{o.get('fullname')}</b>\n"
+        msg += f"📞 <code>{o.get('phone')}</code>\n"
+        msg += f"💰 Сума: <b>{o.get('total', 0)} ₴</b>\n"
+        msg += f"🛒 {o.get('cart')}\n\n"
+        msg += f"📝 ПОБАЖАННЯ: <b>{o.get('wishes') or '—'}</b>"
+        
+        kb_finish = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='✅ ЗАВЕРШИТИ', callback_data=f'finish_order_{oid}')]
+        ])
+        await message.answer(msg, reply_markup=kb_finish, parse_mode='HTML')
 
 @admin_router.message(F.text.startswith('/view_order_'))
 async def view_order_details(message: Message, bot: Bot):
@@ -105,15 +168,20 @@ async def view_order_details(message: Message, bot: Bot):
         await message.answer("Замовлення не знайдено.")
         return
     
+    order_num = order.get('order_number', '—')
     status_label = "НОВЕ" if order.get('status') == 'new' else "ОПЛАЧЕНО"
-    type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'НП', 'beans_delivery': 'Зерна (НП)', 'beans_booking': 'Зерна (Брон)' }
+    type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Доставка', 'beans_delivery': 'Зерна', 'beans_booking': 'Зерна (Самовивіз)' }
     order_type = order.get('order_type')
     type_label = type_map.get(order_type, order_type)
+    if order_type in ('nova_poshta', 'beans_delivery'):
+        di = order.get('delivery_info', '')
+        if 'вул.' in di: type_label = "Кур'єр"
+        else: type_label = "Відділення"
     
-    msg = f"📦 <b>ЗАМОВЛЕННЯ #{oid[-6:]}</b> ({status_label})\n\n"
+    msg = f"📦 <b>ЗАМОВЛЕННЯ #{order_num}</b> ({status_label})\n\n"
     msg += f"👤 Клієнт: <b>{order.get('fullname')}</b>\n"
     msg += f"📞 Телефон: <code>{order.get('phone')}</code>\n"
-    msg += f"🚚 Куди: <b>{type_label}</b> {order.get('table_number', '')}\n"
+    msg += f"🚚 Куди: <b>{type_label} {order.get('delivery_info', '')}</b>\n"
     msg += f"💰 Сума: <b>{order.get('total_amount')} ₴</b>\n"
     msg += f"💳 Оплата: <b>{order.get('payment_mode')}</b>\n\n"
     msg += f"🛒 <b>СКЛАД:</b>\n{order.get('cart')}\n\n"
@@ -141,7 +209,8 @@ async def confirm_order_handler(callback: CallbackQuery, bot: Bot):
     await safe_edit_message(callback.message, callback.message.text + "\n\n✅ <b>ПІДТВЕРДЖЕНО</b>", parse_mode='HTML')
     await callback.answer('Підтверджено!')
     
-    await deliver_guest_message(bot, order, "✅ <b>Ваше замовлення підтверджено!</b>\nМи вже готуємо його.", "Admin confirmed")
+    # User notification DISABLED
+    # await deliver_guest_message(bot, order, "✅ Ваше замовлення підтверджено!", "Admin confirmed")
 
 @admin_router.callback_query(F.data.startswith('reject_order_'))
 async def reject_order_handler(callback: CallbackQuery, bot: Bot):
@@ -154,14 +223,13 @@ async def reject_order_handler(callback: CallbackQuery, bot: Bot):
     await orders_db.update_status(oid, 'rejected')
     await safe_edit_message(callback.message, callback.message.text + "\n\n❌ <b>ВІДХИЛЕНО</b>", parse_mode='HTML')
     await callback.answer('Відхилено.')
-    
-    await deliver_guest_message(bot, order, "❌ <b>На жаль, ваше замовлення відхилено.</b>\nДля деталей зв'яжіться з нами.", "Admin rejected")
 
 @admin_router.callback_query(F.data.startswith('finish_order_'))
 async def finish_order_handler(callback: CallbackQuery, bot: Bot):
     oid = callback.data.replace('finish_order_', '')
     await active_orders_db.remove_order(oid)
     await callback.answer('Замовлення завершено!')
+    # Refresh active orders list
     await list_active_orders_cb(callback)
 
 # --- CONTENT MANAGEMENT BLOCK ---
@@ -342,9 +410,5 @@ async def reject_admin_login(callback: CallbackQuery, bot: Bot):
         await callback.answer('Помилка.')
 
 async def deliver_guest_message(bot: Bot, order: dict, user_text: str, admin_text: str):
-    uid = order.get('user_id')
-    if uid:
-        try: await bot.send_message(uid, user_text, parse_mode='HTML')
-        except: pass
-    else:
-        logger.info(f"No user_id for order {order.get('_id')}, skipping user notification")
+    # DISABLED
+    return
