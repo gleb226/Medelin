@@ -185,4 +185,3 @@ if (document.readyState === 'loading') {
 } else {
     fetchCoffee();
 }
-}
