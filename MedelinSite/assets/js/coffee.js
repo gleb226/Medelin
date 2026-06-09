@@ -62,7 +62,7 @@ function renderCoffeeData(coffeeData) {
                 </div>
 
                 <div class="product-card__price-row">
-                    <span class="product-card__price">${item.price_250} ₴ / 250г</span>
+                    <span class="product-card__price">${item.price_250} ₴</span>
                     <button class="btn-add-plus" type="button" onclick="event.stopPropagation(); if(typeof window.addBeanToCart === 'function') window.addBeanToCart('${item.id || item._id}', '${String(item.name || '').replace(/[\"']/g, '')}', 'bean_weight_hidden_${item.id || item._id}');">
                         <i class="fas fa-plus"></i>
                     </button>
@@ -116,7 +116,7 @@ function openBeanDetail(item, pushState = true) {
                     
                     <div style="background: var(--color-dark-brown); color: white; padding: 2.2rem; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 15px 35px rgba(0,0,0,0.2); margin-top: auto;">
                         <div>
-                            <span style="display: block; font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.2rem;">Ціна за 250г</span>
+                            <span style="display: block; font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.2rem;">Ціна</span>
                             <span style="font-size: 2.5rem; font-weight: 800; font-family: var(--font-accent);">${item.price_250} ₴</span>
                         </div>
                         <button class="btn btn--primary" style="background: white; color: var(--color-dark-brown); border: none; padding: 1.2rem 2.5rem; font-size: 1.1rem; border-radius: 16px; font-weight: 800; cursor: pointer; transition: all 0.2s;" type="button" data-action="add-bean-to-cart" data-bean-id="${item.id || item._id}" data-bean-name="${String(item.name || '').replace(/[\"']/g, '')}" data-weight-name="bean_weight_${item.id || item._id}" onclick="this.style.transform='scale(0.95)'; setTimeout(()=>this.style.transform='scale(1)', 100)">
@@ -184,4 +184,5 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', fetchCoffee);
 } else {
     fetchCoffee();
+}
 }

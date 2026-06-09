@@ -93,7 +93,7 @@ def get_beans_kb(items):
 
 def get_beans_weight_kb():
     keyboard = [
-        [InlineKeyboardButton(text='⚖️ 250г', callback_data='bean_w_250')],
+        [InlineKeyboardButton(text='✅ ОБРАТИ СОРТ', callback_data='bean_w_250')],
         [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='bean_back')]
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
@@ -108,7 +108,7 @@ def get_beans_delivery_kb():
 def get_beans_payment_kb():
     keyboard = [
         [InlineKeyboardButton(text='💳 ОПЛАТИТИ ЗАРАЗ', callback_data='bean_pay_card')],
-        [InlineKeyboardButton(text='📦 НАКЛАДЕНИЙ ПЛАТІЖ', callback_data='bean_pay_cash')],
+        [InlineKeyboardButton(text='📦 Накладний платіж', callback_data='bean_pay_cash')],
         [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='bean_back')]
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)

@@ -212,7 +212,7 @@ async def process_checkout(req: CheckoutRequest):
         from app.databases.active_orders_database import active_orders_db
         await active_orders_db.add_active_order(oid, user_id, user.get('name', '—'), phone, loc_id, items_text, order_type, user.get('table_number', ''), total, payment_mode, wishes_str)
         
-        pay_label = "НАКЛАДЕНИЙ ПЛАТІЖ" if order_type == 'nova_poshta' else "ПІСЛЯПЛАТА"
+        pay_label = "Накладний платіж" if order_type == 'nova_poshta' else "ПІСЛЯПЛАТА"
         
         msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ #{order_num}</b>\n\n👤 {user.get("name")}\n📞 <code>{phone}</code>\n🚚 Куди: <b>{type_label} {delivery_info}</b>'
         msg += f'\n💰 <b>{total} грн</b>\n💳 Оплата: <b>{pay_label}</b>\n\n🛒 {items_text}'

@@ -503,7 +503,7 @@ window.addBeanToCart = function (id, name, weightName) {
     }
     const w = r.value;
     const p = parseInt(r.dataset.price);
-    const fullName = `${name} (${w}г)`;
+    const fullName = name;
     cart_beans.push({ id, name: fullName, price: p, weight: w });
     saveCart();
     updateCartBadge();
@@ -810,7 +810,7 @@ window.openCheckoutModal = function () {
                             <i class="fas fa-university"></i> <span>PrivatPay</span>
                         </button>
                         <button class="payment-btn" type="button" data-action="submit-checkout" data-method="cash">
-                            <i class="fas fa-truck-ramp-box"></i> <span>НАКЛАДЕНИЙ ПЛАТІЖ</span>
+                            <i class="fas fa-truck-ramp-box"></i> <span>Накладний платіж</span>
                         </button>
                     </div>
                     <div style="padding: 0 1.5rem 1.5rem;">
@@ -1325,9 +1325,10 @@ window.toggleTableInput = function (v) {
                         knownStatuses[order.id] = data.status;
                         changed = true;
                         if (data.status === 'confirmed') {
-                            window.showToast(`Ваше замовлення #${String(order.id).slice(-6)} підтверджено!`, 'success');
+                            const summary = getPastOrderSummary(order);
+                            window.showToast(`Ваше замовлення підтверджено! (${summary})`, 'success');
                         } else if (data.status === 'rejected') {
-                            window.showToast(`Замовлення #${String(order.id).slice(-6)} відхилено.`, 'error');
+                            window.showToast(`Замовлення відхилено.`, 'error');
                         }
                     }
                 }

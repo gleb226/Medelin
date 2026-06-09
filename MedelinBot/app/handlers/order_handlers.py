@@ -96,10 +96,27 @@ async def np_city_chosen(callback: CallbackQuery, state: FSMContext):
         return
     
     await state.update_data(all_warehouses=warehouses) # Cache for pagination
-    await safe_edit_message(callback.message, f'🏪 <b>ОБЕРІТЬ ВІДДІЛЕННЯ ({city_name}):</b>', reply_markup=kb.get_np_warehouses_kb(warehouses), parse_mode='HTML')
+    await safe_edit_message(callback.message, f'🏪 <b>ОБЕРІТЬ ВІДДІЛЕННЯ ({city_name}):</b>\n\nМожна ввести номер або вулицю для пошуку:', reply_markup=kb.get_np_warehouses_kb(warehouses), parse_mode='HTML')
     await state.set_state(OrderStates.choosing_np_warehouse)
 
+@order_router.message(OrderStates.choosing_np_warehouse)
+async def np_wh_search(message: Message, state: FSMContext):
+    search = (message.text or '').strip()
+    data = await state.get_data()
+    city_ref = data.get('np_city_ref')
+    if not city_ref:
+        await message.answer('Спочатку оберіть місто.')
+        return
+    
+    warehouses = await np_client.get_warehouses(city_ref, search)
+    if not warehouses:
+        await message.answer('Нічого не знайдено. Спробуйте інший номер або вулицю:')
+        return
+    
+    await message.answer(f'🔍 <b>РЕЗУЛЬТАТИ ПОШУКУ "{search}":</b>', reply_markup=kb.get_np_warehouses_kb(warehouses), parse_mode='HTML')
+
 @order_router.callback_query(F.data.startswith('np_wh_page_'), OrderStates.choosing_np_warehouse)
+
 async def np_wh_pagination(callback: CallbackQuery, state: FSMContext):
     page = int(callback.data.replace('np_wh_page_', ''))
     data = await state.get_data()
@@ -158,7 +175,7 @@ async def send_beans_invoice(user, chat_id, state, bot):
     order_type = 'beans_delivery' if data.get('delivery_type') == 'nova_poshta' else 'beans_booking'
     rid = await orders_db.add_order(
         user_id=user.id, username=user.username, fullname=user.full_name, phone=data.get('phone', '—'), 
-        location_id=data.get('location_id') or "NP", wishes=f"ВАГА: 250г", 
+        location_id=data.get('location_id') or "NP", wishes="НОВА ПОШТА", 
         cart=f"ЗЕРНА: {data['bean_name']}", order_type=order_type,
         date_time='НОВА ПОШТА', people_count='0',
         payment_mode='pay_now', total_amount=total
@@ -178,11 +195,11 @@ async def process_beans_final(user, chat_id, state, bot):
     order_type = 'beans_delivery' if data.get('delivery_type') == 'nova_poshta' else 'beans_booking'
     
     delivery_info = f"{data.get('np_city_name', '')}, {data.get('np_warehouse', '')}" if order_type == 'beans_delivery' else "Самовивіз"
-    pay_label = "ОПЛАЧЕНО" if data.get('payment_method') == 'card' else "НАКЛАДЕНИЙ ПЛАТІЖ"
+    pay_label = "ОПЛАЧЕНО" if data.get('payment_method') == 'card' else "Накладний платіж"
     
     rid = await orders_db.add_order(
         user_id=user.id, username=user.username, fullname=user.full_name, phone=data.get('phone', '—'), 
-        location_id=data.get('location_id') or "NP", wishes=f"ВАГА: 250г | {delivery_info}", 
+        location_id=data.get('location_id') or "NP", wishes=f"{delivery_info}", 
         cart=f"ЗЕРНА: {data['bean_name']}", order_type=order_type,
         date_time='НОВА ПОШТА', people_count='0',
         payment_mode='pay_on_delivery' if data.get('payment_method') != 'card' else 'pay_now', 
@@ -193,14 +210,15 @@ async def process_beans_final(user, chat_id, state, bot):
         rid, user.id, user.full_name, data.get('phone', '—'), data.get('location_id') or "NP", 
         data['bean_name'], order_type, total=data.get('base_price', 0), 
         payment_mode='pay_on_delivery' if data.get('payment_method') != 'card' else 'pay_now', 
-        wishes=f"ВАГА: 250г | {delivery_info}"
+        wishes=f"{delivery_info}"
     )
 
     msg = f"☕️ <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n👤 {user.full_name}\n📞 <code>{data.get('phone')}</code>\n🚚 Куди: <b>{delivery_info}</b>"
-    msg += f"\n📦 Сорт: <b>{data['bean_name']} (250г)</b>\n💳 Оплата: <b>{pay_label}</b>"
-    msg += f"\n\n🛒 {data['bean_name']} (250г)"
+    msg += f"\n📦 Сорт: <b>{data['bean_name']}</b>\n💳 Оплата: <b>{pay_label}</b>"
+    msg += f"\n\n🛒 {data['bean_name']}"
 
     targets = await admin_db.get_notification_targets(data.get('location_id'))
+
     for aid in targets:
         try: await bot.send_message(aid, msg, reply_markup=akb.get_booking_manage_kb(rid), parse_mode='HTML')
         except: pass

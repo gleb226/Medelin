@@ -154,7 +154,7 @@ async def show_bean_details(callback: CallbackQuery, state: FSMContext):
     if bean.get('processing'): text += f"<b>Метод обробки:</b> {bean['processing']}\n"
     if bean.get('harvest'): text += f"<b>Період врожаю:</b> {bean['harvest']}\n"
     
-    text += f"\n💰 <b>Ціна:</b> {bean.get('price_250', 0)} ₴ / 250г"
+    text += f"\n💰 <b>Ціна:</b> {bean.get('price_250', 0)} ₴"
 
     await callback.message.answer_photo(bean.get('image_url', ''), caption=text, reply_markup=kb.get_beans_weight_kb(), parse_mode='HTML')
 

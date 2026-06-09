@@ -103,7 +103,7 @@ async def show_new_orders(message: Message):
 
         pay_mode = o.get('payment_mode', '—')
         if pay_mode == 'pay_now': pay_label = "ОПЛАЧЕНО" if o.get('status') == 'paid' else "КАРТКА (Очікується)"
-        elif pay_mode == 'pay_at_checkout': pay_label = "НАКЛАДЕНИЙ ПЛАТІЖ" if order_type in ('nova_poshta', 'beans_delivery') else "НА КАСІ"
+        elif pay_mode == 'pay_at_checkout': pay_label = "Накладний платіж" if order_type in ('nova_poshta', 'beans_delivery') else "НА КАСІ"
         else: pay_label = pay_mode
 
         msg = f"📦 <b>ЗАМОВЛЕННЯ #{order_num}</b> ({status_label})\n\n"
@@ -135,24 +135,32 @@ async def show_active_orders(message: Message):
     
     for o in orders:
         oid = o.get('order_id')
-        # Get full order data to have order_number
         full_o = await orders_db.get_order_by_id(oid)
-        order_num = full_o.get('order_number', '—') if full_o else '—'
+        if not full_o: continue
+        
+        order_num = full_o.get('order_number', '—')
         
         type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Доставка', 'beans_delivery': 'Зерна', 'beans_booking': 'Зерна (Самовивіз)' }
-        order_type = o.get('order_type')
+        order_type = full_o.get('order_type')
         type_label = type_map.get(order_type, order_type)
         if order_type in ('nova_poshta', 'beans_delivery'):
-            di = o.get('wishes', '') # In active orders wishes often contains delivery info
+            di = full_o.get('delivery_info', '')
             if 'вул.' in di: type_label = "Кур'єр"
             else: type_label = "Відділення"
 
+        pay_mode = full_o.get('payment_mode', '—')
+        if pay_mode == 'pay_now': pay_label = "ОПЛАЧЕНО" if full_o.get('status') == 'paid' else "КАРТКА"
+        elif pay_mode == 'pay_at_checkout': pay_label = "Накладний платіж" if order_type in ('nova_poshta', 'beans_delivery') else "НА КАСІ"
+        else: pay_label = pay_mode
+
         msg = f"📦 <b>АКТИВНЕ #{order_num}</b>\n\n"
-        msg += f"👤 <b>{o.get('fullname')}</b>\n"
-        msg += f"📞 <code>{o.get('phone')}</code>\n"
-        msg += f"💰 Сума: <b>{o.get('total', 0)} ₴</b>\n"
-        msg += f"🛒 {o.get('cart')}\n\n"
-        msg += f"📝 ПОБАЖАННЯ: <b>{o.get('wishes') or '—'}</b>"
+        msg += f"👤 <b>{full_o.get('fullname')}</b>\n"
+        msg += f"📞 <code>{full_o.get('phone')}</code>\n"
+        msg += f"🚚 Куди: <b>{type_label} {full_o.get('delivery_info', '')}</b>\n"
+        msg += f"💰 Сума: <b>{full_o.get('total_amount', 0)} ₴</b>\n"
+        msg += f"💳 Оплата: <b>{pay_label}</b>\n\n"
+        msg += f"🛒 {full_o.get('cart')}\n\n"
+        msg += f"📝 ПОБАЖАННЯ: <b>{full_o.get('wishes') or '—'}</b>"
         
         kb_finish = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text='✅ ЗАВЕРШИТИ', callback_data=f'finish_order_{oid}')]
@@ -209,8 +217,15 @@ async def confirm_order_handler(callback: CallbackQuery, bot: Bot):
     await safe_edit_message(callback.message, callback.message.text + "\n\n✅ <b>ПІДТВЕРДЖЕНО</b>", parse_mode='HTML')
     await callback.answer('Підтверджено!')
     
-    # User notification DISABLED
-    # await deliver_guest_message(bot, order, "✅ Ваше замовлення підтверджено!", "Admin confirmed")
+    # User notification
+    if order.get('user_id'):
+        user_msg = "✅ <b>Ваше замовлення підтверджено!</b>"
+        if order.get('cart'):
+            user_msg += f"\n\n🛒 <b>Склад замовлення:</b>\n{order.get('cart')}"
+        try:
+            await bot.send_message(order['user_id'], user_msg, parse_mode='HTML')
+        except:
+            pass
 
 @admin_router.callback_query(F.data.startswith('reject_order_'))
 async def reject_order_handler(callback: CallbackQuery, bot: Bot):
@@ -227,10 +242,13 @@ async def reject_order_handler(callback: CallbackQuery, bot: Bot):
 @admin_router.callback_query(F.data.startswith('finish_order_'))
 async def finish_order_handler(callback: CallbackQuery, bot: Bot):
     oid = callback.data.replace('finish_order_', '')
-    await active_orders_db.remove_order(oid)
+    await active_orders_db.delete_active_order(oid)
     await callback.answer('Замовлення завершено!')
-    # Refresh active orders list
-    await list_active_orders_cb(callback)
+    try:
+        await callback.message.delete()
+    except:
+        await safe_edit_message(callback.message, callback.message.text + "\n\n✅ <b>ЗАВЕРШЕНО</b>")
+
 
 # --- CONTENT MANAGEMENT BLOCK ---
 

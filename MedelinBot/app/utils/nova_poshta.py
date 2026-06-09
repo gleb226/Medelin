@@ -42,15 +42,17 @@ class NovaPoshtaClient:
         return []
 
     async def get_warehouses(self, city_ref: str, search: str = ""):
-        params = {"CityRef": city_ref, "Limit": "100"}
+        params = {"Limit": "100"}
         if search:
             params["FindByString"] = search
+        
+        # Try with SettlementRef first
+        params["SettlementRef"] = city_ref
         res = await self.call("Address", "getWarehouses", params)
         if not res:
-            # Try as SettlementRef if CityRef failed or returned nothing
-            params = {"SettlementRef": city_ref, "Limit": "100"}
-            if search:
-                params["FindByString"] = search
+            # Try with CityRef
+            del params["SettlementRef"]
+            params["CityRef"] = city_ref
             res = await self.call("Address", "getWarehouses", params)
         return res
 
