@@ -193,61 +193,60 @@ async def process_checkout(req: CheckoutRequest):
     if order_type == 'nova_poshta': loc_id = 'NP'
     
     comment = user.get('comment', '').strip()
-    wishes_str = f'TG: @{tg_nick}' if tg_nick else ''
+    wishes_str = comment if comment else '—'
+    
+    delivery_info = ""
+    type_label = ""
+    
     if order_type == 'nova_poshta':
         np_city = (user.get('np_city_name') or '').strip()
         np_mode = user.get('np_delivery_mode')
         if np_mode == 'courier':
+            type_label = "Кур'єр (НП)"
             np_st = user.get('np_street_name', '')
             np_h = user.get('np_house', '')
             np_f = user.get('np_flat', '')
-            wishes_str += f'\nНП (Кур\'єр): {np_city}, вул. {np_st}, буд. {np_h}, кв. {np_f}'
+            delivery_info = f"{np_city}, вул. {np_st}, буд. {np_h}, кв. {np_f}"
         else:
+            type_label = "Відділення (НП)"
             np_warehouse = (user.get('np_warehouse') or '').strip()
-            wishes_str += f'\nНП (Відділення): {np_city}, {np_warehouse}'
-    if comment: wishes_str += f'\nКоментар: {comment}'
-    
+            delivery_info = f"{np_city}, {np_warehouse}"
+    else:
+        type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі' }
+        type_label = type_map.get(order_type, order_type)
+        if order_type == 'in_house' and user.get('table_number'):
+            delivery_info = f"Стіл #{user.get('table_number')}"
+        else:
+            delivery_info = location['name'] if location else "Web"
+
     user_id = None
     try:
         from app.databases.user_database import user_db
         from app.utils.phone_utils import normalize_phone
         norm_phone = normalize_phone(phone)
-        
-        # 1. Search by phone in past orders
         existing_order = await orders_db.get_user_by_phone(phone)
         if existing_order: user_id = existing_order.get('user_id')
-        
-        # 2. Search by nickname in users table
         if not user_id and tg_nick:
             u_info = await user_db.get_user_by_username(tg_nick)
             if u_info: user_id = u_info[0]
-            
-        # 3. Search by phone in users table
         if not user_id and norm_phone:
             u_info = await user_db.get_user_by_phone(norm_phone)
             if u_info: user_id = u_info[0]
-
-        # Sync user info if we found a Telegram ID
-        if user_id:
-            await user_db.add_user(user_id, user.get('name', '—'), tg_nick, phone)
+        if user_id: await user_db.add_user(user_id, user.get('name', '—'), tg_nick, phone)
     except Exception as e:
         logger.error(f"User sync failed: {e}")
 
-    oid = await orders_db.add_order(user_id=user_id, username=tg_nick, fullname=user.get('name', '—'), phone=phone, location_id=loc_id, wishes=wishes_str.strip(), cart=items_text, order_type=order_type, payment_mode=payment_mode, table_number=user.get('table_number', ''), total_amount=total)
+    oid = await orders_db.add_order(user_id=user_id, username=tg_nick, fullname=user.get('name', '—'), phone=phone, location_id=loc_id, wishes=wishes_str, cart=items_text, order_type=order_type, payment_mode=payment_mode, table_number=user.get('table_number', ''), total_amount=total)
     
     if payment_mode == 'pay_at_checkout' or data.get('payment_method') == 'cash':
         from app.databases.active_orders_database import active_orders_db
         await active_orders_db.add_active_order(oid, user_id, user.get('name', '—'), phone, loc_id, items_text, order_type, user.get('table_number', ''), total, payment_mode, wishes_str)
         
-        type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Нова Пошта' }
-        delivery_type_str = type_map.get(order_type, order_type)
+        pay_label = "НАКЛАДЕНИЙ ПЛАТІЖ" if order_type == 'nova_poshta' else "ПІСЛЯПЛАТА"
         
-        msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 {user.get("name")}\n📞 {phone}\n🚚 Тип: <b>{delivery_type_str}</b>'
-        if order_type == 'in_house' and user.get('table_number'): msg += f' (Стіл #{user.get("table_number")})'
-        msg += f'\n💰 {total} грн\n💳 Оплата: <b>ПІСЛЯПЛАТА</b>\n\n🛒 {items_text}'
-        
-        if wishes_str: 
-            msg += f'\n\n📝 <b>ПОБАЖАННЯ/АДРЕСА:</b>\n{wishes_str}'
+        msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 {user.get("name")}\n📞 {phone}\n📍 Куди: <b>{type_label}</b>\n🏠 Деталі: <b>{delivery_info}</b>'
+        msg += f'\n💰 {total} грн\n💳 Оплата: <b>{pay_label}</b>\n\n🛒 {items_text}'
+        msg += f'\n\n📝 <b>ПОБАЖАННЯ:</b>\n{wishes_str}'
         
         await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, user_id or -1), location_id=loc_id)
         return {'status': 'ok', 'manual': True, 'order_id': oid}
@@ -255,25 +254,14 @@ async def process_checkout(req: CheckoutRequest):
     # LiqPay Integration
     from app.common.config import LIQPAY_PUBLIC_KEY, LIQPAY_PRIVATE_KEY
     if LIQPAY_PUBLIC_KEY and LIQPAY_PRIVATE_KEY:
-        paytype_map = {
-            'card': 'card',
-            'applepay': 'apay',
-            'googlepay': 'gpay',
-            'privatpay': 'privat24'
-        }
+        paytype_map = { 'card': 'card', 'applepay': 'apay', 'googlepay': 'gpay', 'privatpay': 'privat24' }
         paytypes = paytype_map.get(data.get('payment_method'), 'card')
         
         liqpay_params = {
-            "public_key": LIQPAY_PUBLIC_KEY,
-            "version": "3",
-            "action": "pay",
-            "amount": str(total),
-            "currency": "UAH",
-            "description": f"Замовлення #{str(oid)[-6:]} в Medelin",
-            "order_id": str(oid),
-            "result_url": f"{WEB_APP_URL}/index.html?payment=success",
-            "server_url": f"{WEB_APP_URL}/api/liqpay-callback",
-            "paytypes": paytypes
+            "public_key": LIQPAY_PUBLIC_KEY, "version": "3", "action": "pay",
+            "amount": str(total), "currency": "UAH", "description": f"Замовлення #{str(oid)[-6:]} в Medelin",
+            "order_id": str(oid), "result_url": f"{WEB_APP_URL}/index.html?payment=success",
+            "server_url": f"{WEB_APP_URL}/api/liqpay-callback", "paytypes": paytypes
         }
         json_params = json.dumps(liqpay_params).encode()
         data_b64 = base64.b64encode(json_params).decode()
@@ -304,13 +292,16 @@ async def liqpay_callback(request: Request):
                 # Add to active orders
                 from app.databases.active_orders_database import active_orders_db
                 await active_orders_db.add_active_order(oid, order.get('user_id'), order.get('fullname'), order.get('phone'), order.get('location_id'), order.get('cart'), order.get('order_type'), order.get('table_number'), order.get('total_amount'), 'pay_now', order.get('wishes'))
-                type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Нова Пошта' }
-                delivery_type_str = type_map.get(order.get('order_type'), order.get('order_type'))
                 
-                msg = f'💰 <b>ОПЛАЧЕНО ЗАМОВЛЕННЯ</b>\n\n👤 {order.get("fullname")}\n📞 {order.get("phone")}\n🚚 Тип: <b>{delivery_type_str}</b>'
-                if order.get('order_type') != 'nova_poshta' and order.get('table_number'): msg += f' (Стіл #{order.get("table_number")})'
-                msg += f'\n💰 {order.get("total_amount")} грн\n💳 Оплата: <b>LiqPay</b>\n\n🛒 {order.get("cart")}'
-                if order.get('wishes'): msg += f'\n\n📝 <b>ПОБАЖАННЯ/АДРЕСА:</b>\n{order.get("wishes")}'
+                type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Нова Пошта' }
+                order_type = order.get('order_type')
+                type_label = type_map.get(order_type, order_type)
+                if order_type == 'nova_poshta':
+                    type_label = "НП"
+                
+                msg = f'💰 <b>ОПЛАЧЕНО ЗАМОВЛЕННЯ</b>\n\n👤 {order.get("fullname")}\n📞 {order.get("phone")}\n📍 Куди: <b>{type_label}</b>\n🏠 Деталі: <b>{order.get("wishes") if order.get("wishes") else "—"}</b>'
+                msg += f'\n💰 {order.get("total_amount")} грн\n💳 Оплата: <b>ОПЛАЧЕНО (Сайт)</b>\n\n🛒 {order.get("cart")}'
+                
                 await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, order.get('user_id') or -1), location_id=order.get('location_id'))
         return {'status': 'ok'}
     except Exception as e:
@@ -395,7 +386,10 @@ async def get_new_orders(admin: dict = Depends(get_current_admin)):
     # Returns only orders with status 'new' or 'paid'
     locs = None
     if admin.get('role') not in ('boss', 'owner', 'developer'):
-        locs = admin.get('locations')
+        locs = list(admin.get('locations') or [])
+        # Admins should also see website/NP orders
+        if 'web' not in locs: locs.append('web')
+        if 'NP' not in locs: locs.append('NP')
     
     if locs:
         orders = await orders_db.get_new_orders_by_locations(locs)
@@ -445,7 +439,9 @@ async def get_active_orders(admin: dict = Depends(get_current_admin)):
     from app.databases.active_orders_database import active_orders_db
     locs = None
     if admin.get('role') not in ('boss', 'owner', 'developer'):
-        locs = admin.get('locations')
+        locs = list(admin.get('locations') or [])
+        if 'web' not in locs: locs.append('web')
+        if 'NP' not in locs: locs.append('NP')
     
     orders = await active_orders_db.get_active_orders(locs)
     for o in orders:
@@ -455,6 +451,7 @@ async def get_active_orders(admin: dict = Depends(get_current_admin)):
         del o['_id']
         # Add location name
         if o['location_id'] == 'NP': o['location_name'] = 'Нова Пошта'
+        elif o['location_id'] == 'web': o['location_name'] = 'Сайт'
         else:
             loc = await location_db.get_location_by_id(o['location_id'])
             o['location_name'] = loc['name'] if loc else 'Web'
