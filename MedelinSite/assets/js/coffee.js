@@ -1,4 +1,5 @@
 let allCoffeeData = [];
+let lastScrollPosition = 0;
 
 async function fetchCoffee() {
     const root = document.getElementById('coffee-root');
@@ -47,14 +48,14 @@ function renderCoffeeData(coffeeData) {
         return;
     }
 
-    // Apply background colors to sections
+    // Apply background colors to sections - more explicit as requested
     const commercialSection = document.getElementById('commercial-section');
     const specialtyEspressoSection = document.getElementById('specialty-espresso-section');
     const specialtyFilterSection = document.getElementById('specialty-filter-section');
 
-    if (commercialSection) commercialSection.style.backgroundColor = 'rgba(44, 115, 109, 0.06)';
-    if (specialtyEspressoSection) specialtyEspressoSection.style.backgroundColor = 'rgba(249, 194, 15, 0.06)';
-    if (specialtyFilterSection) specialtyFilterSection.style.backgroundColor = 'rgba(248, 102, 3, 0.06)';
+    if (commercialSection) commercialSection.style.backgroundColor = 'rgba(44, 115, 109, 0.12)'; // Olive/Teal #2c736d
+    if (specialtyEspressoSection) specialtyEspressoSection.style.backgroundColor = 'rgba(242, 185, 7, 0.12)'; // Yellow #f2b907
+    if (specialtyFilterSection) specialtyFilterSection.style.backgroundColor = 'rgba(248, 102, 3, 0.12)'; // Orange #f86603
 
     const defImg = 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?q=80&w=1061&auto=format&fit=crop';
 
@@ -72,7 +73,7 @@ function renderCoffeeData(coffeeData) {
                     ${item.processing ? `<div style="margin-bottom: 4px;"><strong>Обробка:</strong> ${item.processing}</div>` : ''}
                     ${item.descriptors || item.taste ? `<div style="margin-bottom: 4px;"><strong>Дескриптори:</strong> ${item.descriptors || item.taste}</div>` : ''}
                     ${item.roast ? `<div style="margin-bottom: 4px;"><strong>Обсмаження:</strong> ${item.roast}</div>` : ''}
-                    ${item.quality_score ? `<div><strong>SCA:</strong> ${item.quality_score}</div>` : ''}
+                    ${item.quality_score ? `<div style="color: #d32f2f; font-weight: 700;"><strong>Оцінка SCA:</strong> ${item.quality_score}</div>` : ''}
                 </div>
 
                 <div class="product-card__price-row">
@@ -124,6 +125,9 @@ function openBeanDetail(item, pushState = true) {
 
     if (!gridSection || !detailSection || !detailContent) return;
 
+    // Save scroll position before switching views
+    lastScrollPosition = window.scrollY;
+
     if (pushState) {
         const url = new URL(window.location);
         url.searchParams.set('id', item.id || item._id);
@@ -157,7 +161,7 @@ function openBeanDetail(item, pushState = true) {
                     <div class="bean-full-view__primary-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; background: var(--color-cream); padding: 2.5rem; border-radius: 24px; border: 1px solid rgba(139, 94, 60, 0.08); flex-grow: 1; align-content: start;">
                         ${item.species ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Склад</label><p style="font-size: 1.1rem; font-weight: 700;">${item.species}</p></div>` : ''}
                         ${item.roast ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Обсмаження</label><p style="font-size: 1.1rem; font-weight: 700;">${item.roast}</p></div>` : ''}
-                        ${score ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Оцінка якості</label><p style="font-size: 1.1rem; font-weight: 700;">${score}</p></div>` : ''}
+                        ${score ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Оцінка якості (SCA)</label><p style="font-size: 1.1rem; font-weight: 700; color: #d32f2f;">${score}</p></div>` : ''}
                         ${item.harvest ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Врожай</label><p style="font-size: 1.1rem; font-weight: 700;">${item.harvest}</p></div>` : ''}
                         
                         ${item.descriptors || item.taste ? `<div style="grid-column: span 2; border-top: 1px solid rgba(0,0,0,0.04); padding-top: 1.5rem;"><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Дескриптори</label><p style="font-size: 1.2rem; font-weight: 700; color: var(--color-dark-brown);">${item.descriptors || item.taste}</p></div>` : ''}
@@ -178,7 +182,7 @@ function openBeanDetail(item, pushState = true) {
 
     gridSection.style.display = 'none';
     detailSection.style.display = 'block';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 window.closeBeanDetail = function() {
@@ -192,7 +196,9 @@ window.closeBeanDetail = function() {
 
     gridSection.style.display = 'block';
     detailSection.style.display = 'none';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Restore scroll position precisely
+    window.scrollTo({ top: lastScrollPosition, behavior: 'instant' });
 };
 
 window.addEventListener('popstate', () => {
