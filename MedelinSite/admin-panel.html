@@ -344,8 +344,28 @@
                 showLoader(false);
             }
 
-            async function confirmOrder(oid) { if (confirm('Підтвердити замовлення?')) { await apiFetch(`orders/${oid}/confirm`, 'POST'); refreshData(); } }
-            async function rejectOrder(oid) { if (confirm('Відхилити замовлення?')) { await apiFetch(`orders/${oid}/reject`, 'POST'); refreshData(); } }
+            async function confirmOrder(oid) { 
+                if (confirm('Підтвердити замовлення?')) { 
+                    const res = await apiFetch(`orders/${oid}/confirm`, 'POST');
+                    if (res && res.status === 'ok') {
+                        alert('Замовлення підтверджено');
+                        refreshData();
+                    } else {
+                        alert('Помилка при підтвердженні');
+                    }
+                } 
+            }
+            async function rejectOrder(oid) { 
+                if (confirm('Відхилити замовлення?')) { 
+                    const res = await apiFetch(`orders/${oid}/reject`, 'POST');
+                    if (res && res.status === 'ok') {
+                        alert('Замовлення відхилено');
+                        refreshData();
+                    } else {
+                        alert('Помилка при відхиленні');
+                    }
+                } 
+            }
 
             async function loadOrders() {
                 showLoader(true);

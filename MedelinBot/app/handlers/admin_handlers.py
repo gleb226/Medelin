@@ -73,39 +73,96 @@ async def back_to_admin_main(callback: CallbackQuery):
 @admin_router.message(F.text == '🆕 НОВІ ЗАМОВЛЕННЯ')
 async def list_new_orders_msg(message: Message):
     if not await admin_db.is_admin(message.from_user.id): return
-    # Placeholder for new orders logic (e.g. pending payment or approval)
-    await message.answer('🆕 <b>НОВІ ЗАМОВЛЕННЯ:</b>\nТут будуть замовлення, що очікують підтвердження або оплати.', parse_mode='HTML')
-
-@admin_router.message(F.text == '📦 АКТИВНІ ЗАМОВЛЕННЯ')
-async def list_active_orders_msg(message: Message):
-    if not await admin_db.is_admin(message.from_user.id): return
-    role = await get_user_role(message.from_user.id)
-    locs = None
-    if role not in ('boss', 'owner', 'developer'):
-        locs = await admin_db.get_locations_for_admin(message.from_user.id)
-    
-    orders = await active_orders_db.get_active_orders(locs)
-    if not orders:
-        await message.answer('📦 <b>АКТИВНІ ЗАМОВЛЕННЯ:</b>\nНаразі немає замовлень у роботі.', parse_mode='HTML')
-        return
-    await message.answer('📦 <b>АКТИВНІ ЗАМОВЛЕННЯ:</b>\nНатисніть на замовлення, щоб завершити його:', reply_markup=akb.get_active_orders_list_kb(orders), parse_mode='HTML')
+    await show_new_orders(message)
 
 @admin_router.callback_query(F.data == 'new_orders')
 async def list_new_orders_cb(callback: CallbackQuery):
-    await callback.answer('Функція в розробці...')
+    await show_new_orders(callback.message)
+    await callback.answer()
 
-@admin_router.callback_query(F.data == 'active_orders')
-async def list_active_orders_cb(callback: CallbackQuery):
-    role = await get_user_role(callback.from_user.id)
-    locs = None
-    if role not in ('boss', 'owner', 'developer'):
-        locs = await admin_db.get_locations_for_admin(callback.from_user.id)
-    
-    orders = await active_orders_db.get_active_orders(locs)
+async def show_new_orders(message: Message):
+    orders = await orders_db.get_new_orders()
     if not orders:
-        await callback.answer('Немає активних замовлень.')
+        await message.answer('🆕 <b>НОВІ ЗАМОВЛЕННЯ:</b>\nНаразі нових замовлень немає.', parse_mode='HTML')
         return
-    await safe_edit_message(callback.message, '📦 <b>АКТИВНІ ЗАМОВЛЕННЯ:</b>\nНатисніть для завершення:', reply_markup=akb.get_active_orders_list_kb(orders), parse_mode='HTML')
+    
+    text = "🆕 <b>НОВІ ЗАМОВЛЕННЯ:</b>\n\n"
+    for o in orders:
+        oid = str(o['_id'])
+        user = o.get('fullname', 'Гість')
+        total = o.get('total_amount', 0)
+        created = o.get('created_at').strftime('%H:%M') if o.get('created_at') else '??'
+        text += f"🕒 {created} | 📦 <b>{user}</b> - {total} ₴\nПереглянути: /view_order_{oid}\n\n"
+    
+    await message.answer(text, parse_mode='HTML')
+
+@admin_router.message(F.text.startswith('/view_order_'))
+async def view_order_details(message: Message, bot: Bot):
+    if not await admin_db.is_admin(message.from_user.id): return
+    oid = message.text.replace('/view_order_', '')
+    order = await orders_db.get_order_by_id(oid)
+    if not order:
+        await message.answer("Замовлення не знайдено.")
+        return
+    
+    status_label = "НОВЕ" if order.get('status') == 'new' else "ОПЛАЧЕНО"
+    type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'НП', 'beans_delivery': 'Зерна (НП)', 'beans_booking': 'Зерна (Брон)' }
+    order_type = order.get('order_type')
+    type_label = type_map.get(order_type, order_type)
+    
+    msg = f"📦 <b>ЗАМОВЛЕННЯ #{oid[-6:]}</b> ({status_label})\n\n"
+    msg += f"👤 Клієнт: <b>{order.get('fullname')}</b>\n"
+    msg += f"📞 Телефон: <code>{order.get('phone')}</code>\n"
+    msg += f"🚚 Куди: <b>{type_label}</b> {order.get('table_number', '')}\n"
+    msg += f"💰 Сума: <b>{order.get('total_amount')} ₴</b>\n"
+    msg += f"💳 Оплата: <b>{order.get('payment_mode')}</b>\n\n"
+    msg += f"🛒 <b>СКЛАД:</b>\n{order.get('cart')}\n\n"
+    msg += f"📝 ПОБАЖАННЯ: <b>{order.get('wishes') or '—'}</b>"
+    
+    await message.answer(msg, reply_markup=akb.get_booking_manage_kb(oid, order.get('user_id') or -1), parse_mode='HTML')
+
+@admin_router.callback_query(F.data.startswith('confirm_order_'))
+async def confirm_order_handler(callback: CallbackQuery, bot: Bot):
+    oid = callback.data.replace('confirm_order_', '')
+    order = await orders_db.get_order_by_id(oid)
+    if not order:
+        await callback.answer('Замовлення не знайдено.')
+        return
+    
+    await orders_db.update_status(oid, 'confirmed')
+    # Add to active orders if not there
+    await active_orders_db.add_active_order(
+        oid, order.get('user_id'), order.get('fullname'), order.get('phone'), 
+        order.get('location_id'), order.get('cart'), order.get('order_type'), 
+        order.get('table_number', ''), order.get('total_amount'), 
+        order.get('payment_mode'), order.get('wishes')
+    )
+    
+    await safe_edit_message(callback.message, callback.message.text + "\n\n✅ <b>ПІДТВЕРДЖЕНО</b>", parse_mode='HTML')
+    await callback.answer('Підтверджено!')
+    
+    await deliver_guest_message(bot, order, "✅ <b>Ваше замовлення підтверджено!</b>\nМи вже готуємо його.", "Admin confirmed")
+
+@admin_router.callback_query(F.data.startswith('reject_order_'))
+async def reject_order_handler(callback: CallbackQuery, bot: Bot):
+    oid = callback.data.replace('reject_order_', '')
+    order = await orders_db.get_order_by_id(oid)
+    if not order:
+        await callback.answer('Замовлення не знайдено.')
+        return
+    
+    await orders_db.update_status(oid, 'rejected')
+    await safe_edit_message(callback.message, callback.message.text + "\n\n❌ <b>ВІДХИЛЕНО</b>", parse_mode='HTML')
+    await callback.answer('Відхилено.')
+    
+    await deliver_guest_message(bot, order, "❌ <b>На жаль, ваше замовлення відхилено.</b>\nДля деталей зв'яжіться з нами.", "Admin rejected")
+
+@admin_router.callback_query(F.data.startswith('finish_order_'))
+async def finish_order_handler(callback: CallbackQuery, bot: Bot):
+    oid = callback.data.replace('finish_order_', '')
+    await active_orders_db.remove_order(oid)
+    await callback.answer('Замовлення завершено!')
+    await list_active_orders_cb(callback)
 
 # --- CONTENT MANAGEMENT BLOCK ---
 

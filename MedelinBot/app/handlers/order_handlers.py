@@ -41,6 +41,8 @@ import re, time
 
 order_router = Router()
 
+from app.utils.nova_poshta import np_client
+
 class OrderStates(StatesGroup):
     choosing_order_type = State()
     choosing_location = State()
@@ -51,27 +53,71 @@ class OrderStates(StatesGroup):
     entering_phone = State()
     choosing_bean_weight = State()
     choosing_bean_delivery = State()
+    searching_np_city = State()
+    choosing_np_warehouse = State()
     choosing_bean_payment = State()
-
-@order_router.callback_query(F.data == 'bean_back')
-async def bean_back(callback: CallbackQuery, state: FSMContext):
-    from app.handlers.user_handlers import show_beans
-    await show_beans(callback.message)
-    await callback.message.delete()
-    await state.clear()
-
-@order_router.callback_query(F.data == 'bean_w_250')
-async def bean_weight_chosen(callback: CallbackQuery, state: FSMContext):
-    await state.update_data(weight=250)
-    kb_del = kb.get_beans_delivery_kb()
-    await safe_edit_message(callback.message, '🚚 <b>ОБЕРІТЬ СПОСІБ ОТРИМАННЯ:</b>', reply_markup=kb_del, parse_mode='HTML')
-    await state.set_state(OrderStates.choosing_bean_delivery)
 
 @order_router.callback_query(F.data == 'bean_del_np', OrderStates.choosing_bean_delivery)
 async def bean_delivery_np(callback: CallbackQuery, state: FSMContext):
     await state.update_data(delivery_type='nova_poshta', location_id='NP')
-    await callback.message.answer('🏙 <b>ВКАЖІТЬ ВАШЕ МІСТО (або частину назви):</b>', parse_mode='HTML')
-    await state.set_state(OrderStates.entering_phone) # Simplified: just ask for phone for now
+    await safe_edit_message(callback.message, '🏙 <b>ВКАЖІТЬ ВАШЕ МІСТО (або частину назви):</b>', parse_mode='HTML')
+    await state.set_state(OrderStates.searching_np_city)
+
+@order_router.message(OrderStates.searching_np_city)
+async def np_city_search(message: Message, state: FSMContext):
+    search = (message.text or '').strip()
+    if len(search) < 2:
+        await message.answer('Назва занадто коротка. Спробуйте ще раз:')
+        return
+    
+    cities = await np_client.search_settlements(search)
+    if not cities:
+        await message.answer('🏙 Місто не знайдено. Спробуйте іншу назву:')
+        return
+    
+    await message.answer(f'🔍 <b>РЕЗУЛЬТАТИ ПОШУКУ "{search}":</b>', reply_markup=kb.get_np_cities_kb(cities), parse_mode='HTML')
+
+@order_router.callback_query(F.data.startswith('np_city_'), OrderStates.searching_np_city)
+async def np_city_chosen(callback: CallbackQuery, state: FSMContext):
+    city_ref = callback.data.replace('np_city_', '')
+    # Find city name from keyboard (or we could store it in state during search)
+    city_name = "Місто"
+    for row in callback.message.reply_markup.inline_keyboard:
+        for button in row:
+            if button.callback_data == callback.data:
+                city_name = button.text
+                break
+    
+    await state.update_data(np_city_ref=city_ref, np_city_name=city_name)
+    
+    warehouses = await np_client.get_warehouses(city_ref)
+    if not warehouses:
+        await callback.answer('У цьому місті не знайдено відділень.', show_alert=True)
+        return
+    
+    await state.update_data(all_warehouses=warehouses) # Cache for pagination
+    await safe_edit_message(callback.message, f'🏪 <b>ОБЕРІТЬ ВІДДІЛЕННЯ ({city_name}):</b>', reply_markup=kb.get_np_warehouses_kb(warehouses), parse_mode='HTML')
+    await state.set_state(OrderStates.choosing_np_warehouse)
+
+@order_router.callback_query(F.data.startswith('np_wh_page_'), OrderStates.choosing_np_warehouse)
+async def np_wh_pagination(callback: CallbackQuery, state: FSMContext):
+    page = int(callback.data.replace('np_wh_page_', ''))
+    data = await state.get_data()
+    warehouses = data.get('all_warehouses', [])
+    await safe_edit_message(callback.message, callback.message.text, reply_markup=kb.get_np_warehouses_kb(warehouses, page=page), parse_mode='HTML')
+
+@order_router.callback_query(F.data.startswith('np_wh_'), OrderStates.choosing_np_warehouse)
+async def np_wh_chosen(callback: CallbackQuery, state: FSMContext):
+    wh_ref = callback.data.replace('np_wh_', '')
+    wh_name = "Відділення"
+    for row in callback.message.reply_markup.inline_keyboard:
+        for button in row:
+            if button.callback_data == callback.data:
+                wh_name = button.text
+                break
+    
+    await state.update_data(np_warehouse=wh_name)
+    await ask_phone_order(callback, state)
 
 async def ask_phone_order(target, state: FSMContext):
     text = '📞 <b>ВКАЖІТЬ ВАШ ТЕЛЕФОН (+380...):</b>\n\nНатисніть кнопку нижче або введіть вручну:'
@@ -131,21 +177,28 @@ async def process_beans_final(user, chat_id, state, bot):
     is_admin = await admin_db.is_admin(user.id)
     order_type = 'beans_delivery' if data.get('delivery_type') == 'nova_poshta' else 'beans_booking'
     
+    delivery_info = f"{data.get('np_city_name', '')}, {data.get('np_warehouse', '')}" if order_type == 'beans_delivery' else "Самовивіз"
+    pay_label = "ОПЛАЧЕНО" if data.get('payment_method') == 'card' else "НАКЛАДЕНИЙ ПЛАТІЖ"
+    
     rid = await orders_db.add_order(
         user_id=user.id, username=user.username, fullname=user.full_name, phone=data.get('phone', '—'), 
-        location_id=data.get('location_id') or "NP", wishes=f"ВАГА: 250г", 
+        location_id=data.get('location_id') or "NP", wishes=f"ВАГА: 250г | {delivery_info}", 
         cart=f"ЗЕРНА: {data['bean_name']}", order_type=order_type,
         date_time='НОВА ПОШТА', people_count='0',
-        payment_mode='pay_on_delivery', total_amount=data.get('base_price', 0)
+        payment_mode='pay_on_delivery' if data.get('payment_method') != 'card' else 'pay_now', 
+        total_amount=data.get('base_price', 0)
     )
 
     await active_orders_db.add_active_order(
         rid, user.id, user.full_name, data.get('phone', '—'), data.get('location_id') or "NP", 
         data['bean_name'], order_type, total=data.get('base_price', 0), 
-        payment_mode='pay_on_delivery', wishes="ВАГА: 250г"
+        payment_mode='pay_on_delivery' if data.get('payment_method') != 'card' else 'pay_now', 
+        wishes=f"ВАГА: 250г | {delivery_info}"
     )
 
-    msg = f"☕️ <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n👤 <b>КЛІЄНТ:</b> {user.full_name}\n📞 <b>ТЕЛЕФОН:</b> <code>{data.get('phone')}</code>\n📦 <b>СОРТ:</b> {data['bean_name']} (250г)\n🚚 <b>ДОСТАВКА:</b> НОВА ПОШТА\n📦 <b>ОПЛАТА:</b> НАКЛАДЕНИЙ ПЛАТІЖ"
+    msg = f"☕️ <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n👤 {user.full_name}\n📞 <code>{data.get('phone')}</code>\n🚚 Куди: <b>{delivery_info}</b>"
+    msg += f"\n📦 Сорт: <b>{data['bean_name']} (250г)</b>\n💳 Оплата: <b>{pay_label}</b>"
+    msg += f"\n\n🛒 {data['bean_name']} (250г)"
 
     targets = await admin_db.get_notification_targets(data.get('location_id'))
     for aid in targets:

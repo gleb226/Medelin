@@ -713,7 +713,7 @@ window.openCheckoutModal = function () {
                                 <input type="hidden" name="delivery_type" value="nova_poshta">
 
                                 <div class="form-group" style="margin-top: 1rem;">
-                                    <label class="form-label">Тип доставки НП:</label>
+                                    <label class="form-label">Тип доставки Нової Пошти:</label>
                                     <div class="choice-grid" style="grid-template-columns: 1fr 1fr;">
                                         <label class="choice-chip choice-chip--active" id="np_type_branch_label">
                                             <input type="radio" name="np_delivery_mode" value="branch" checked style="display:none;" onchange="window.toggleNpMode('branch')">
@@ -931,6 +931,8 @@ function initNovaPoshtaSearch() {
         const ref = document.getElementById('np_city_ref').value;
         const whRes = document.getElementById('np_wh_results');
         if (!ref || !whRes) return;
+        if (val.length > 0 && val.length < 2) return;
+        
         whRes.innerHTML = '<div class="np-result-item" style="opacity:0.5;">Шукаємо...</div>';
         whRes.style.display = 'block';
         fetch(`${window.API_BASE_URL}/api/nova-poshta/warehouses?cityRef=${ref}&search=${encodeURIComponent(val)}`)
@@ -956,7 +958,7 @@ function initNovaPoshtaSearch() {
                     });
                 }
             });
-    }, 350);
+    }, 500);
 
     const searchCities = debounce((val) => {
         if (val.length < 2) {

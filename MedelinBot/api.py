@@ -106,55 +106,23 @@ def build_cart_text(cart: list) -> tuple[int, str]:
         items.append(f"- {item['name']} ({price} грн)")
     return (total, '\n'.join(items))
 
-async def call_np(model: str, method: str, params: dict):
-    url = "https://api.novaposhta.ua/v2.0/json/"
-    payload = {
-        "apiKey": NP_API_KEY,
-        "modelName": model,
-        "calledMethod": method,
-        "methodProperties": params
-    }
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                data = await resp.json()
-                if not data.get('success'):
-                    logger.error(f"NP API Error: {data.get('errors')}")
-                    return []
-                return data.get('data', [])
-    except Exception as e:
-        logger.error(f"NP API Exception: {e}")
-        return []
+from app.utils.nova_poshta import np_client
 
+# ... (around line 96)
 @app.get('/api/nova-poshta/cities')
 async def get_np_cities(search: str = Query('')):
     if len(search) < 2: return []
-    # Try searchSettlements first
-    res = await call_np("Address", "searchSettlements", {"CityName": search, "Limit": "20"})
-    if isinstance(res, list) and len(res) > 0 and 'Addresses' in res[0]:
-        return res[0]['Addresses']
-    # Fallback to getCities
-    res = await call_np("Address", "getCities", {"FindByString": search, "Limit": "20"})
-    return res
+    return await np_client.search_settlements(search)
 
 @app.get('/api/nova-poshta/warehouses')
 async def get_np_warehouses(cityRef: str, search: str = Query('')):
-    # Try with provided ref (could be CityRef or SettlementRef)
-    params = {"CityRef": cityRef, "Limit": "50"}
-    if search: params["FindByString"] = search
-    res = await call_np("Address", "getWarehouses", params)
-    if not res:
-        # Try as SettlementRef
-        params = {"SettlementRef": cityRef, "Limit": "50"}
-        if search: params["FindByString"] = search
-        res = await call_np("Address", "getWarehouses", params)
-    return res
+    return await np_client.get_warehouses(cityRef, search)
 
 @app.get('/api/nova-poshta/streets')
 async def get_np_streets(cityRef: str = Query(None), city_ref: str = Query(None), search: str = Query('')):
     ref = cityRef or city_ref
     if not ref or len(search) < 2: return []
-    res = await call_np("Address", "searchSettlementStreets", {"StreetName": search, "SettlementRef": ref, "Limit": "20"})
+    res = await np_client.search_streets(ref, search)
     if isinstance(res, list) and len(res) > 0 and 'Addresses' in res[0]:
         return res[0]['Addresses']
     return []
@@ -244,9 +212,9 @@ async def process_checkout(req: CheckoutRequest):
         
         pay_label = "НАКЛАДЕНИЙ ПЛАТІЖ" if order_type == 'nova_poshta' else "ПІСЛЯПЛАТА"
         
-        msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 {user.get("name")}\n📞 {phone}\n📍 Куди: <b>{type_label}</b>\n🏠 Деталі: <b>{delivery_info}</b>'
-        msg += f'\n💰 {total} грн\n💳 Оплата: <b>{pay_label}</b>\n\n🛒 {items_text}'
-        msg += f'\n\n📝 <b>ПОБАЖАННЯ:</b>\n{wishes_str}'
+        msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ</b>\n\n👤 {user.get("name")}\n📞 <code>{phone}</code>\n🚚 Куди: <b>{type_label} {delivery_info}</b>'
+        msg += f'\n💰 <b>{total} грн</b>\n💳 Оплата: <b>{pay_label}</b>\n\n🛒 {items_text}'
+        msg += f'\n\n📝 ПОБАЖАННЯ: <b>{wishes_str}</b>'
         
         await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, user_id or -1), location_id=loc_id)
         return {'status': 'ok', 'manual': True, 'order_id': oid}
@@ -293,14 +261,24 @@ async def liqpay_callback(request: Request):
                 from app.databases.active_orders_database import active_orders_db
                 await active_orders_db.add_active_order(oid, order.get('user_id'), order.get('fullname'), order.get('phone'), order.get('location_id'), order.get('cart'), order.get('order_type'), order.get('table_number'), order.get('total_amount'), 'pay_now', order.get('wishes'))
                 
-                type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Нова Пошта' }
+                type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'НП' }
                 order_type = order.get('order_type')
                 type_label = type_map.get(order_type, order_type)
-                if order_type == 'nova_poshta':
-                    type_label = "НП"
                 
-                msg = f'💰 <b>ОПЛАЧЕНО ЗАМОВЛЕННЯ</b>\n\n👤 {order.get("fullname")}\n📞 {order.get("phone")}\n📍 Куди: <b>{type_label}</b>\n🏠 Деталі: <b>{order.get("wishes") if order.get("wishes") else "—"}</b>'
-                msg += f'\n💰 {order.get("total_amount")} грн\n💳 Оплата: <b>ОПЛАЧЕНО (Сайт)</b>\n\n🛒 {order.get("cart")}'
+                delivery_info = order.get('table_number') if order_type == 'in_house' else ""
+                if order_type == 'nova_poshta':
+                    # For NP we might have stored address in wishes or it's empty in this simple flow
+                    # But if it came from site, we should check if we can reconstruct it.
+                    # In process_checkout we don't store delivery_info separately in the order doc.
+                    # Let's use wishes for now as details if it contains address-like info.
+                    delivery_info = order.get('wishes', '')
+                    wishes_str = "—"
+                else:
+                    wishes_str = order.get('wishes') or '—'
+
+                msg = f'💰 <b>ОПЛАЧЕНО ЗАМОВЛЕННЯ</b>\n\n👤 {order.get("fullname")}\n📞 <code>{order.get("phone")}</code>\n🚚 Куди: <b>{type_label} {delivery_info}</b>'
+                msg += f'\n💰 <b>{order.get("total_amount")} грн</b>\n💳 Оплата: <b>ОПЛАЧЕНО</b>\n\n🛒 {order.get("cart")}'
+                msg += f'\n\n📝 ПОБАЖАННЯ: <b>{wishes_str if order_type != "nova_poshta" else "—"}</b>'
                 
                 await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, order.get('user_id') or -1), location_id=order.get('location_id'))
         return {'status': 'ok'}
