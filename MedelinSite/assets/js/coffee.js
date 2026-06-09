@@ -104,12 +104,6 @@ function openBeanDetail(item, pushState = true) {
 
     detailContent.innerHTML = `
         <div class="bean-full-view">
-            <div style="margin-bottom: 2rem;">
-                <button class="btn btn--outline btn--sm" onclick="window.closeBeanDetail()">
-                    <i class="fas fa-arrow-left" style="margin-right: 8px;"></i> Назад до списку
-                </button>
-            </div>
-            
             <div class="bean-full-view__container" style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 4rem; align-items: stretch; margin-bottom: 3rem;">
                 <div class="bean-full-view__left-col" style="display: flex; flex-direction: column;">
                     <img src="${item.image_url || defImg}" alt="${displayName}" style="width: 100%; height: 600px; border-radius: 32px; box-shadow: 0 25px 50px rgba(0,0,0,0.15); object-fit: cover; margin-bottom: 1.2rem;">

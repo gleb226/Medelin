@@ -199,21 +199,15 @@ async def process_beans_final(user, chat_id, state, bot):
     
     rid = await orders_db.add_order(
         user_id=user.id, username=user.username, fullname=user.full_name, phone=data.get('phone', '—'), 
-        location_id=data.get('location_id') or "NP", wishes=f"{delivery_info}", 
+        location_id=data.get('location_id') or "NP", wishes="НОВА ПОШТА", 
         cart=f"ЗЕРНА: {data['bean_name']}", order_type=order_type,
         date_time='НОВА ПОШТА', people_count='0',
         payment_mode='pay_on_delivery' if data.get('payment_method') != 'card' else 'pay_now', 
         total_amount=data.get('base_price', 0)
     )
 
-    await active_orders_db.add_active_order(
-        rid, user.id, user.full_name, data.get('phone', '—'), data.get('location_id') or "NP", 
-        data['bean_name'], order_type, total=data.get('base_price', 0), 
-        payment_mode='pay_on_delivery' if data.get('payment_method') != 'card' else 'pay_now', 
-        wishes=f"{delivery_info}"
-    )
-
     msg = f"☕️ <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n👤 {user.full_name}\n📞 <code>{data.get('phone')}</code>\n🚚 Куди: <b>{delivery_info}</b>"
+
     msg += f"\n📦 Сорт: <b>{data['bean_name']}</b>\n💳 Оплата: <b>{pay_label}</b>"
     msg += f"\n\n🛒 {data['bean_name']}"
 

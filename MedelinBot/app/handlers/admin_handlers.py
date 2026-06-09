@@ -216,16 +216,6 @@ async def confirm_order_handler(callback: CallbackQuery, bot: Bot):
     
     await safe_edit_message(callback.message, callback.message.text + "\n\n✅ <b>ПІДТВЕРДЖЕНО</b>", parse_mode='HTML')
     await callback.answer('Підтверджено!')
-    
-    # User notification
-    if order.get('user_id'):
-        user_msg = "✅ <b>Ваше замовлення підтверджено!</b>"
-        if order.get('cart'):
-            user_msg += f"\n\n🛒 <b>Склад замовлення:</b>\n{order.get('cart')}"
-        try:
-            await bot.send_message(order['user_id'], user_msg, parse_mode='HTML')
-        except:
-            pass
 
 @admin_router.callback_query(F.data.startswith('reject_order_'))
 async def reject_order_handler(callback: CallbackQuery, bot: Bot):
