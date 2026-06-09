@@ -48,14 +48,16 @@ function renderCoffeeData(coffeeData) {
         return;
     }
 
-    // Apply background colors to sections - more explicit as requested
+    // Apply background colors to sections - using EXACT hex colors provided, NO transparency
     const commercialSection = document.getElementById('commercial-section');
     const specialtyEspressoSection = document.getElementById('specialty-espresso-section');
     const specialtyFilterSection = document.getElementById('specialty-filter-section');
 
-    if (commercialSection) commercialSection.style.backgroundColor = 'rgba(44, 115, 109, 0.12)'; // Olive/Teal #2c736d
-    if (specialtyEspressoSection) specialtyEspressoSection.style.backgroundColor = 'rgba(242, 185, 7, 0.12)'; // Yellow #f2b907
-    if (specialtyFilterSection) specialtyFilterSection.style.backgroundColor = 'rgba(248, 102, 3, 0.12)'; // Orange #f86603
+    if (commercialSection) {
+        commercialSection.style.backgroundColor = '#769487'; 
+    }
+    if (specialtyEspressoSection) specialtyEspressoSection.style.backgroundColor = '#F0CC75';
+    if (specialtyFilterSection) specialtyFilterSection.style.backgroundColor = '#FC9A4C';
 
     const defImg = 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?q=80&w=1061&auto=format&fit=crop';
 
@@ -73,7 +75,7 @@ function renderCoffeeData(coffeeData) {
                     ${item.processing ? `<div style="margin-bottom: 4px;"><strong>Обробка:</strong> ${item.processing}</div>` : ''}
                     ${item.descriptors || item.taste ? `<div style="margin-bottom: 4px;"><strong>Дескриптори:</strong> ${item.descriptors || item.taste}</div>` : ''}
                     ${item.roast ? `<div style="margin-bottom: 4px;"><strong>Обсмаження:</strong> ${item.roast}</div>` : ''}
-                    ${item.quality_score ? `<div style="color: #d32f2f; font-weight: 700;"><strong>Оцінка SCA:</strong> ${item.quality_score}</div>` : ''}
+                    ${item.quality_score ? `<div><strong>Оцінка якості:</strong> ${item.quality_score}</div>` : ''}
                 </div>
 
                 <div class="product-card__price-row">
