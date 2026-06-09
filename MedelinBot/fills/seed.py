@@ -435,13 +435,13 @@ async def seed():
         
         # Determine category image
         if not b.get('quality_score') or score < 80:
-            img_url = '../Photos/Comercial.png'
+            img_url = '../photos/Comercial.png'
         elif roast == 'espresso':
-            img_url = '../Photos/Espresso.png'
+            img_url = '../photos/Espresso.png'
         elif roast == 'filter':
-            img_url = '../Photos/Filter.png'
+            img_url = '../photos/Filter.png'
         else:
-            img_url = '../Photos/Comercial.png'
+            img_url = '../photos/Comercial.png'
 
         await coffee_beans_db.add_bean(
             name=b['name'], 
