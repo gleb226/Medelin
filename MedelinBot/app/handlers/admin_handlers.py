@@ -51,14 +51,15 @@ class AdminStates(StatesGroup):
     # Bean management states
     adding_bean_name = State()
     adding_bean_photo = State()
+    adding_bean_description = State()
     adding_bean_species = State()
     adding_bean_roast = State()
+    adding_bean_score = State()
     adding_bean_harvest = State()
     adding_bean_descriptors = State()
     adding_bean_variety = State()
     adding_bean_altitude = State()
     adding_bean_processing = State()
-    adding_bean_score = State()
     adding_bean_price = State()
     
     editing_bean_field = State()
@@ -358,7 +359,7 @@ async def add_bean_start(callback: CallbackQuery, state: FSMContext):
 @admin_router.message(AdminStates.adding_bean_name)
 async def add_bean_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
-    await message.answer('Скиньте фото (файлом або картинкою) або надішліть посилання на фото з інтернету.\n\nЯкщо фото не потрібне, надішліть <code>-</code>', parse_mode='HTML')
+    await message.answer('Скиньте фото (галерея/посилання) або <code>-</code>:', parse_mode='HTML')
     await state.set_state(AdminStates.adding_bean_photo)
 
 from app.utils.photo_utils import process_photo
@@ -367,6 +368,22 @@ from app.utils.photo_utils import process_photo
 async def add_bean_photo(message: Message, state: FSMContext, bot: Bot):
     url = await process_photo(message, bot)
     await state.update_data(image_url=url)
+    await message.answer('Вкажіть ціну за 250г (тільки число):')
+    await state.set_state(AdminStates.adding_bean_price)
+
+@admin_router.message(AdminStates.adding_bean_price)
+async def add_bean_price(message: Message, state: FSMContext):
+    try:
+        price = int(message.text)
+        await state.update_data(price_250=price)
+        await message.answer('Вкажіть ОПИС кави (кілька речень):')
+        await state.set_state(AdminStates.adding_bean_description)
+    except:
+        await message.answer('Помилка. Вкажіть ціну числом:')
+
+@admin_router.message(AdminStates.adding_bean_description)
+async def add_bean_description(message: Message, state: FSMContext):
+    await state.update_data(description=message.text)
     await message.answer('Вкажіть склад / ботанічний вид (напр. 100% Арабіка):')
     await state.set_state(AdminStates.adding_bean_species)
 
@@ -379,13 +396,19 @@ async def add_bean_species(message: Message, state: FSMContext):
 @admin_router.message(AdminStates.adding_bean_roast)
 async def add_bean_roast(message: Message, state: FSMContext):
     await state.update_data(roast=message.text)
-    await message.answer('Вкажіть рік/період врожаю (напр. 2023):')
+    await message.answer('Вкажіть оцінку якості (SCA Score) або <code>0</code>:', parse_mode='HTML')
+    await state.set_state(AdminStates.adding_bean_score)
+
+@admin_router.message(AdminStates.adding_bean_score)
+async def add_bean_score(message: Message, state: FSMContext):
+    await state.update_data(quality_score=message.text)
+    await message.answer('Вкажіть рік врожаю (напр. 2023):')
     await state.set_state(AdminStates.adding_bean_harvest)
 
 @admin_router.message(AdminStates.adding_bean_harvest)
 async def add_bean_harvest(message: Message, state: FSMContext):
     await state.update_data(harvest=message.text)
-    await message.answer('Вкажіть дескриптори (напр. Цитрус, Шоколад, Бергамот):')
+    await message.answer('Вкажіть дескриптори (напр. Цитрус, Шоколад):')
     await state.set_state(AdminStates.adding_bean_descriptors)
 
 @admin_router.message(AdminStates.adding_bean_descriptors)
@@ -397,50 +420,40 @@ async def add_bean_descriptors(message: Message, state: FSMContext):
 @admin_router.message(AdminStates.adding_bean_variety)
 async def add_bean_variety(message: Message, state: FSMContext):
     await state.update_data(variety=message.text)
-    await message.answer('Вкажіть висоту вирощування (напр. 1900-2200 м):')
+    await message.answer('Вкажіть висоту (напр. 1900 м):')
     await state.set_state(AdminStates.adding_bean_altitude)
 
 @admin_router.message(AdminStates.adding_bean_altitude)
 async def add_bean_altitude(message: Message, state: FSMContext):
     await state.update_data(altitude=message.text)
-    await message.answer('Вкажіть метод обробки (напр. Митий / Natural):')
+    await message.answer('Вкажіть метод обробки (напр. Митий):')
     await state.set_state(AdminStates.adding_bean_processing)
 
 @admin_router.message(AdminStates.adding_bean_processing)
 async def add_bean_processing(message: Message, state: FSMContext):
     await state.update_data(processing=message.text)
-    await message.answer('Вкажіть оцінку якості (SCA Score) цифрами (напр. 86.5).\n\nЯкщо це комерційна кава, надішліть <code>0</code>', parse_mode='HTML')
-    await state.set_state(AdminStates.adding_bean_score)
-
-@admin_router.message(AdminStates.adding_bean_score)
-async def add_bean_score(message: Message, state: FSMContext):
-    await state.update_data(quality_score=message.text)
-    await message.answer('Вкажіть ціну за 250г (тільки число):')
-    await state.set_state(AdminStates.adding_bean_price)
-
-@admin_router.message(AdminStates.adding_bean_price)
-async def add_bean_price(message: Message, state: FSMContext):
+    data = await state.get_data()
     try:
-        price = int(message.text)
-        data = await state.get_data()
         await coffee_beans_db.add_bean(
             name=data['name'],
-            price_250=price,
+            price_250=data['price_250'],
             image_url=data.get('image_url', ''),
+            description=data.get('description', ''),
             species=data.get('species', ''),
             roast=data.get('roast', ''),
+            quality_score=data.get('quality_score', '0'),
             harvest=data.get('harvest', ''),
             descriptors=data.get('descriptors', ''),
             variety=data.get('variety', ''),
             altitude=data.get('altitude', ''),
-            processing=data.get('processing', ''),
-            quality_score=data.get('quality_score', '0')
+            processing=data.get('processing', '')
         )
         await message.answer('✅ Сорт успішно додано!', reply_markup=akb.get_beans_manage_kb())
         await state.clear()
     except Exception as e:
         logger.error(f"Error adding bean: {e}")
-        await message.answer('Помилка. Вкажіть ціну числом:')
+        await message.answer('Виникла помилка при збереженні. Спробуйте ще раз.')
+        await state.clear()
 
 @admin_router.callback_query(F.data.startswith('bean_full_edit_'))
 async def edit_bean_full_start(callback: CallbackQuery, state: FSMContext):
@@ -451,7 +464,7 @@ async def edit_bean_full_start(callback: CallbackQuery, state: FSMContext):
         return
     
     await state.update_data(edit_bean_id=bid)
-    await callback.message.answer(f"📝 <b>РЕДАГУВАННЯ: {bean['name']}</b>\n\nВкажіть НОВУ назву або надішліть <code>.</code> щоб залишити поточну:", parse_mode='HTML')
+    await callback.message.answer(f"📝 <b>РЕДАГУВАННЯ: {bean['name']}</b>\n\nВкажіть НОВУ назву або <code>.</code>:", parse_mode='HTML')
     await state.set_state(AdminStates.editing_bean_field)
     await state.update_data(edit_step='name')
 
@@ -460,30 +473,49 @@ async def edit_bean_field_logic(message: Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
     step = data.get('edit_step')
     bid = data.get('edit_bean_id')
-    val = message.text.strip()
+    val = (message.text or "").strip()
     
-    # helper to check if skip
     skip = (val == '.')
     
     if step == 'name':
         if not skip: await state.update_data(name=val)
-        await message.answer('Нове фото (галерея/посилання) або <code>.</code> щоб пропустити:', parse_mode='HTML')
+        await message.answer('Нове фото або <code>.</code>:', parse_mode='HTML')
         await state.update_data(edit_step='photo')
     
     elif step == 'photo':
         if not skip:
             url = await process_photo(message, bot)
             await state.update_data(image_url=url)
-        await message.answer('Новий склад (напр. 100% Арабіка) або <code>.</code>:', parse_mode='HTML')
+        await message.answer('Нова ціна або <code>.</code>:', parse_mode='HTML')
+        await state.update_data(edit_step='price')
+
+    elif step == 'price':
+        if not skip:
+            try:
+                await state.update_data(price_250=int(val))
+            except:
+                await message.answer('Ціна має бути числом. Спробуйте ще раз або <code>.</code>:', parse_mode='HTML')
+                return
+        await message.answer('Новий ОПИС або <code>.</code>:', parse_mode='HTML')
+        await state.update_data(edit_step='description')
+        
+    elif step == 'description':
+        if not skip: await state.update_data(description=val)
+        await message.answer('Новий склад або <code>.</code>:', parse_mode='HTML')
         await state.update_data(edit_step='species')
         
     elif step == 'species':
         if not skip: await state.update_data(species=val)
-        await message.answer('Нове обсмаження (Espresso/Filter) або <code>.</code>:', parse_mode='HTML')
+        await message.answer('Нове обсмаження або <code>.</code>:', parse_mode='HTML')
         await state.update_data(edit_step='roast')
         
     elif step == 'roast':
         if not skip: await state.update_data(roast=val)
+        await message.answer('Нова оцінка або <code>.</code>:', parse_mode='HTML')
+        await state.update_data(edit_step='score')
+        
+    elif step == 'score':
+        if not skip: await state.update_data(quality_score=val)
         await message.answer('Новий врожай або <code>.</code>:', parse_mode='HTML')
         await state.update_data(edit_step='harvest')
         
@@ -509,26 +541,12 @@ async def edit_bean_field_logic(message: Message, state: FSMContext, bot: Bot):
         
     elif step == 'processing':
         if not skip: await state.update_data(processing=val)
-        await message.answer('Нова оцінка якості або <code>.</code>:', parse_mode='HTML')
-        await state.update_data(edit_step='score')
         
-    elif step == 'score':
-        if not skip: await state.update_data(quality_score=val)
-        await message.answer('Нова ціна за 250г або <code>.</code>:', parse_mode='HTML')
-        await state.update_data(edit_step='price')
-        
-    elif step == 'price':
         update = {}
-        fields = ['name', 'image_url', 'species', 'roast', 'harvest', 'descriptors', 'variety', 'altitude', 'processing', 'quality_score']
+        latest_data = await state.get_data()
+        fields = ['name', 'image_url', 'description', 'species', 'roast', 'quality_score', 'harvest', 'descriptors', 'variety', 'altitude', 'processing', 'price_250']
         for f in fields:
-            if f in data: update[f] = data[f]
-        
-        if not skip:
-            try:
-                update['price_250'] = int(val)
-            except:
-                await message.answer('Ціна має бути числом. Спробуйте ще раз або <code>.</code>:', parse_mode='HTML')
-                return
+            if f in latest_data: update[f] = latest_data[f]
         
         if update:
             await coffee_beans_db.update_bean(bid, update)
