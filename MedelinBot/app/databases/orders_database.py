@@ -90,12 +90,12 @@ class OrdersDatabase:
         return await cur.to_list(length=None)
 
     async def update_status(self, order_id, status):
-
         db = await get_db()
-
         oid = ObjectId(str(order_id))
-
-        await db.orders.update_one({'_id': oid}, {'$set': {'status': status}})
+        update = {'status': status}
+        if status == 'confirmed':
+            update['confirmed_at'] = datetime.utcnow()
+        await db.orders.update_one({'_id': oid}, {'$set': update})
 
     async def get_order_by_id(self, order_id):
 

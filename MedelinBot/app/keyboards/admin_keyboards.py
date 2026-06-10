@@ -20,7 +20,7 @@ def get_admin_main_kb(role='boss'):
     
     # 2. Content Management Block (Owner & Developer)
     if role in ('owner', 'developer', 'boss'):
-        keyboard.append([KeyboardButton(text='☕️ КЕРУВАННЯ ЗЕРНАМИ')])
+        keyboard.append([KeyboardButton(text='☕️ ЗЕРНА')])
         keyboard.append([KeyboardButton(text='📍 ЛОКАЦІЇ'), KeyboardButton(text='📞 КОНТАКТИ')])
     
     # 3. System Management Block (Owner & Developer)

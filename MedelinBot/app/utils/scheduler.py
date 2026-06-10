@@ -12,7 +12,7 @@ async def cleanup_old_data() -> None:
     now = datetime.utcnow()
 
     # Retention rules (user request)
-    cut_active = now - timedelta(days=4)
+    cut_active = now - timedelta(days=7)
     cut_logs = now - timedelta(days=7)
     cut_sales_bookings = now - timedelta(days=5)
     cut_users = now - timedelta(days=180)
