@@ -53,11 +53,23 @@ function renderCoffeeData(coffeeData) {
     const specialtyEspressoSection = document.getElementById('specialty-espresso-section');
     const specialtyFilterSection = document.getElementById('specialty-filter-section');
 
+    const colorCommercial = '#D5DEDA';
+    const colorSpecialtyEspresso = '#FFF4D1';
+    const colorSpecialtyFilter = '#FFEFE0';
+    const colorWhite = '#ffffff';
+
     if (commercialSection) {
-        commercialSection.style.backgroundColor = '#D5DEDA'; 
+        commercialSection.style.backgroundColor = colorCommercial;
+        commercialSection.style.backgroundImage = `linear-gradient(to bottom, ${colorWhite}, ${colorCommercial})`;
     }
-    if (specialtyEspressoSection) specialtyEspressoSection.style.backgroundColor = '#FFF4D1';
-    if (specialtyFilterSection) specialtyFilterSection.style.backgroundColor = '#FFEFE0';
+    if (specialtyEspressoSection) {
+        specialtyEspressoSection.style.backgroundColor = colorSpecialtyEspresso;
+        specialtyEspressoSection.style.backgroundImage = `linear-gradient(to bottom, ${colorCommercial}, ${colorSpecialtyEspresso})`;
+    }
+    if (specialtyFilterSection) {
+        specialtyFilterSection.style.backgroundColor = colorSpecialtyFilter;
+        specialtyFilterSection.style.backgroundImage = `linear-gradient(to bottom, ${colorSpecialtyEspresso}, ${colorSpecialtyFilter})`;
+    }
 
     const defImg = 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?q=80&w=1061&auto=format&fit=crop';
 
@@ -79,7 +91,7 @@ function renderCoffeeData(coffeeData) {
                 </div>
 
                 <div class="product-card__price-row">
-                    <span class="product-card__price">${item.price_250} ₴</span>
+                    <span class="product-card__price">${item.price_250} ₴ / 250г</span>
                     <button class="btn-add-plus" type="button" onclick="event.stopPropagation(); if(typeof window.addBeanToCart === 'function') window.addBeanToCart('${item.id || item._id}', '${String(item.name || '').replace(/[\"']/g, '')}', 'bean_weight_hidden_${item.id || item._id}');">
                         <i class="fas fa-plus"></i>
                     </button>
@@ -139,6 +151,18 @@ function openBeanDetail(item, pushState = true) {
     let displayName = item.name.replace(/Blend Mixed/gi, '').trim();
     const score = item.quality_score || item.cup_score;
 
+    // Determine category color for detail background
+    const scoreVal = parseFloat(item.quality_score);
+    const roast = (item.roast || '').toLowerCase();
+    let detailBgColor = '#D5DEDA'; // Default commercial
+
+    if (item.quality_score && scoreVal >= 80) {
+        if (roast === 'espresso') detailBgColor = '#FFF4D1';
+        else if (roast === 'filter') detailBgColor = '#FFEFE0';
+    }
+    
+    detailSection.style.backgroundColor = detailBgColor;
+
     detailContent.innerHTML = `
         <div class="bean-full-view">
             <div class="bean-full-view__container" style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 4rem; align-items: stretch; margin-bottom: 3rem;">
@@ -148,7 +172,7 @@ function openBeanDetail(item, pushState = true) {
                     <div style="background: var(--color-dark-brown); color: white; padding: 2.2rem; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 15px 35px rgba(0,0,0,0.2); margin-top: auto;">
                         <div>
                             <span style="display: block; font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.2rem;">Ціна</span>
-                            <span style="font-size: 2.5rem; font-weight: 800; font-family: var(--font-accent);">${item.price_250} ₴</span>
+                            <span style="font-size: 2.5rem; font-weight: 800; font-family: var(--font-accent);">${item.price_250} ₴ / 250г</span>
                         </div>
                         <button class="btn btn--primary" style="background: white; color: var(--color-dark-brown); border: none; padding: 1.2rem 2.5rem; font-size: 1.1rem; border-radius: 16px; font-weight: 800; cursor: pointer; transition: all 0.2s;" type="button" data-action="add-bean-to-cart" data-bean-id="${item.id || item._id}" data-bean-name="${String(item.name || '').replace(/[\"']/g, '')}" data-weight-name="bean_weight_${item.id || item._id}" onclick="this.style.transform='scale(0.95)'; setTimeout(()=>this.style.transform='scale(1)', 100)">
                             <i class="fas fa-shopping-basket" style="margin-right: 12px;"></i> У кошик
