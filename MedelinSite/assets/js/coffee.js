@@ -58,17 +58,18 @@ function renderCoffeeData(coffeeData) {
     const colorSpecialtyFilter = '#FFEFE0';
     const colorWhite = '#ffffff';
 
+    // Sharper, more elegant gradients (only 80px transition)
     if (commercialSection) {
         commercialSection.style.backgroundColor = colorCommercial;
-        commercialSection.style.backgroundImage = `linear-gradient(to bottom, ${colorWhite}, ${colorCommercial})`;
+        commercialSection.style.backgroundImage = `linear-gradient(to bottom, ${colorWhite} 0%, ${colorCommercial} 80px)`;
     }
     if (specialtyEspressoSection) {
         specialtyEspressoSection.style.backgroundColor = colorSpecialtyEspresso;
-        specialtyEspressoSection.style.backgroundImage = `linear-gradient(to bottom, ${colorCommercial}, ${colorSpecialtyEspresso})`;
+        specialtyEspressoSection.style.backgroundImage = `linear-gradient(to bottom, ${colorCommercial} 0%, ${colorSpecialtyEspresso} 80px)`;
     }
     if (specialtyFilterSection) {
         specialtyFilterSection.style.backgroundColor = colorSpecialtyFilter;
-        specialtyFilterSection.style.backgroundImage = `linear-gradient(to bottom, ${colorSpecialtyEspresso}, ${colorSpecialtyFilter})`;
+        specialtyFilterSection.style.backgroundImage = `linear-gradient(to bottom, ${colorSpecialtyEspresso} 0%, ${colorSpecialtyFilter} 80px)`;
     }
 
     const defImg = 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?q=80&w=1061&auto=format&fit=crop';
@@ -161,7 +162,11 @@ function openBeanDetail(item, pushState = true) {
         else if (roast === 'filter') detailBgColor = '#FFEFE0';
     }
     
+    // Set background color AND remove any gradient artifacts under header
     detailSection.style.backgroundColor = detailBgColor;
+    detailSection.style.backgroundImage = 'none';
+    detailSection.style.marginTop = '0';
+    detailSection.style.paddingTop = '3rem';
 
     detailContent.innerHTML = `
         <div class="bean-full-view">
@@ -184,7 +189,7 @@ function openBeanDetail(item, pushState = true) {
                     <h1 style="font-family: var(--font-accent); font-size: 3.5rem; line-height: 1.1; margin-bottom: 1.5rem; color: var(--color-dark-brown);">${displayName}</h1>
                     <p style="font-size: 1.2rem; line-height: 1.6; color: #4a3728; margin-bottom: 2rem; font-weight: 400; opacity: 0.9;">${item.description || 'Преміальна свіжообсмажена кава Medelin, створена для справжніх поціновувачів.'}</p>
                     
-                    <div class="bean-full-view__primary-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; background: var(--color-cream); padding: 2.5rem; border-radius: 24px; border: 1px solid rgba(139, 94, 60, 0.08); flex-grow: 1; align-content: start;">
+                    <div class="bean-full-view__primary-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; background: #fdfaf5; padding: 2.5rem; border-radius: 24px; border: 1px solid rgba(139, 94, 60, 0.15); flex-grow: 1; align-content: start;">
                         ${item.species ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Склад</label><p style="font-size: 1.1rem; font-weight: 700;">${item.species}</p></div>` : ''}
                         ${item.roast ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Обсмаження</label><p style="font-size: 1.1rem; font-weight: 700;">${item.roast}</p></div>` : ''}
                         ${score ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Оцінка якості</label><p style="font-size: 1.1rem; font-weight: 700;">${score}</p></div>` : ''}
