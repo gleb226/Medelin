@@ -88,7 +88,7 @@ async def show_location_details(callback: CallbackQuery):
 
         [InlineKeyboardButton(text='🗺 ГУГЛ КАРТИ', url=loc.get('google_maps_url', 'https://maps.google.com'))],
 
-        [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='back_locinfo')]
+        [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='back_locinfo')]
 
     ])
 

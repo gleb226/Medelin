@@ -36,7 +36,7 @@ def get_beans_manage_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='➕ ДОДАТИ', callback_data='bean_add'), InlineKeyboardButton(text='📝 РЕДАГУВАТИ', callback_data='beans_list_edit')],
         [InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data='beans_list_del'), InlineKeyboardButton(text='📜 СПИСОК', callback_data='beans_list')],
-        [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')]
+        [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')]
     ])
 
 def get_bean_edit_fields_kb(bean_id):
@@ -48,7 +48,7 @@ def get_bean_edit_fields_kb(bean_id):
         [InlineKeyboardButton(text='🍓 Дескрип.', callback_data=f'bean_fedit_{bean_id}_descriptors'), InlineKeyboardButton(text='🧬 Різновид', callback_data=f'bean_fedit_{bean_id}_variety')],
         [InlineKeyboardButton(text='⛰ Висота', callback_data=f'bean_fedit_{bean_id}_altitude'), InlineKeyboardButton(text='🧪 Обробка', callback_data=f'bean_fedit_{bean_id}_processing')],
         [InlineKeyboardButton(text='🔄 РЕДАГУВАТИ ВСЕ', callback_data=f'bean_full_edit_{bean_id}')],
-        [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='beans_list')]
+        [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ ДО СПИСКУ', callback_data='beans_list')]
     ])
 
 
@@ -56,28 +56,28 @@ def get_locations_manage_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='➕ ДОДАТИ ЛОКАЦІЮ', callback_data='location_add')],
         [InlineKeyboardButton(text='📍 СПИСОК / РЕДАГУВАННЯ', callback_data='locations_list')],
-        [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')]
+        [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')]
     ])
 
 def get_contacts_manage_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='➕ ДОДАТИ КОНТАКТ', callback_data='contact_add')],
         [InlineKeyboardButton(text='📞 СПИСОК / РЕДАГУВАННЯ', callback_data='contacts_list')],
-        [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')]
+        [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')]
     ])
 
 def get_staff_manage_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='➕ ДОДАТИ ПЕРСОНАЛ', callback_data='staff_add')],
         [InlineKeyboardButton(text='👤 СПИСОК ПЕРСОНАЛУ', callback_data='staff_list')],
-        [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')]
+        [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')]
     ])
 
 def get_active_types_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='🆕 НОВІ (БЕЗ ОПЛАТИ / ПЕРЕВІРКА)', callback_data='new_orders')],
         [InlineKeyboardButton(text='📦 АКТИВНІ (В РОБОТІ)', callback_data='active_orders')],
-        [InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')]
+        [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')]
     ])
 
 def get_active_orders_list_kb(orders):
@@ -87,7 +87,7 @@ def get_active_orders_list_kb(orders):
         user = o.get('user_name', 'Гість')
         type_name = ORDER_TYPE_NAMES.get(o.get('order_type'), 'Замовлення')
         buttons.append([InlineKeyboardButton(text=f"📦 {type_name} - {user}", callback_data=f"finish_order_{oid}")])
-    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='admin_panel_back')])
+    buttons.append([InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 

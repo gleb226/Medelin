@@ -104,17 +104,19 @@ function renderCoffeeData(coffeeData) {
         art.onclick = () => openBeanDetail(item);
 
         // Categorization logic
-        const score = parseFloat(item.quality_score);
+        const qScore = (item.quality_score || '').trim();
         const roast = (item.roast || '').toLowerCase();
+        
+        const isCommercial = !qScore || qScore === '—' || qScore === '-' || qScore === '0';
 
-        if (!item.quality_score || score < 80) {
+        if (isCommercial) {
             commercialRoot.appendChild(art);
-        } else if (roast === 'espresso') {
+        } else if (roast.includes('espresso')) {
             specialtyEspressoRoot.appendChild(art);
-        } else if (roast === 'filter') {
+        } else if (roast.includes('filter')) {
             specialtyFilterRoot.appendChild(art);
         } else {
-            commercialRoot.appendChild(art); // Default to commercial
+            specialtyEspressoRoot.appendChild(art); // Default specialty
         }
     });
 
@@ -153,13 +155,15 @@ function openBeanDetail(item, pushState = true) {
     const score = item.quality_score || item.cup_score;
 
     // Determine category color for detail background
-    const scoreVal = parseFloat(item.quality_score);
+    const qScore = (item.quality_score || '').trim();
     const roast = (item.roast || '').toLowerCase();
+    const isCommercial = !qScore || qScore === '—' || qScore === '-' || qScore === '0';
     let detailBgColor = '#D5DEDA'; // Default commercial
 
-    if (item.quality_score && scoreVal >= 80) {
-        if (roast === 'espresso') detailBgColor = '#FFF4D1';
-        else if (roast === 'filter') detailBgColor = '#FFEFE0';
+    if (!isCommercial) {
+        if (roast.includes('espresso')) detailBgColor = '#FFF4D1';
+        else if (roast.includes('filter')) detailBgColor = '#FFEFE0';
+        else detailBgColor = '#FFF4D1'; // Default specialty
     }
     
     // Set background color AND remove any gradient artifacts under header

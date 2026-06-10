@@ -312,19 +312,26 @@ async def list_beans_admin(callback: CallbackQuery):
         return
     
     mode_titles = {'list': 'СПИСОК', 'edit': 'РЕДАГУВАННЯ', 'del': 'ВИДАЛЕННЯ'}
-    text = f"📜 <b>{mode_titles[mode]} ЗЕРЕН:</b>\n\n"
-    buttons = []
+    text = f"📜 <b>{mode_titles[mode]} ЗЕРЕН:</b>"
+    
+    keyboard = []
+    row = []
     for b in beans:
         bid = str(b['_id'])
-        text += f"• <b>{b['name']}</b> ({b.get('price_250')} ₴)\n"
-        
         cb = f"bean_edit_{bid}"
         if mode == 'del': cb = f"bean_del_confirm_{bid}"
         
-        buttons.append([InlineKeyboardButton(text=f"⚙️ {b['name'][:20]}", callback_data=cb)])
+        # Grid logic: 2 columns
+        row.append(InlineKeyboardButton(text=f"⚙️ {b['name'][:18]}", callback_data=cb))
+        if len(row) == 2:
+            keyboard.append(row)
+            row = []
     
-    buttons.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='beans_manage')])
-    await safe_edit_message(callback.message, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons), parse_mode='HTML')
+    if row:
+        keyboard.append(row)
+    
+    keyboard.append([InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='beans_manage')])
+    await safe_edit_message(callback.message, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard), parse_mode='HTML')
 
 @admin_router.callback_query(F.data.startswith('bean_edit_'))
 async def edit_bean_menu(callback: CallbackQuery):
