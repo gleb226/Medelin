@@ -163,6 +163,10 @@ function openBeanDetail(item, pushState = true) {
     }
     
     // Set background color AND remove any gradient artifacts under header
+    const mainElement = document.querySelector('main');
+    if (mainElement) {
+        mainElement.style.backgroundColor = detailBgColor;
+    }
     detailSection.style.backgroundColor = detailBgColor;
     detailSection.style.backgroundImage = 'none';
     detailSection.style.marginTop = '0';
@@ -189,17 +193,17 @@ function openBeanDetail(item, pushState = true) {
                     <h1 style="font-family: var(--font-accent); font-size: 3.5rem; line-height: 1.1; margin-bottom: 1.5rem; color: var(--color-dark-brown);">${displayName}</h1>
                     <p style="font-size: 1.2rem; line-height: 1.6; color: #4a3728; margin-bottom: 2rem; font-weight: 400; opacity: 0.9;">${item.description || 'Преміальна свіжообсмажена кава Medelin, створена для справжніх поціновувачів.'}</p>
                     
-                    <div class="bean-full-view__primary-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; background: #fdfaf5; padding: 2.5rem; border-radius: 24px; border: 1px solid rgba(139, 94, 60, 0.15); flex-grow: 1; align-content: start;">
-                        ${item.species ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Склад</label><p style="font-size: 1.1rem; font-weight: 700;">${item.species}</p></div>` : ''}
-                        ${item.roast ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Обсмаження</label><p style="font-size: 1.1rem; font-weight: 700;">${item.roast}</p></div>` : ''}
-                        ${score ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Оцінка якості</label><p style="font-size: 1.1rem; font-weight: 700;">${score}</p></div>` : ''}
-                        ${item.harvest ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Врожай</label><p style="font-size: 1.1rem; font-weight: 700;">${item.harvest}</p></div>` : ''}
+                    <div class="bean-full-view__primary-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; background: var(--color-coffee); padding: 2.5rem; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); flex-grow: 1; align-content: start; color: #fff; box-shadow: var(--shadow-md);">
+                        ${item.species ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); margin-bottom: 0.5rem;">Склад</label><p style="font-size: 1.1rem; font-weight: 700; color: #fff;">${item.species}</p></div>` : ''}
+                        ${item.roast ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); margin-bottom: 0.5rem;">Обсмаження</label><p style="font-size: 1.1rem; font-weight: 700; color: #fff;">${item.roast}</p></div>` : ''}
+                        ${score ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); margin-bottom: 0.5rem;">Оцінка якості</label><p style="font-size: 1.1rem; font-weight: 700; color: #fff;">${score}</p></div>` : ''}
+                        ${item.harvest ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); margin-bottom: 0.5rem;">Врожай</label><p style="font-size: 1.1rem; font-weight: 700; color: #fff;">${item.harvest}</p></div>` : ''}
                         
-                        ${item.descriptors || item.taste ? `<div style="grid-column: span 2; border-top: 1px solid rgba(0,0,0,0.04); padding-top: 1.5rem;"><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Дескриптори</label><p style="font-size: 1.2rem; font-weight: 700; color: var(--color-dark-brown);">${item.descriptors || item.taste}</p></div>` : ''}
+                        ${item.descriptors || item.taste ? `<div style="grid-column: span 2; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 1.5rem;"><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); margin-bottom: 0.5rem;">Дескриптори</label><p style="font-size: 1.2rem; font-weight: 700; color: #fff;">${item.descriptors || item.taste}</p></div>` : ''}
                         
-                        ${item.variety ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Різновид</label><p style="font-size: 1.1rem; font-weight: 700;">${item.variety}</p></div>` : ''}
-                        ${item.altitude ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Висота</label><p style="font-size: 1.1rem; font-weight: 700;">${item.altitude}</p></div>` : ''}
-                        ${item.processing ? `<div style="grid-column: span 2;"><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.6;">Метод обробки</label><p style="font-size: 1.1rem; font-weight: 700;">${item.processing}</p></div>` : ''}
+                        ${item.variety ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); margin-bottom: 0.5rem;">Різновид</label><p style="font-size: 1.1rem; font-weight: 700; color: #fff;">${item.variety}</p></div>` : ''}
+                        ${item.altitude ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); margin-bottom: 0.5rem;">Висота</label><p style="font-size: 1.1rem; font-weight: 700; color: #fff;">${item.altitude}</p></div>` : ''}
+                        ${item.processing ? `<div style="grid-column: span 2;"><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); margin-bottom: 0.5rem;">Метод обробки</label><p style="font-size: 1.1rem; font-weight: 700; color: #fff;">${item.processing}</p></div>` : ''}
                     </div>
 
                     <div style="display:none;">
@@ -219,7 +223,14 @@ function openBeanDetail(item, pushState = true) {
 window.closeBeanDetail = function() {
     const gridSection = document.getElementById('beans-grid-section');
     const detailSection = document.getElementById('bean-detail-section');
+    const mainElement = document.querySelector('main');
+    
+    if (mainElement) {
+        mainElement.style.backgroundColor = '';
+    }
+    
     if (!gridSection || !detailSection) return;
+
 
     const url = new URL(window.location);
     url.searchParams.delete('id');
