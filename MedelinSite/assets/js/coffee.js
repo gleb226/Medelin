@@ -193,16 +193,6 @@ function openBeanDetail(item, pushState = true) {
                     <h1 style="font-family: var(--font-accent); font-size: 3.5rem; line-height: 1.1; margin-bottom: 1rem; color: var(--color-dark-brown);">${displayName}</h1>
                     <p style="font-size: 1.1rem; line-height: 1.6; color: #4a3728; margin-bottom: 2rem; font-weight: 400; opacity: 0.9;">${item.description || 'Преміальна свіжообсмажена кава Medelin, створена для справжніх поціновувачів.'}</p>
                     
-                    <div style="background: var(--color-dark-brown); color: white; padding: 1.5rem 2rem; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.15); margin-bottom: 2rem;">
-                        <div style="flex: 1;">
-                            <span style="display: block; font-size: 0.8rem; opacity: 0.8; margin-bottom: 0.1rem; text-transform: uppercase; letter-spacing: 1px;">Ціна</span>
-                            <span style="font-size: 1.8rem; font-weight: 800; font-family: var(--font-accent); white-space: nowrap;">${item.price_250} ₴ <small style="font-size: 1rem; opacity: 0.7; font-weight: 400;">/ 250г</small></span>
-                        </div>
-                        <button class="btn btn--primary" style="background: white; color: var(--color-dark-brown); border: none; padding: 0.8rem 1.8rem; font-size: 1rem; border-radius: 14px; font-weight: 800; cursor: pointer; transition: all 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 10px;" type="button" data-action="add-bean-to-cart" data-bean-id="${item.id || item._id}" data-bean-name="${String(item.name || '').replace(/[\"']/g, '')}" data-weight-name="bean_weight_${item.id || item._id}" onclick="this.style.transform='scale(0.95)'; setTimeout(()=>this.style.transform='scale(1)', 100)">
-                            <i class="fas fa-shopping-basket"></i> У кошик
-                        </button>
-                    </div>
-
                     <div class="bean-full-view__primary-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; background: #fcf8f5; padding: 2.5rem; border-radius: 24px; border: 1px solid rgba(111, 78, 55, 0.2); flex-grow: 1; align-content: start; color: var(--color-dark-brown); box-shadow: var(--shadow-sm);">
                         ${item.species ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Склад</label><p style="font-size: 1.1rem; font-weight: 700; color: var(--color-dark-brown);">${item.species}</p></div>` : ''}
                         ${item.roast ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Обсмаження</label><p style="font-size: 1.1rem; font-weight: 700; color: var(--color-dark-brown);">${item.roast}</p></div>` : ''}
