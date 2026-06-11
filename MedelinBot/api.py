@@ -522,4 +522,5 @@ async def admin_delete_team(uid: int, admin: dict = Depends(get_current_admin)):
     return {'status': 'ok'}
 
 if _site_dir:
+    app.mount('/uploads', StaticFiles(directory=str(_site_dir / 'assets' / 'images' / 'uploads')), name='uploads')
     app.mount('/', StaticFiles(directory=str(_site_dir), html=True), name='site')
