@@ -232,6 +232,7 @@ window.closeBeanDetail = function() {
     if (mainElement) {
         mainElement.style.backgroundColor = '';
     }
+    document.body.style.backgroundColor = '';
     
     if (!gridSection || !detailSection) return;
 
@@ -261,4 +262,6 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', fetchCoffee);
 } else {
     fetchCoffee();
+}
+fee();
 }
