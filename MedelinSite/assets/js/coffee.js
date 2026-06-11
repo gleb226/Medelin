@@ -171,10 +171,11 @@ function openBeanDetail(item, pushState = true) {
     if (mainElement) {
         mainElement.style.backgroundColor = detailBgColor;
     }
+    document.body.style.backgroundColor = detailBgColor;
     detailSection.style.backgroundColor = detailBgColor;
     detailSection.style.backgroundImage = 'none';
     detailSection.style.marginTop = '0';
-    detailSection.style.paddingTop = '3rem';
+    detailSection.style.paddingTop = '1rem';
 
     detailContent.innerHTML = `
         <div class="bean-full-view">
@@ -262,6 +263,4 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', fetchCoffee);
 } else {
     fetchCoffee();
-}
-fee();
 }
