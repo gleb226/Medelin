@@ -799,7 +799,7 @@ h4 {
 .products {
     max-width: var(--container-width);
     margin: 0 auto;
-    padding: 5rem var(--gutter-x);
+    padding: 0.7rem var(--gutter-x);
 }
 
 .products-grid {
