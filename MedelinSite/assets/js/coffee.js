@@ -175,7 +175,7 @@ function openBeanDetail(item, pushState = true) {
     detailSection.style.backgroundColor = detailBgColor;
     detailSection.style.backgroundImage = 'none';
     detailSection.style.marginTop = '0';
-    detailSection.style.paddingTop = '1rem';
+    detailSection.style.paddingTop = '0.5rem';
 
     detailContent.innerHTML = `
         <div class="bean-full-view">
