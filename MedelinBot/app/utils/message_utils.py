@@ -6,17 +6,17 @@ from aiogram.exceptions import TelegramBadRequest
 import logging
 
 async def safe_edit_message(message: Message, text: str, reply_markup: InlineKeyboardMarkup=None, parse_mode: str='HTML', **kwargs):
-
     try:
-
         if message.photo:
-
-            await message.edit_caption(caption=text, reply_markup=reply_markup, parse_mode=parse_mode, **kwargs)
-
+            # If it's a photo, we usually want to move to a text menu when "back" is pressed.
+            # Editing caption keeps the photo. To get rid of it, we delete and send new.
+            try:
+                await message.delete()
+            except:
+                pass
+            return await message.answer(text, reply_markup=reply_markup, parse_mode=parse_mode, **kwargs)
         else:
-
-            await message.edit_text(text=text, reply_markup=reply_markup, parse_mode=parse_mode, **kwargs)
-
+            return await message.edit_text(text=text, reply_markup=reply_markup, parse_mode=parse_mode, **kwargs)
     except TelegramBadRequest as e:
 
         if 'message is not modified' in str(e).lower():

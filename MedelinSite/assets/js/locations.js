@@ -49,7 +49,7 @@ function renderLocations(locations) {
         article.onclick = () => window.openPopup(locId);
 
         article.innerHTML = `
-            <div class="product-card__image" style="background-image: url('${loc.image_url}')"></div>
+            <div class="product-card__image" style="background-image: url('${window.fixImageUrl(loc.image_url)}')"></div>
             <div class="product-card__content">
                 <h3 class="product-card__title">${loc.name}</h3>
                 <p style="font-size: 0.9rem; color: var(--color-muted);">${loc.address}</p>
@@ -64,7 +64,7 @@ function renderLocations(locations) {
             <div class="popup__overlay" data-action="close-popup" data-popup-id="${locId}"></div>
             <div class="popup__content">
                 <button class="popup__close" type="button" data-action="close-popup" data-popup-id="${locId}"><i class="fas fa-times"></i></button>
-                <img src="${loc.image_url}" class="popup__image">
+                <img src="${window.fixImageUrl(loc.image_url)}" class="popup__image">
                 <div class="popup__body-inner">
                     <h3 class="popup__title popup__title--margin-bottom">${loc.name}</h3>
                     <p class="popup__description">${loc.atmosphere || ''}</p>
@@ -190,7 +190,7 @@ function addMarkerToMap(loc, locId) {
 
     const popupHtml = `
         <div class="map-popup">
-            <div class="map-popup__header" style="background-image: url('${loc.image_url}');"></div>
+            <div class="map-popup__header" style="background-image: url('${window.fixImageUrl(loc.image_url)}');"></div>
             <div class="map-popup__body">
                 <h4 class="map-popup__title">${loc.name}</h4>
                 <p class="map-popup__address"><span><i class="fas fa-map-marker-alt" style="margin-right:5px;"></i></span> ${loc.address}</p>
