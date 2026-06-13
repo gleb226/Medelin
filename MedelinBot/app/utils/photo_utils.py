@@ -17,46 +17,13 @@ from app.common.bot_instance import bot as global_bot
 
 logger = logging.getLogger(__name__)
 
-def _get_uploads_dir() -> pathlib.Path:
-    """
-    Determines the directory for photo uploads based on the environment.
-    """
-    # 1. Manual override
-    env_dir = (os.getenv('UPLOADS_DIR') or '').strip()
-    if env_dir:
-        return pathlib.Path(env_dir)
+from app.utils.paths import get_uploads_dir
 
-    # 2. Docker / Unified environment (Nginx + Bot)
-    # Common path for shared volume between Nginx and Bot
-    paths_to_try = [
-        pathlib.Path('/usr/share/nginx/html/assets/images/uploads'),
-        pathlib.Path('/app/MedelinSite/assets/images/uploads'),
-        pathlib.Path('/app/uploads'),
-    ]
-    
-    for p in paths_to_try:
-        if p.exists() or p.parent.exists():
-            try:
-                p.mkdir(parents=True, exist_ok=True)
-                return p
-            except:
-                continue
-
-    # 3. Local development (fallback)
-    try:
-        repo_root = pathlib.Path(__file__).resolve().parents[3]
-        dev_path = repo_root / 'MedelinSite' / 'assets' / 'images' / 'uploads'
-        dev_path.mkdir(parents=True, exist_ok=True)
-        return dev_path
-    except Exception:
-        pass
-        
-    return pathlib.Path('uploads')
-
-async def process_photo(message: Message, bot: Bot = None) -> str:
+async def process_photo(message: Message, bot: Bot = None) -> str | None:
     """
     Processes a photo from a message (either PhotoSize or Document).
     Returns a URL-friendly path starting with /uploads/.
+    Returns None if the user explicitly sent '-' to skip/remove.
     """
     target_bot = bot or global_bot
     file_id = None
@@ -74,7 +41,9 @@ async def process_photo(message: Message, bot: Bot = None) -> str:
 
     if not file_id:
         val = (message.text or '').strip()
-        return '' if val == '-' else val
+        if val == '-':
+            return None
+        return val
 
     try:
         file_bytes_io = io.BytesIO()
@@ -83,16 +52,12 @@ async def process_photo(message: Message, bot: Bot = None) -> str:
         f = await target_bot.get_file(file_id)
         await target_bot.download_file(f.file_path, destination=file_bytes_io)
         file_bytes_io.seek(0)
-        if f.file_path:
-            ext = pathlib.Path(f.file_path).suffix.lower()
-            if ext:
-                original_ext = ext
         
         file_bytes = file_bytes_io.getvalue()
         if not file_bytes:
             return ''
 
-        uploads_dir = _get_uploads_dir()
+        uploads_dir = get_uploads_dir()
         stem = uuid.uuid4().hex[:10]
 
         # Try to convert to WEBP for efficiency
@@ -114,7 +79,7 @@ async def process_photo(message: Message, bot: Bot = None) -> str:
             filename = f'{stem}.webp'
             filepath = uploads_dir / filename
             
-            img.save(str(filepath), 'WEBP', quality=85, method=6)
+            img.save(str(filepath), 'WEBP', quality=85, method=4)
             logger.info(f"Saved processed photo: {filename}")
             return f'/uploads/{filename}'
         except Exception as e:

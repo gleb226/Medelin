@@ -15,7 +15,7 @@ def get_admin_main_kb(role='boss'):
     """
     # 1. Orders Block
     keyboard = [
-        [KeyboardButton(text='🆕 НОВІ ЗАМОВЛЕННЯ'), KeyboardButton(text='📦 АКТИВНІ ЗАМОВЛЕННЯ')],
+        [KeyboardButton(text='НОВІ'), KeyboardButton(text='АКТИВНІ')],
     ]
     
     # 2. Content Management Block (Owner & Developer)
@@ -37,8 +37,8 @@ def get_admin_main_inline_kb(role='boss'):
     Inline version of Admin Menu for message editing.
     """
     keyboard = [
-        [InlineKeyboardButton(text='🆕 НОВІ ЗАМОВЛЕННЯ', callback_data='new_orders')],
-        [InlineKeyboardButton(text='📦 АКТИВНІ ЗАМОВЛЕННЯ', callback_data='active_orders')],
+        [InlineKeyboardButton(text='НОВІ', callback_data='new_orders')],
+        [InlineKeyboardButton(text='АКТИВНІ', callback_data='active_orders')],
     ]
     if role in ('owner', 'developer', 'boss'):
         keyboard.append([InlineKeyboardButton(text='☕️ ЗЕРНА', callback_data='beans_manage')])
@@ -97,8 +97,8 @@ def get_staff_manage_kb():
 
 def get_active_types_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='🆕 НОВІ (БЕЗ ОПЛАТИ / ПЕРЕВІРКА)', callback_data='new_orders')],
-        [InlineKeyboardButton(text='📦 АКТИВНІ (В РОБОТІ)', callback_data='active_orders')],
+        [InlineKeyboardButton(text='🆕 НОВІ', callback_data='new_orders')],
+        [InlineKeyboardButton(text='📦 АКТИВНІ', callback_data='active_orders')],
         [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')]
     ])
 

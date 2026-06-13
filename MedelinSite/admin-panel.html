@@ -416,7 +416,10 @@
                             <div class="admin-field"><label>Висота</label><input name="altitude" value="${b?.altitude || ''}"></div>
                             <div class="admin-field"><label>Обробка</label><input name="processing" value="${b?.processing || ''}"></div>
                             <div class="admin-field"><label>Врожай</label><input name="harvest" value="${b?.harvest || ''}"></div>
-                            <div class="admin-field"><label>URL Фото</label><input name="image_url" value="${b?.image_url || ''}"></div>
+                            <div class="admin-field"><label>URL Фото</label><input name="image_url" id="bean-image-url" value="${b?.image_url || ''}" oninput="document.getElementById('bean-img-preview').src = this.value"></div>
+                        </div>
+                        <div id="bean-img-preview-container" style="margin-top:1rem; text-align:center;">
+                            <img id="bean-img-preview" src="${b?.image_url || 'https://via.placeholder.com/150'}" style="max-width:200px; max-height:200px; border-radius:12px; border:2px solid var(--color-coffee-soft); object-fit:cover;">
                         </div>
                         <div class="admin-field" style="margin-top:1rem;"><label>Опис</label><textarea name="description" rows="3">${b?.description || ''}</textarea></div>
                     </form>
