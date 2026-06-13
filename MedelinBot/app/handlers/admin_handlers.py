@@ -79,7 +79,7 @@ async def back_to_admin_main(callback: CallbackQuery):
 
 # --- ORDERS BLOCK ---
 
-@admin_router.message(F.text == 'НОВІ')
+@admin_router.message(F.text == '🆕 НОВІ')
 async def list_new_orders_msg(message: Message):
     if not await admin_db.is_admin(message.from_user.id): return
     await show_new_orders(message)
@@ -92,7 +92,7 @@ async def list_new_orders_cb(callback: CallbackQuery):
 async def show_new_orders(message: Message):
     orders = await orders_db.get_new_orders()
     if not orders:
-        await message.answer('<b>НОВІ:</b>\nНаразі нових замовлень немає.', parse_mode='HTML')
+        await message.answer('🆕 <b>НОВІ:</b>\nНаразі нових замовлень немає.', parse_mode='HTML')
         return
     
     for o in orders:
@@ -124,7 +124,7 @@ async def show_new_orders(message: Message):
         
         await message.answer(msg, reply_markup=akb.get_booking_manage_kb(oid, o.get('user_id') or -1), parse_mode='HTML')
 
-@admin_router.message(F.text == 'АКТИВНІ')
+@admin_router.message(F.text == '📦 АКТИВНІ')
 async def list_active_orders_msg(message: Message):
     if not await admin_db.is_admin(message.from_user.id): return
     await show_active_orders(message)
@@ -137,7 +137,7 @@ async def list_active_orders_cb(callback: CallbackQuery):
 async def show_active_orders(message: Message):
     orders = await active_orders_db.get_all_active_orders()
     if not orders:
-        await message.answer('<b>АКТИВНІ:</b>\nНаразі активних замовлень немає.', parse_mode='HTML')
+        await message.answer('📦 <b>АКТИВНІ:</b>\nНаразі активних замовлень немає.', parse_mode='HTML')
         return
     
     for o in orders:

@@ -15,7 +15,7 @@ def get_admin_main_kb(role='boss'):
     """
     # 1. Orders Block
     keyboard = [
-        [KeyboardButton(text='НОВІ'), KeyboardButton(text='АКТИВНІ')],
+        [KeyboardButton(text='🆕 НОВІ'), KeyboardButton(text='📦 АКТИВНІ')],
     ]
     
     # 2. Content Management Block (Owner & Developer)
@@ -37,8 +37,8 @@ def get_admin_main_inline_kb(role='boss'):
     Inline version of Admin Menu for message editing.
     """
     keyboard = [
-        [InlineKeyboardButton(text='НОВІ', callback_data='new_orders')],
-        [InlineKeyboardButton(text='АКТИВНІ', callback_data='active_orders')],
+        [InlineKeyboardButton(text='🆕 НОВІ', callback_data='new_orders')],
+        [InlineKeyboardButton(text='📦 АКТИВНІ', callback_data='active_orders')],
     ]
     if role in ('owner', 'developer', 'boss'):
         keyboard.append([InlineKeyboardButton(text='☕️ ЗЕРНА', callback_data='beans_manage')])
