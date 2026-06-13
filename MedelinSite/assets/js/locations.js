@@ -118,6 +118,8 @@ function guessSocialKeyFromUrl(url) {
     if (u.includes('telegram.') || u.includes('t.me/')) return 'telegram';
     if (u.includes('viber.')) return 'viber';
     if (u.includes('github.')) return 'github';
+    if (u.startsWith('tel:')) return 'phone';
+    if (u.startsWith('mailto:')) return 'email';
     return null;
 }
 

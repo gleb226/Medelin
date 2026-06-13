@@ -410,6 +410,8 @@ LOCATIONS_DATA = [
 ]
 
 SOCIALS_DATA = [
+    {'name': '📞 Телефон', 'url': 'tel:+380503775906'},
+    {'name': '📧 Email', 'url': 'mailto:medelin.social@gmail.com'},
     {'name': 'Instagram', 'url': 'https://www.instagram.com/medelin_uzh/'},
     {'name': 'Facebook', 'url': 'https://www.facebook.com/medelin.coffee/'},
     {'name': 'Telegram', 'url': 'https://t.me/medelin_bot'},
@@ -435,13 +437,13 @@ async def seed():
         
         # Determine category image
         if not b.get('quality_score') or score < 80:
-            img_url = '../photos/Comercial.png'
+            img_url = '/photos/Comercial.png'
         elif roast == 'espresso':
-            img_url = '../photos/Espresso.png'
+            img_url = '/photos/Espresso.png'
         elif roast == 'filter':
-            img_url = '../photos/Filter.png'
+            img_url = '/photos/Filter.png'
         else:
-            img_url = '../photos/Comercial.png'
+            img_url = '/photos/Comercial.png'
 
         await coffee_beans_db.add_bean(
             name=b['name'], 

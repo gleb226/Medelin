@@ -427,30 +427,34 @@ async def show_bean_card(target, bean: dict):
     logger.info(f"Showing bean card for {bean.get('name')}. Image URL in DB: {image}")
 
     if image:
-        if image.startswith('/uploads/'):
+        if image.startswith('/uploads/') or image.startswith('/photos/'):
             # Try multiple possible local paths for robustness
-            filename = image.replace('/uploads/', '')
+            filename = image.lstrip('/')
             uploads_dir = get_uploads_dir()
-            local_path = uploads_dir / filename
+            repo_root = Path(__file__).resolve().parents[3]
+            
+            # 1. Try directly in MedelinSite
+            local_path = repo_root / "MedelinSite" / filename
+            if not local_path.exists() and image.startswith('/uploads/'):
+                # 2. Try in assets/images/uploads (where it should be in site)
+                local_path = repo_root / "MedelinSite" / "assets" / "images" / filename
+            if not local_path.exists() and image.startswith('/uploads/'):
+                # 3. Try in the dynamic uploads_dir
+                local_path = uploads_dir / filename.replace('uploads/', '')
             
             logger.info(f"Checking local photo at: {local_path}")
             
             if local_path.exists():
                 photo = FSInputFile(local_path)
+            elif WEB_APP_URL:
+                # Fallback to web URL if local file not found
+                photo = f"{WEB_APP_URL.rstrip('/')}{image}"
+                logger.info(f"Photo not found locally, using web URL: {photo}")
             else:
-                # Fallback to repo-relative if needed
-                repo_root = Path(__file__).resolve().parents[3]
-                alt_path = repo_root / "MedelinSite" / "assets" / "images" / "uploads" / filename
-                if alt_path.exists():
-                    logger.info(f"Found photo at fallback path: {alt_path}")
-                    photo = FSInputFile(alt_path)
-                elif WEB_APP_URL:
-                    # Fallback to web URL if local file not found
-                    photo = f"{WEB_APP_URL.rstrip('/')}{image}"
-                    logger.info(f"Photo not found locally, using web URL: {photo}")
-                else:
-                    logger.warning(f"Photo file not found: {filename}")
-        elif image.startswith('http') or len(image) > 20: # Likely URL or file_id
+                logger.warning(f"Photo file not found: {filename}")
+        elif image.startswith('http'):
+            photo = image
+        elif len(image) > 10 and '/' not in image: # Likely file_id
             photo = image
 
     if photo:
