@@ -7,11 +7,6 @@ from pathlib import Path
 def get_uploads_dir() -> Path:
     """
     Resolve a writable uploads directory across environments.
-
-    Priority:
-    1) `UPLOADS_DIR` env override
-    2) Common container paths (/usr/share/nginx/html/images/uploads, /app/uploads, /app/MedelinSite/images/uploads)
-    3) Repo-local `MedelinSite/images/uploads`
     """
     env_dir = (os.getenv("UPLOADS_DIR") or "").strip()
     if env_dir:
@@ -20,9 +15,9 @@ def get_uploads_dir() -> Path:
         return p
 
     candidates = [
-        Path("/usr/share/nginx/html/images/uploads"),
+        Path("/usr/share/nginx/html/assets/images/uploads"),
+        Path("/app/MedelinSite/assets/images/uploads"),
         Path("/app/uploads"),
-        Path("/app/MedelinSite/images/uploads"),
     ]
     for p in candidates:
         if p.exists() or p.parent.exists():
@@ -33,7 +28,7 @@ def get_uploads_dir() -> Path:
                 pass
 
     repo_root = Path(__file__).resolve().parents[3]
-    dev_path = repo_root / "MedelinSite" / "images" / "uploads"
+    dev_path = repo_root / "MedelinSite" / "assets" / "images" / "uploads"
     dev_path.mkdir(parents=True, exist_ok=True)
     return dev_path
 

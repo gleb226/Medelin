@@ -34,20 +34,26 @@ def get_admin_main_kb(role='boss'):
 
 def get_beans_manage_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='➕ ДОДАТИ', callback_data='bean_add'), InlineKeyboardButton(text='📝 РЕДАГУВАТИ', callback_data='beans_list_edit')],
-        [InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data='beans_list_del'), InlineKeyboardButton(text='📜 СПИСОК', callback_data='beans_list')],
+        [InlineKeyboardButton(text='🌱 Комерційна', callback_data='beans_page_commercial'), InlineKeyboardButton(text='⭐ Спешелті', callback_data='beans_page_specialty')],
+        [InlineKeyboardButton(text='➕ ДОДАТИ НОВУ КАВУ', callback_data='bean_new')],
         [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')]
+    ])
+
+def get_bean_card_kb(bean_id, category='commercial'):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ ВСЕ', callback_data=f'bean_full_edit_{bean_id}')],
+        [InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data=f'bean_del_confirm_{bean_id}')],
+        [InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data=f'beans_page_{category}')]
     ])
 
 def get_bean_edit_fields_kb(bean_id):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='🏷 Назва', callback_data=f'bean_fedit_{bean_id}_name'), InlineKeyboardButton(text='💰 Ціна', callback_data=f'bean_fedit_{bean_id}_price')],
-        [InlineKeyboardButton(text='📸 Фото', callback_data=f'bean_fedit_{bean_id}_photo'), InlineKeyboardButton(text='📝 Опис', callback_data=f'bean_fedit_{bean_id}_description')],
+        [InlineKeyboardButton(text='📸 Фото', callback_data=f'bean_fedit_{bean_id}_photo'), InlineKeyboardButton(text='🌱 Категорія', callback_data=f'bean_fedit_{bean_id}_category')],
         [InlineKeyboardButton(text='🌿 Склад', callback_data=f'bean_fedit_{bean_id}_species'), InlineKeyboardButton(text='🔥 Обсмаж.', callback_data=f'bean_fedit_{bean_id}_roast')],
         [InlineKeyboardButton(text='📊 Оцінка', callback_data=f'bean_fedit_{bean_id}_score'), InlineKeyboardButton(text='📅 Врожай', callback_data=f'bean_fedit_{bean_id}_harvest')],
         [InlineKeyboardButton(text='🍓 Дескрип.', callback_data=f'bean_fedit_{bean_id}_descriptors'), InlineKeyboardButton(text='🧬 Різновид', callback_data=f'bean_fedit_{bean_id}_variety')],
         [InlineKeyboardButton(text='⛰ Висота', callback_data=f'bean_fedit_{bean_id}_altitude'), InlineKeyboardButton(text='🧪 Обробка', callback_data=f'bean_fedit_{bean_id}_processing')],
-        [InlineKeyboardButton(text='🔄 РЕДАГУВАТИ ВСЕ', callback_data=f'bean_full_edit_{bean_id}')],
         [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ ДО СПИСКУ', callback_data='beans_list')]
     ])
 

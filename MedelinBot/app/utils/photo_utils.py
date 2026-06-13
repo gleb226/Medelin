@@ -64,7 +64,10 @@ async def process_photo(message: Message, bot: Bot = None) -> str:
 
     if message.photo:
         file_id = message.photo[-1].file_id
-    elif message.document and message.document.mime_type and message.document.mime_type.startswith('image/'):
+    elif message.document and (
+        (message.document.mime_type or '').startswith('image/')
+        or pathlib.Path(message.document.file_name or '').suffix.lower() in ('.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif')
+    ):
         file_id = message.document.file_id
         if message.document.file_name:
             original_ext = pathlib.Path(message.document.file_name).suffix.lower()
@@ -77,14 +80,13 @@ async def process_photo(message: Message, bot: Bot = None) -> str:
         file_bytes_io = io.BytesIO()
 
         # Download file
-        try:
-            f = await target_bot.get_file(file_id)
-            await target_bot.download_file(f.file_path, destination=file_bytes_io)
-            if f.file_path:
-                original_ext = pathlib.Path(f.file_path).suffix.lower()
-        except Exception as e:
-            logger.warning(f"Failed to get_file, trying direct download: {e}")
-            await target_bot.download(file_id, destination=file_bytes_io)
+        f = await target_bot.get_file(file_id)
+        await target_bot.download_file(f.file_path, destination=file_bytes_io)
+        file_bytes_io.seek(0)
+        if f.file_path:
+            ext = pathlib.Path(f.file_path).suffix.lower()
+            if ext:
+                original_ext = ext
         
         file_bytes = file_bytes_io.getvalue()
         if not file_bytes:

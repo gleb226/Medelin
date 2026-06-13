@@ -1,7 +1,9 @@
 
 from aiogram import Router, F, Bot
 
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
+
+from app.utils.paths import get_uploads_dir
 
 from aiogram.exceptions import TelegramBadRequest
 
@@ -32,6 +34,7 @@ from app.utils.message_utils import safe_edit_message
 from app.common.config import DEVELOPER_IDS
 
 from app.databases.mongo_client import get_db
+from app.utils.photo_utils import process_photo
 
 import logging
 
@@ -50,17 +53,6 @@ class AdminStates(StatesGroup):
     
     # Bean management states
     adding_bean_name = State()
-    adding_bean_photo = State()
-    adding_bean_description = State()
-    adding_bean_species = State()
-    adding_bean_roast = State()
-    adding_bean_score = State()
-    adding_bean_harvest = State()
-    adding_bean_descriptors = State()
-    adding_bean_variety = State()
-    adding_bean_altitude = State()
-    adding_bean_processing = State()
-    adding_bean_price = State()
     
     editing_bean_field = State()
     
@@ -260,7 +252,11 @@ async def finish_order_handler(callback: CallbackQuery, bot: Bot):
 async def manage_beans_msg(message: Message):
     role = await get_user_role(message.from_user.id)
     if role not in ('owner', 'developer', 'boss'): return
-    await message.answer('☕️ <b>ЗЕРНА:</b>\nКеруйте асортиментом кави.', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
+    beans = _sorted_beans(await coffee_beans_db.get_all_beans(), 'commercial')
+    text = "🌱 <b>КОМЕРЦІЙНА КАВА</b>\nСпочатку Espresso, потім Filter."
+    if not beans:
+        text += "\n\nСписок порожній."
+    await message.answer(text, reply_markup=_bean_list_kb(beans, 'commercial'), parse_mode='HTML')
 
 @admin_router.message(F.text == '📍 ЛОКАЦІЇ')
 async def manage_locations_msg(message: Message):
@@ -290,7 +286,7 @@ async def show_stats_msg(message: Message):
 
 @admin_router.callback_query(F.data == 'beans_manage')
 async def manage_beans_cb(callback: CallbackQuery):
-    await safe_edit_message(callback.message, '☕️ <b>ЗЕРНА:</b>', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
+    await show_beans_page(callback, 'commercial')
 
 @admin_router.callback_query(F.data == 'locations_manage')
 async def manage_locations_cb(callback: CallbackQuery):
@@ -300,342 +296,361 @@ async def manage_locations_cb(callback: CallbackQuery):
 async def manage_contacts_cb(callback: CallbackQuery):
     await safe_edit_message(callback.message, '📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>', reply_markup=akb.get_contacts_manage_kb(), parse_mode='HTML')
 
-@admin_router.callback_query(F.data.in_(['beans_list', 'beans_list_edit', 'beans_list_del']))
-async def list_beans_admin(callback: CallbackQuery):
-    mode = 'list'
-    if 'edit' in callback.data: mode = 'edit'
-    elif 'del' in callback.data: mode = 'del'
-    
-    beans = await coffee_beans_db.get_all_beans()
-    if not beans:
-        await callback.answer('Сорти відсутні.')
-        return
-    
-    mode_titles = {'list': 'СПИСОК', 'edit': 'РЕДАГУВАННЯ', 'del': 'ВИДАЛЕННЯ'}
-    text = f"📜 <b>{mode_titles[mode]} ЗЕРЕН:</b>"
-    
+BEAN_ADD_STEPS = [
+    ('name', '📝 <b>Введіть назву кави:</b>'),
+    ('photo', '📸 <b>Надішліть фото кави</b> (або - якщо немає):'),
+    ('price_250', '💰 <b>Ціна за 250 г</b> (тільки число):'),
+    ('roast', '🔥 <b>Обсмаження</b> (Espresso або Filter):'),
+    ('quality_score', '📊 <b>Оцінка якості</b> (число для specialty, - для комерційної):'),
+    ('species', '🌿 <b>Склад / Вид</b> (напр. Арабіка 100%):'),
+    ('taste', '👅 <b>Смак:</b>'),
+    ('descriptors', '🍓 <b>Дескриптори:</b>'),
+    ('variety', '🧬 <b>Різновид:</b>'),
+    ('altitude', '⛰ <b>Висота:</b>'),
+    ('processing', '🧪 <b>Метод обробки:</b>'),
+    ('harvest', '📅 <b>Врожай:</b>'),
+    ('description', '📖 <b>Опис:</b>')
+]
+
+BEAN_EDIT_FIELDS = [field for field, _ in BEAN_ADD_STEPS]
+
+def _bean_score(bean: dict) -> str:
+    return str(bean.get('quality_score') or bean.get('cup_score') or '').strip()
+
+def _bean_category(bean: dict) -> str:
+    category = str(bean.get('category') or '').strip().lower()
+    if category in ('commercial', 'specialty'):
+        return category
+    score = _bean_score(bean)
+    if not score or score == '-':
+        return 'commercial'
+    try:
+        return 'specialty' if float(score.replace(',', '.')) >= 80 else 'commercial'
+    except ValueError:
+        return 'commercial'
+
+def _roast_rank(bean: dict) -> int:
+    roast = str(bean.get('roast') or '').strip().lower()
+    if 'espresso' in roast or 'еспрес' in roast:
+        return 0
+    if 'filter' in roast or 'фільтр' in roast:
+        return 1
+    return 2
+
+def _sorted_beans(beans: list[dict], category: str) -> list[dict]:
+    return sorted(
+        [b for b in beans if _bean_category(b) == category],
+        key=lambda b: (_roast_rank(b), str(b.get('name') or '').casefold())
+    )
+
+def _bean_list_kb(beans: list[dict], category: str) -> InlineKeyboardMarkup:
+    other = 'specialty' if category == 'commercial' else 'commercial'
+    other_text = '⭐ ПЕРЕЙТИ ДО СПЕШЕЛТІ' if other == 'specialty' else '🌱 ПЕРЕЙТИ ДО КОМЕРЦІЙНОЇ'
     keyboard = []
-    row = []
     for b in beans:
         bid = str(b['_id'])
-        cb = f"bean_edit_{bid}"
-        if mode == 'del': cb = f"bean_del_confirm_{bid}"
-        
-        # Grid logic: 2 columns
-        row.append(InlineKeyboardButton(text=f"⚙️ {b['name'][:18]}", callback_data=cb))
-        if len(row) == 2:
-            keyboard.append(row)
-            row = []
+        roast = str(b.get('roast') or '').strip()
+        prefix = '☕️' if _roast_rank(b) == 0 else '🧪' if _roast_rank(b) == 1 else '•'
+        keyboard.append([InlineKeyboardButton(text=f"{prefix} {b.get('name', '')[:40]}", callback_data=f'bean_open_{bid}')])
     
-    if row:
-        keyboard.append(row)
-    
-    keyboard.append([InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='beans_manage')])
-    await safe_edit_message(callback.message, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard), parse_mode='HTML')
+    keyboard.append([InlineKeyboardButton(text=other_text, callback_data=f'beans_page_{other}')])
+    keyboard.append([InlineKeyboardButton(text='➕ ДОДАТИ НОВУ КАВУ', callback_data='bean_new')])
+    keyboard.append([InlineKeyboardButton(text='⬅️ НАЗАД В МЕНЮ', callback_data='admin_panel_back')])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-@admin_router.callback_query(F.data.startswith('bean_edit_'))
-async def edit_bean_menu(callback: CallbackQuery):
-    bid = callback.data.replace('bean_edit_', '')
+def _bean_card_text(bean: dict) -> str:
+    score = _bean_score(bean) or '—'
+    category = '🌱 Комерційна' if _bean_category(bean) == 'commercial' else '⭐ Спешелті'
+    
+    # Auto sorting grade for commercial
+    grade_info = ""
+    if _bean_category(bean) == 'commercial':
+        low_score = score.lower()
+        if 'зелен' in low_score or 'green' in low_score: grade_info = " (🟢 Зелена)"
+        elif 'жовт' in low_score or 'yellow' in low_score: grade_info = " (🟡 Жовта)"
+        elif 'оранж' in low_score or 'orange' in low_score: grade_info = " (🟠 Оранжева)"
+
+    lines = [
+        f"☕️ <b>{html.escape(str(bean.get('name') or 'Без назви'))}</b>",
+        f"━━━━━━━━━━━━━━━",
+        f"📊 Категорія: <b>{category}{grade_info}</b>",
+        f"💰 Ціна 250г: <b>{bean.get('price_250', 0)} ₴</b>",
+        f"🔥 Обсмаження: <b>{html.escape(str(bean.get('roast') or '—'))}</b>",
+        f"📈 Оцінка: <b>{html.escape(score)}</b>",
+        f"🌿 Склад: <b>{html.escape(str(bean.get('species') or '—'))}</b>",
+        f"👅 Смак: <b>{html.escape(str(bean.get('taste') or '—'))}</b>",
+        f"🍓 Дескриптори: <b>{html.escape(str(bean.get('descriptors') or '—'))}</b>",
+        f"🧬 Різновид: <b>{html.escape(str(bean.get('variety') or '—'))}</b>",
+        f"⛰ Висота: <b>{html.escape(str(bean.get('altitude') or '—'))}</b>",
+        f"🧪 Обробка: <b>{html.escape(str(bean.get('processing') or '—'))}</b>",
+        f"📅 Врожай: <b>{html.escape(str(bean.get('harvest') or '—'))}</b>",
+        f"━━━━━━━━━━━━━━━",
+        f"📖 <b>Опис:</b>",
+        f"{html.escape(str(bean.get('description') or '—'))}"
+    ]
+    return '\n'.join(lines)
+
+async def show_beans_page(callback: CallbackQuery, category: str = 'commercial'):
+    beans = _sorted_beans(await coffee_beans_db.get_all_beans(), category)
+    title = '🌱 <b>КОМЕРЦІЙНА КАВА</b>' if category == 'commercial' else '⭐ <b>СПЕШЕЛТІ КАВА</b>'
+    text = f"{title}\n<i>Спочатку Espresso, потім Filter.</i>"
+    if not beans:
+        text += "\n\nСписок порожній."
+    await safe_edit_message(callback.message, text, reply_markup=_bean_list_kb(beans, category), parse_mode='HTML')
+    await callback.answer()
+
+async def show_bean_card(target, bean: dict):
+    category = _bean_category(bean)
+    text = _bean_card_text(bean)
+    kb = akb.get_bean_card_kb(str(bean['_id']), category)
+    
+    image = str(bean.get('image_url') or '').strip()
+    photo = None
+    
+    if image:
+        if image.startswith('/uploads/'):
+            local_path = get_uploads_dir() / image.replace('/uploads/', '')
+            if local_path.exists():
+                photo = FSInputFile(str(local_path))
+        elif image.startswith('http') or len(image) > 20: # Likely URL or file_id
+            photo = image
+
+    if photo:
+        try:
+            if isinstance(target, Message):
+                await target.answer_photo(photo, caption=text, reply_markup=kb, parse_mode='HTML')
+            else: # CallbackQuery
+                await target.message.answer_photo(photo, caption=text, reply_markup=kb, parse_mode='HTML')
+            return
+        except Exception as e:
+            logger.warning(f"Failed to send bean photo: {e}")
+
+    if isinstance(target, Message):
+        await target.answer(text, reply_markup=kb, parse_mode='HTML')
+    else:
+        await target.message.answer(text, reply_markup=kb, parse_mode='HTML')
+
+def _cancel_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='bean_add_cancel')]])
+
+def _validate_bean_value(field: str, value: str, data: dict):
+    value = (value or '').strip()
+    if field == 'price_250':
+        if not value.isdigit():
+            return None, 'Введіть ціну цілим числом.'
+        return int(value), None
+    if field == 'quality_score':
+        if value == '-':
+            return '-', None
+        low = value.lower()
+        # Quality colors for commercial
+        for color in ['зелена', 'жовта', 'оранжева', 'зелен', 'жовт', 'оранж']:
+            if color in low:
+                return value, None
+        try:
+            return str(float(value.replace(',', '.'))).rstrip('0').rstrip('.'), None
+        except ValueError:
+            return None, 'Оцінка якості має бути числом, дефісом або кольором (зелена/жовта/оранжева).'
+    if field == 'roast':
+        low = value.lower()
+        if 'espresso' in low or 'еспрес' in low:
+            return 'Espresso', None
+        if 'filter' in low or 'фільтр' in low:
+            return 'Filter', None
+        return None, 'Введіть Espresso або Filter.'
+    if not value:
+        return None, 'Поле не може бути порожнім.'
+    if value == '-':
+        return None, 'Дефіс дозволений тільки для оцінки якості.'
+    return value, None
+
+async def _ask_bean_step(message: Message, state: FSMContext):
+    data = await state.get_data()
+    step_index = int(data.get('bean_step_index', 0))
+    steps = data.get('bean_steps') or BEAN_ADD_STEPS
+    field, prompt = steps[step_index]
+    await message.answer(prompt, reply_markup=_cancel_kb())
+
+async def _finish_bean_flow(message: Message, state: FSMContext):
+    data = await state.get_data()
+    payload = {field: data[field] for field in BEAN_EDIT_FIELDS if field in data}
+    if data.get('image_url'):
+        payload['image_url'] = data['image_url']
+    score = str(payload.get('quality_score') or '').strip()
+    payload['category'] = 'commercial' if score == '-' else 'specialty'
+    if data.get('bean_mode') == 'edit':
+        bid = data['edit_bean_id']
+        await coffee_beans_db.update_bean(bid, payload)
+        bean = await coffee_beans_db.get_bean_by_id(bid)
+        await message.answer('✅ Зерно оновлено.')
+        if bean:
+            await show_bean_card(message, bean)
+    else:
+        bid = await coffee_beans_db.add_bean(**payload)
+        bean = await coffee_beans_db.get_bean_by_id(bid)
+        await message.answer('✅ Зерно додано.')
+        if bean:
+            await show_bean_card(message, bean)
+    await state.clear()
+
+@admin_router.callback_query(F.data.in_(['beans_list', 'beans_list_edit', 'beans_list_del', 'beans_page_commercial', 'beans_page_specialty']))
+async def list_beans_admin(callback: CallbackQuery):
+    category = 'specialty' if callback.data.endswith('specialty') else 'commercial'
+    await show_beans_page(callback, category)
+
+@admin_router.callback_query(F.data == 'bean_add')
+async def add_bean_start(callback: CallbackQuery):
+    await show_beans_page(callback, 'commercial')
+
+@admin_router.callback_query(F.data == 'bean_new')
+async def add_bean_new(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await state.update_data(bean_mode='add', bean_step_index=0, bean_steps=BEAN_ADD_STEPS)
+    await callback.message.answer('➕ <b>ДОДАВАННЯ КАВИ</b>', parse_mode='HTML')
+    await _ask_bean_step(callback.message, state)
+    await state.set_state(AdminStates.adding_bean_name)
+    await callback.answer()
+
+@admin_router.callback_query(F.data == 'bean_add_cancel')
+async def add_bean_cancel(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await safe_edit_message(callback.message, '❌ Дію скасовано.', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith('bean_open_'))
+async def open_bean_card(callback: CallbackQuery):
+    bid = callback.data.replace('bean_open_', '')
     bean = await coffee_beans_db.get_bean_by_id(bid)
-    if not bean: return
-    
-    text = f"⚙️ <b>РЕДАГУВАННЯ: {bean['name']}</b>\n\n"
-    text += f"💰 Ціна: <b>{bean.get('price_250')} ₴</b>\n"
-    text += f"📊 Оцінка: <b>{bean.get('quality_score') or '—'}</b>\n"
-    text += f"🔥 Обсмаження: <b>{bean.get('roast') or '—'}</b>\n"
-    text += f"📝 Опис: <i>{bean.get('description')[:50] if bean.get('description') else '—'}...</i>\n\n"
-    text += "Виберіть параметр для зміни:"
-    
-    await safe_edit_message(callback.message, text, reply_markup=akb.get_bean_edit_fields_kb(bid), parse_mode='HTML')
-
-@admin_router.callback_query(F.data.startswith('bean_fedit_'))
-async def edit_bean_single_field_start(callback: CallbackQuery, state: FSMContext):
-    parts = callback.data.split('_')
-    bid = parts[2]
-    field = parts[3]
-    
-    field_names = {
-        'name': 'назву', 'price': 'ціну', 'photo': 'фото', 'description': 'опис',
-        'species': 'склад', 'roast': 'тип обсмаження', 'score': 'оцінку SCA',
-        'harvest': 'рік врожаю', 'descriptors': 'дескриптори', 'variety': 'різновид',
-        'altitude': 'висоту', 'processing': 'метод обробки'
-    }
-    
-    await state.update_data(edit_bean_id=bid, edit_single_field=field)
-    msg = f"📝 Вкажіть нове значення для поля <b>{field_names.get(field, field).upper()}</b>:"
-    if field == 'photo': msg = "📸 Скиньте нове ФОТО:"
-    
-    await callback.message.answer(msg, parse_mode='HTML')
-    await state.set_state(AdminStates.editing_bean_field)
-    await state.update_data(edit_step='single_field')
+    if not bean:
+        await callback.answer('Зерно не знайдено.', show_alert=True)
+        return
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    await show_bean_card(callback.message, bean)
+    await callback.answer()
 
 @admin_router.callback_query(F.data.startswith('bean_del_confirm_'))
 async def delete_bean_confirm(callback: CallbackQuery):
     bid = callback.data.replace('bean_del_confirm_', '')
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='🗑 ТАК, ВИДАЛИТИ', callback_data=f'bean_del_final_{bid}')],
-        [InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data=f'bean_edit_{bid}')]
+        [InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data=f'bean_open_{bid}')]
     ])
-    await safe_edit_message(callback.message, "⚠️ <b>ВИ ВПЕВНЕНІ?</b>\nЦе дію неможливо скасувати.", reply_markup=kb, parse_mode='HTML')
+    await safe_edit_message(callback.message, "Видалити це зерно?", reply_markup=kb)
+    await callback.answer()
 
 @admin_router.callback_query(F.data.startswith('bean_del_final_'))
 async def delete_bean_final(callback: CallbackQuery):
     bid = callback.data.replace('bean_del_final_', '')
+    bean = await coffee_beans_db.get_bean_by_id(bid)
+    category = _bean_category(bean or {})
     await coffee_beans_db.delete_bean(bid)
-    await callback.answer('Сорт видалено!')
-    await list_beans_admin(callback)
-
-@admin_router.callback_query(F.data == 'bean_add_cancel')
-async def add_bean_cancel(callback: CallbackQuery, state: FSMContext):
-    await state.clear()
-    await safe_edit_message(callback.message, '❌ <b>ДОДАВАННЯ СКАСОВАНО</b>', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
-
-@admin_router.callback_query(F.data == 'bean_add')
-async def add_bean_start(callback: CallbackQuery, state: FSMContext):
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='bean_add_cancel')]])
-    await callback.message.answer('✨ <b>КРОК 1:</b> Вкажіть назву нового сорту\n(напр. <i>Ethiopia Yirgacheffe</i>):', reply_markup=kb, parse_mode='HTML')
-    await state.set_state(AdminStates.adding_bean_name)
-
-@admin_router.message(AdminStates.adding_bean_name)
-async def add_bean_name(message: Message, state: FSMContext):
-    await state.update_data(name=message.text)
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='bean_add_cancel')]])
-    await message.answer('📸 <b>КРОК 2:</b> Скиньте фото або відправте <code>-</code> якщо фото немає:', reply_markup=kb, parse_mode='HTML')
-    await state.set_state(AdminStates.adding_bean_photo)
-
-from app.utils.photo_utils import process_photo
-
-@admin_router.message(AdminStates.adding_bean_photo)
-async def add_bean_photo(message: Message, state: FSMContext, bot: Bot):
-    url = await process_photo(message, bot)
-    await state.update_data(image_url=url)
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='bean_add_cancel')]])
-    await message.answer('💰 <b>КРОК 3:</b> Вкажіть ціну за 250г (тільки число):', reply_markup=kb, parse_mode='HTML')
-    await state.set_state(AdminStates.adding_bean_price)
-
-@admin_router.message(AdminStates.adding_bean_price)
-async def add_bean_price(message: Message, state: FSMContext):
-    try:
-        price = int(message.text)
-        await state.update_data(price_250=price)
-        kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='bean_add_cancel')]])
-        await message.answer('📝 <b>КРОК 4:</b> Напишіть опис кави (кілька речень):', reply_markup=kb, parse_mode='HTML')
-        await state.set_state(AdminStates.adding_bean_description)
-    except:
-        await message.answer('❌ <b>ПОМИЛКА:</b> Вкажіть ціну числом (напр. 250):', parse_mode='HTML')
-
-@admin_router.message(AdminStates.adding_bean_description)
-async def add_bean_description(message: Message, state: FSMContext):
-    await state.update_data(description=message.text)
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='bean_add_cancel')]])
-    await message.answer('🌿 <b>КРОК 5:</b> Вкажіть склад / вид (напр. <i>100% Арабіка</i>):', reply_markup=kb, parse_mode='HTML')
-    await state.set_state(AdminStates.adding_bean_species)
-
-@admin_router.message(AdminStates.adding_bean_species)
-async def add_bean_species(message: Message, state: FSMContext):
-    await state.update_data(species=message.text)
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='bean_add_cancel')]])
-    await message.answer('🔥 <b>КРОК 6:</b> Тип обсмаження (напр. <i>Espresso</i> або <i>Filter</i>):', reply_markup=kb, parse_mode='HTML')
-    await state.set_state(AdminStates.adding_bean_roast)
-
-@admin_router.message(AdminStates.adding_bean_roast)
-async def add_bean_roast(message: Message, state: FSMContext):
-    await state.update_data(roast=message.text)
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='bean_add_cancel')]])
-    await message.answer('📊 <b>КРОК 7:</b> Оцінка якості SCA Score (напр. <i>86.5</i> або <code>0</code>):', reply_markup=kb, parse_mode='HTML')
-    await state.set_state(AdminStates.adding_bean_score)
-
-@admin_router.message(AdminStates.adding_bean_score)
-async def add_bean_score(message: Message, state: FSMContext):
-    await state.update_data(quality_score=message.text)
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='bean_add_cancel')]])
-    await message.answer('📅 <b>КРОК 8:</b> Рік врожаю (напр. <i>2023</i>):', reply_markup=kb, parse_mode='HTML')
-    await state.set_state(AdminStates.adding_bean_harvest)
-
-@admin_router.message(AdminStates.adding_bean_harvest)
-async def add_bean_harvest(message: Message, state: FSMContext):
-    await state.update_data(harvest=message.text)
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='bean_add_cancel')]])
-    await message.answer('🍓 <b>КРОК 9:</b> Дескриптори (напр. <i>Цитрус, Шоколад</i>):', reply_markup=kb, parse_mode='HTML')
-    await state.set_state(AdminStates.adding_bean_descriptors)
-
-@admin_router.message(AdminStates.adding_bean_descriptors)
-async def add_bean_descriptors(message: Message, state: FSMContext):
-    await state.update_data(descriptors=message.text)
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='bean_add_cancel')]])
-    await message.answer('🧬 <b>КРОК 10:</b> Різновид (напр. <i>Heirloom, Typica</i>):', reply_markup=kb, parse_mode='HTML')
-    await state.set_state(AdminStates.adding_bean_variety)
-
-@admin_router.message(AdminStates.adding_bean_variety)
-async def add_bean_variety(message: Message, state: FSMContext):
-    await state.update_data(variety=message.text)
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='bean_add_cancel')]])
-    await message.answer('⛰ <b>КРОК 11:</b> Висота зростання (напр. <i>1900 м</i>):', reply_markup=kb, parse_mode='HTML')
-    await state.set_state(AdminStates.adding_bean_altitude)
-
-@admin_router.message(AdminStates.adding_bean_altitude)
-async def add_bean_altitude(message: Message, state: FSMContext):
-    await state.update_data(altitude=message.text)
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='bean_add_cancel')]])
-    await message.answer('🧪 <b>КРОК 12:</b> Метод обробки (напр. <i>Митий, Натуральний</i>):', reply_markup=kb, parse_mode='HTML')
-    await state.set_state(AdminStates.adding_bean_processing)
-
-@admin_router.message(AdminStates.adding_bean_processing)
-async def add_bean_processing(message: Message, state: FSMContext):
-    await state.update_data(processing=message.text)
-    data = await state.get_data()
-    try:
-        await coffee_beans_db.add_bean(
-            name=data['name'],
-            price_250=data['price_250'],
-            image_url=data.get('image_url', ''),
-            description=data.get('description', ''),
-            species=data.get('species', ''),
-            roast=data.get('roast', ''),
-            quality_score=data.get('quality_score', '0'),
-            harvest=data.get('harvest', ''),
-            descriptors=data.get('descriptors', ''),
-            variety=data.get('variety', ''),
-            altitude=data.get('altitude', ''),
-            processing=data.get('processing', '')
-        )
-        await message.answer('✅ <b>УСПІХ:</b> Сорт успішно додано до каталогу!', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
-        await state.clear()
-    except Exception as e:
-        logger.error(f"Error adding bean: {e}")
-        await message.answer('❌ <b>ПОМИЛКА:</b> Не вдалося зберегти сорт. Спробуйте ще раз.', parse_mode='HTML')
-        await state.clear()
+    await callback.answer('Зерно видалено.')
+    await show_beans_page(callback, category)
 
 @admin_router.callback_query(F.data.startswith('bean_full_edit_'))
 async def edit_bean_full_start(callback: CallbackQuery, state: FSMContext):
     bid = callback.data.replace('bean_full_edit_', '')
     bean = await coffee_beans_db.get_bean_by_id(bid)
     if not bean:
-        await callback.answer('Сорт не знайдено.')
+        await callback.answer('Зерно не знайдено.', show_alert=True)
         return
-    
-    await state.update_data(edit_bean_id=bid)
-    await callback.message.answer(f"📝 <b>РЕДАГУВАННЯ: {bean['name']}</b>\n\nВкажіть НОВУ назву або <code>.</code>:", parse_mode='HTML')
+    await state.clear()
+    steps = [(field, f"{prompt}\nПоточне значення: {bean.get('price_250') if field == 'price_250' else bean.get('image_url') if field == 'photo' else bean.get(field, '')}") for field, prompt in BEAN_ADD_STEPS]
+    await state.update_data(bean_mode='edit', edit_bean_id=bid, bean_step_index=0, bean_steps=steps)
+    await callback.message.answer(f"✏️ <b>РЕДАГУВАННЯ: {html.escape(str(bean.get('name') or ''))}</b>", parse_mode='HTML')
+    await _ask_bean_step(callback.message, state)
     await state.set_state(AdminStates.editing_bean_field)
-    await state.update_data(edit_step='name')
+    await callback.answer()
 
+@admin_router.callback_query(F.data.startswith('bean_fedit_'))
+async def edit_bean_single_field_start(callback: CallbackQuery, state: FSMContext):
+    parts = callback.data.split('_')
+    bid = parts[2]
+    raw_field = parts[3]
+    field_map = {'price': 'price_250', 'score': 'quality_score', 'photo': 'photo'}
+    field = field_map.get(raw_field, raw_field)
+    prompts = dict(BEAN_ADD_STEPS)
+    if field == 'category':
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='🌱 Комерційна', callback_data=f'bean_set_category_{bid}_commercial')],
+            [InlineKeyboardButton(text='⭐ Спешелті', callback_data=f'bean_set_category_{bid}_specialty')]
+        ])
+        await callback.message.answer('Оберіть категорію:', reply_markup=kb)
+        await callback.answer()
+        return
+    await state.clear()
+    await state.update_data(bean_mode='single_edit', edit_bean_id=bid, edit_single_field=field)
+    await callback.message.answer(prompts.get(field, 'Нове значення:'), reply_markup=_cancel_kb())
+    await state.set_state(AdminStates.editing_bean_field)
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith('bean_set_category_'))
+async def set_bean_category(callback: CallbackQuery):
+    payload = callback.data.replace('bean_set_category_', '')
+    bid, category = payload.rsplit('_', 1)
+    update = {'category': category}
+    if category == 'commercial':
+        update['quality_score'] = '-'
+    await coffee_beans_db.update_bean(bid, update)
+    bean = await coffee_beans_db.get_bean_by_id(bid)
+    await callback.answer('Категорію оновлено.')
+    if bean:
+        await show_bean_card(callback.message, bean)
+
+@admin_router.message(AdminStates.adding_bean_name)
 @admin_router.message(AdminStates.editing_bean_field)
-async def edit_bean_field_logic(message: Message, state: FSMContext, bot: Bot):
+async def bean_flow_input(message: Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
-    step = data.get('edit_step')
-    bid = data.get('edit_bean_id')
-    val = (message.text or "").strip()
-    
-    if step == 'single_field':
+    mode = data.get('bean_mode')
+    if mode == 'single_edit':
         field = data.get('edit_single_field')
-        update = {}
-        
         if field == 'photo':
-            url = await process_photo(message, bot)
-            update['image_url'] = url
-        elif field == 'price':
-            try: update['price_250'] = int(val)
-            except:
-                await message.answer('❌ <b>ПОМИЛКА:</b> Введіть число для ціни:')
+            value = await process_photo(message, bot)
+            if not value:
+                await message.answer('Не вдалося отримати фото. Надішліть фото з галереї або посилання.')
                 return
-        elif field == 'score':
-            update['quality_score'] = val
         else:
-            update[field] = val
-        
-        await coffee_beans_db.update_bean(bid, update)
-        bean = await coffee_beans_db.get_bean_by_id(bid)
-        
-        text = f"✅ Параметр <b>{field.upper()}</b> оновлено!\n\n"
-        text += f"⚙️ <b>РЕДАГУВАННЯ: {bean['name']}</b>\n"
-        text += f"💰 Ціна: <b>{bean.get('price_250')} ₴</b>\n"
-        text += f"📊 Оцінка: <b>{bean.get('quality_score') or '—'}</b>\n"
-        text += f"🔥 Обсмаження: <b>{bean.get('roast') or '—'}</b>\n"
-        
-        await message.answer(text, parse_mode='HTML', reply_markup=akb.get_bean_edit_fields_kb(bid))
+            value, error = _validate_bean_value(field, message.text or '', data)
+            if error:
+                await message.answer(error)
+                return
+        update_field = 'image_url' if field == 'photo' else field
+        update = {update_field: value}
+        if update_field == 'quality_score':
+            update['category'] = 'commercial' if value == '-' else 'specialty'
+        await coffee_beans_db.update_bean(data['edit_bean_id'], update)
+        bean = await coffee_beans_db.get_bean_by_id(data['edit_bean_id'])
+        await message.answer('✅ Поле оновлено.')
         await state.clear()
+        if bean:
+            await show_bean_card(message, bean)
         return
 
-    skip = (val == '.')
-    
-    if step == 'name':
-        if not skip: await state.update_data(name=val)
-        await message.answer('Нове фото або <code>.</code>:', parse_mode='HTML')
-        await state.update_data(edit_step='photo')
-    
-    elif step == 'photo':
-        if not skip:
-            url = await process_photo(message, bot)
-            await state.update_data(image_url=url)
-        await message.answer('Нова ціна або <code>.</code>:', parse_mode='HTML')
-        await state.update_data(edit_step='price')
-
-    elif step == 'price':
-        if not skip:
-            try:
-                await state.update_data(price_250=int(val))
-            except:
-                await message.answer('Ціна має бути числом. Спробуйте ще раз або <code>.</code>:', parse_mode='HTML')
-                return
-        await message.answer('Новий ОПИС або <code>.</code>:', parse_mode='HTML')
-        await state.update_data(edit_step='description')
-        
-    elif step == 'description':
-        if not skip: await state.update_data(description=val)
-        await message.answer('Новий склад або <code>.</code>:', parse_mode='HTML')
-        await state.update_data(edit_step='species')
-        
-    elif step == 'species':
-        if not skip: await state.update_data(species=val)
-        await message.answer('Нове обсмаження або <code>.</code>:', parse_mode='HTML')
-        await state.update_data(edit_step='roast')
-        
-    elif step == 'roast':
-        if not skip: await state.update_data(roast=val)
-        await message.answer('Нова оцінка або <code>.</code>:', parse_mode='HTML')
-        await state.update_data(edit_step='score')
-        
-    elif step == 'score':
-        if not skip: await state.update_data(quality_score=val)
-        await message.answer('Новий врожай або <code>.</code>:', parse_mode='HTML')
-        await state.update_data(edit_step='harvest')
-        
-    elif step == 'harvest':
-        if not skip: await state.update_data(harvest=val)
-        await message.answer('Нові дескриптори або <code>.</code>:', parse_mode='HTML')
-        await state.update_data(edit_step='descriptors')
-        
-    elif step == 'descriptors':
-        if not skip: await state.update_data(descriptors=val)
-        await message.answer('Новий різновид або <code>.</code>:', parse_mode='HTML')
-        await state.update_data(edit_step='variety')
-        
-    elif step == 'variety':
-        if not skip: await state.update_data(variety=val)
-        await message.answer('Нова висота або <code>.</code>:', parse_mode='HTML')
-        await state.update_data(edit_step='altitude')
-        
-    elif step == 'altitude':
-        if not skip: await state.update_data(altitude=val)
-        await message.answer('Новий метод обробки або <code>.</code>:', parse_mode='HTML')
-        await state.update_data(edit_step='processing')
-        
-    elif step == 'processing':
-        if not skip: await state.update_data(processing=val)
-        
-        update = {}
-        latest_data = await state.get_data()
-        fields = ['name', 'image_url', 'description', 'species', 'roast', 'quality_score', 'harvest', 'descriptors', 'variety', 'altitude', 'processing', 'price_250']
-        for f in fields:
-            if f in latest_data: update[f] = latest_data[f]
-        
-        if update:
-            await coffee_beans_db.update_bean(bid, update)
-            await message.answer('✅ Сорт оновлено!', reply_markup=akb.get_beans_manage_kb())
-        else:
-            await message.answer('Змін не внесено.', reply_markup=akb.get_beans_manage_kb())
-            
-        await state.clear()
+    steps = data.get('bean_steps') or BEAN_ADD_STEPS
+    step_index = int(data.get('bean_step_index', 0))
+    field, _ = steps[step_index]
+    if field == 'photo':
+        value = await process_photo(message, bot)
+        # value is "" if process_photo failed OR if user sent "-"
+        if not value and (message.text or '').strip() != '-':
+            await message.answer('Не вдалося отримати фото. Надішліть фото з галереї або посилання (або - для пропуску).')
+            return
+        await state.update_data(image_url=value)
+    else:
+        value, error = _validate_bean_value(field, message.text or '', data)
+        if error:
+            await message.answer(error)
+            return
+        await state.update_data(**{field: value})
+    step_index += 1
+    if step_index >= len(steps):
+        await _finish_bean_flow(message, state)
+        return
+    await state.update_data(bean_step_index=step_index)
+    await _ask_bean_step(message, state)
 
 
 @admin_router.callback_query(F.data.startswith('admin_auth_confirm_'))

@@ -86,6 +86,7 @@ class PublicDataCache:
                     'variety': i.get('variety', ''),
                     'quality_score': i.get('quality_score') or i.get('cup_score', ''),
                     'harvest': i.get('harvest', ''),
+                    'category': i.get('category', ''),
                     'taste': i.get('taste', ''),
                     'descriptors': i.get('descriptors', '')
                 })
