@@ -153,6 +153,8 @@ async def show_bean_details(callback: CallbackQuery, state: FSMContext):
     if bean.get('altitude'): text += f"<b>Висота зростання:</b> {bean['altitude']}\n"
     if bean.get('processing'): text += f"<b>Метод обробки:</b> {bean['processing']}\n"
     if bean.get('harvest'): text += f"<b>Період врожаю:</b> {bean['harvest']}\n"
+    if bean.get('descriptors') or bean.get('taste'):
+        text += f"<b>Дескриптори:</b> {bean.get('descriptors') or bean.get('taste')}\n"
     
     text += f"\n💰 <b>Ціна:</b> {bean.get('price_250', 0)} ₴"
 

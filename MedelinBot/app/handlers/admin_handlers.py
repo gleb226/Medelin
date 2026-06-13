@@ -74,7 +74,8 @@ async def show_admin_panel(message: Message):
 @admin_router.callback_query(F.data == 'admin_panel_back')
 async def back_to_admin_main(callback: CallbackQuery):
     role = await get_user_role(callback.from_user.id)
-    await safe_edit_message(callback.message, f'🔐 <b>АДМІН-ПАНЕЛЬ</b>\nВаша роль: <b>{role.upper()}</b>\n\nВиберіть розділ керування:', reply_markup=akb.get_admin_main_kb(role), parse_mode='HTML')
+    await safe_edit_message(callback.message, f'🔐 <b>АДМІН-ПАНЕЛЬ</b>\nВаша роль: <b>{role.upper()}</b>\n\nВиберіть розділ керування:', reply_markup=akb.get_admin_main_inline_kb(role), parse_mode='HTML')
+
 
 # --- ORDERS BLOCK ---
 
@@ -253,7 +254,7 @@ async def manage_beans_msg(message: Message):
     role = await get_user_role(message.from_user.id)
     if role not in ('owner', 'developer', 'boss'): return
     beans = _sorted_beans(await coffee_beans_db.get_all_beans(), 'commercial')
-    text = "🌱 <b>КОМЕРЦІЙНА КАВА</b>\nСпочатку Espresso, потім Filter."
+    text = "<b>КОМЕРЦІЙНА КАВА</b>\nСпочатку Espresso, потім Filter."
     if not beans:
         text += "\n\nСписок порожній."
     await message.answer(text, reply_markup=_bean_list_kb(beans, 'commercial'), parse_mode='HTML')
@@ -303,7 +304,6 @@ BEAN_ADD_STEPS = [
     ('roast', '🔥 <b>Обсмаження</b> (Espresso або Filter):'),
     ('quality_score', '📊 <b>Оцінка якості</b> (число для specialty, - для комерційної):'),
     ('species', '🌿 <b>Склад / Вид</b> (напр. Арабіка 100%):'),
-    ('taste', '👅 <b>Смак:</b>'),
     ('descriptors', '🍓 <b>Дескриптори:</b>'),
     ('variety', '🧬 <b>Різновид:</b>'),
     ('altitude', '⛰ <b>Висота:</b>'),
@@ -345,13 +345,20 @@ def _sorted_beans(beans: list[dict], category: str) -> list[dict]:
 
 def _bean_list_kb(beans: list[dict], category: str) -> InlineKeyboardMarkup:
     other = 'specialty' if category == 'commercial' else 'commercial'
-    other_text = '⭐ ПЕРЕЙТИ ДО СПЕШЕЛТІ' if other == 'specialty' else '🌱 ПЕРЕЙТИ ДО КОМЕРЦІЙНОЇ'
+    other_text = 'ПЕРЕЙТИ ДО СПЕШЕЛТІ' if other == 'specialty' else 'ПЕРЕЙТИ ДО КОМЕРЦІЙНОЇ'
     keyboard = []
-    for b in beans:
+    
+    # Grid: 2 columns
+    row = []
+    for i, b in enumerate(beans):
         bid = str(b['_id'])
-        roast = str(b.get('roast') or '').strip()
-        prefix = '☕️' if _roast_rank(b) == 0 else '🧪' if _roast_rank(b) == 1 else '•'
-        keyboard.append([InlineKeyboardButton(text=f"{prefix} {b.get('name', '')[:40]}", callback_data=f'bean_open_{bid}')])
+        name = b.get('name', '')[:25]
+        row.append(InlineKeyboardButton(text=name, callback_data=f'bean_open_{bid}'))
+        if len(row) == 2:
+            keyboard.append(row)
+            row = []
+    if row:
+        keyboard.append(row)
     
     keyboard.append([InlineKeyboardButton(text=other_text, callback_data=f'beans_page_{other}')])
     keyboard.append([InlineKeyboardButton(text='➕ ДОДАТИ НОВУ КАВУ', callback_data='bean_new')])
@@ -360,25 +367,24 @@ def _bean_list_kb(beans: list[dict], category: str) -> InlineKeyboardMarkup:
 
 def _bean_card_text(bean: dict) -> str:
     score = _bean_score(bean) or '—'
-    category = '🌱 Комерційна' if _bean_category(bean) == 'commercial' else '⭐ Спешелті'
+    category = 'Комерційна' if _bean_category(bean) == 'commercial' else 'Спешелті'
     
     # Auto sorting grade for commercial
     grade_info = ""
     if _bean_category(bean) == 'commercial':
         low_score = score.lower()
-        if 'зелен' in low_score or 'green' in low_score: grade_info = " (🟢 Зелена)"
-        elif 'жовт' in low_score or 'yellow' in low_score: grade_info = " (🟡 Жовта)"
-        elif 'оранж' in low_score or 'orange' in low_score: grade_info = " (🟠 Оранжева)"
+        if 'зелен' in low_score or 'green' in low_score: grade_info = " (Зелена)"
+        elif 'жовт' in low_score or 'yellow' in low_score: grade_info = " (Жовта)"
+        elif 'оранж' in low_score or 'orange' in low_score: grade_info = " (Оранжева)"
 
     lines = [
-        f"☕️ <b>{html.escape(str(bean.get('name') or 'Без назви'))}</b>",
+        f"<b>{html.escape(str(bean.get('name') or 'Без назви'))}</b>",
         f"━━━━━━━━━━━━━━━",
         f"📊 Категорія: <b>{category}{grade_info}</b>",
         f"💰 Ціна 250г: <b>{bean.get('price_250', 0)} ₴</b>",
         f"🔥 Обсмаження: <b>{html.escape(str(bean.get('roast') or '—'))}</b>",
         f"📈 Оцінка: <b>{html.escape(score)}</b>",
         f"🌿 Склад: <b>{html.escape(str(bean.get('species') or '—'))}</b>",
-        f"👅 Смак: <b>{html.escape(str(bean.get('taste') or '—'))}</b>",
         f"🍓 Дескриптори: <b>{html.escape(str(bean.get('descriptors') or '—'))}</b>",
         f"🧬 Різновид: <b>{html.escape(str(bean.get('variety') or '—'))}</b>",
         f"⛰ Висота: <b>{html.escape(str(bean.get('altitude') or '—'))}</b>",
@@ -392,7 +398,7 @@ def _bean_card_text(bean: dict) -> str:
 
 async def show_beans_page(callback: CallbackQuery, category: str = 'commercial'):
     beans = _sorted_beans(await coffee_beans_db.get_all_beans(), category)
-    title = '🌱 <b>КОМЕРЦІЙНА КАВА</b>' if category == 'commercial' else '⭐ <b>СПЕШЕЛТІ КАВА</b>'
+    title = '<b>КОМЕРЦІЙНА КАВА</b>' if category == 'commercial' else '<b>СПЕШЕЛТІ КАВА</b>'
     text = f"{title}\n<i>Спочатку Espresso, потім Filter.</i>"
     if not beans:
         text += "\n\nСписок порожній."
@@ -411,7 +417,7 @@ async def show_bean_card(target, bean: dict):
         if image.startswith('/uploads/'):
             local_path = get_uploads_dir() / image.replace('/uploads/', '')
             if local_path.exists():
-                photo = FSInputFile(str(local_path))
+                photo = FSInputFile(local_path)
         elif image.startswith('http') or len(image) > 20: # Likely URL or file_id
             photo = image
 
@@ -469,7 +475,7 @@ async def _ask_bean_step(message: Message, state: FSMContext):
     step_index = int(data.get('bean_step_index', 0))
     steps = data.get('bean_steps') or BEAN_ADD_STEPS
     field, prompt = steps[step_index]
-    await message.answer(prompt, reply_markup=_cancel_kb())
+    await message.answer(prompt, reply_markup=_cancel_kb(), parse_mode='HTML')
 
 async def _finish_bean_flow(message: Message, state: FSMContext):
     data = await state.get_data()
@@ -575,15 +581,15 @@ async def edit_bean_single_field_start(callback: CallbackQuery, state: FSMContex
     prompts = dict(BEAN_ADD_STEPS)
     if field == 'category':
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text='🌱 Комерційна', callback_data=f'bean_set_category_{bid}_commercial')],
-            [InlineKeyboardButton(text='⭐ Спешелті', callback_data=f'bean_set_category_{bid}_specialty')]
+            [InlineKeyboardButton(text='Комерційна', callback_data=f'bean_set_category_{bid}_commercial')],
+            [InlineKeyboardButton(text='Спешелті', callback_data=f'bean_set_category_{bid}_specialty')]
         ])
         await callback.message.answer('Оберіть категорію:', reply_markup=kb)
         await callback.answer()
         return
     await state.clear()
     await state.update_data(bean_mode='single_edit', edit_bean_id=bid, edit_single_field=field)
-    await callback.message.answer(prompts.get(field, 'Нове значення:'), reply_markup=_cancel_kb())
+    await callback.message.answer(prompts.get(field, 'Нове значення:'), reply_markup=_cancel_kb(), parse_mode='HTML')
     await state.set_state(AdminStates.editing_bean_field)
     await callback.answer()
 

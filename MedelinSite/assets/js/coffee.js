@@ -78,6 +78,8 @@ function renderCoffeeData(coffeeData) {
         const art = document.createElement('article');
         art.className = 'product-card';
         let displayName = item.name.replace(/Blend Mixed/gi, '').trim();
+        // Remove ANY emojis from name
+        displayName = displayName.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
 
         art.innerHTML = `
             <div class="product-card__image" style="background-image: url('${item.image_url || defImg}');"></div>
