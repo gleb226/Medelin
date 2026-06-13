@@ -31,7 +31,7 @@ from app.utils.data_cache import public_data_cache
 
 from app.utils.message_utils import safe_edit_message
 
-from app.common.config import DEVELOPER_IDS
+from app.common.config import DEVELOPER_IDS, WEB_APP_URL
 
 from app.databases.mongo_client import get_db
 from app.utils.photo_utils import process_photo
