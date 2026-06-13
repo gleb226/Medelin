@@ -37,6 +37,7 @@ from app.databases.mongo_client import get_db
 from app.utils.photo_utils import process_photo
 
 import logging
+from pathlib import Path
 
 import html
 
