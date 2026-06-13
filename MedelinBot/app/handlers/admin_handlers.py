@@ -405,6 +405,17 @@ async def show_beans_page(callback: CallbackQuery, category: str = 'commercial')
     await safe_edit_message(callback.message, text, reply_markup=_bean_list_kb(beans, category), parse_mode='HTML')
     await callback.answer()
 
+@admin_router.callback_query(F.data.startswith('bean_edit_fields_'))
+async def edit_bean_fields_menu(callback: CallbackQuery):
+    bid = callback.data.replace('bean_edit_fields_', '')
+    bean = await coffee_beans_db.get_bean_by_id(bid)
+    if not bean:
+        await callback.answer('Зерно не знайдено.', show_alert=True)
+        return
+    category = _bean_category(bean)
+    await safe_edit_message(callback.message, f"⚙️ <b>Оберіть поле для редагування:</b>\n{html.escape(str(bean.get('name', '')))}", reply_markup=akb.get_bean_edit_fields_kb(bid, category), parse_mode='HTML')
+    await callback.answer()
+
 async def show_bean_card(target, bean: dict):
     category = _bean_category(bean)
     text = _bean_card_text(bean)
@@ -413,11 +424,32 @@ async def show_bean_card(target, bean: dict):
     image = str(bean.get('image_url') or '').strip()
     photo = None
     
+    logger.info(f"Showing bean card for {bean.get('name')}. Image URL in DB: {image}")
+
     if image:
         if image.startswith('/uploads/'):
-            local_path = get_uploads_dir() / image.replace('/uploads/', '')
+            # Try multiple possible local paths for robustness
+            filename = image.replace('/uploads/', '')
+            uploads_dir = get_uploads_dir()
+            local_path = uploads_dir / filename
+            
+            logger.info(f"Checking local photo at: {local_path}")
+            
             if local_path.exists():
                 photo = FSInputFile(local_path)
+            else:
+                # Fallback to repo-relative if needed
+                repo_root = Path(__file__).resolve().parents[3]
+                alt_path = repo_root / "MedelinSite" / "assets" / "images" / "uploads" / filename
+                if alt_path.exists():
+                    logger.info(f"Found photo at fallback path: {alt_path}")
+                    photo = FSInputFile(alt_path)
+                elif WEB_APP_URL:
+                    # Fallback to web URL if local file not found
+                    photo = f"{WEB_APP_URL.rstrip('/')}{image}"
+                    logger.info(f"Photo not found locally, using web URL: {photo}")
+                else:
+                    logger.warning(f"Photo file not found: {filename}")
         elif image.startswith('http') or len(image) > 20: # Likely URL or file_id
             photo = image
 
@@ -431,6 +463,7 @@ async def show_bean_card(target, bean: dict):
         except Exception as e:
             logger.warning(f"Failed to send bean photo: {e}")
 
+    # Fallback to text if no photo found or failed to send
     if isinstance(target, Message):
         await target.answer(text, reply_markup=kb, parse_mode='HTML')
     else:
@@ -575,7 +608,7 @@ async def edit_bean_full_start(callback: CallbackQuery, state: FSMContext):
 async def edit_bean_single_field_start(callback: CallbackQuery, state: FSMContext):
     parts = callback.data.split('_')
     bid = parts[2]
-    raw_field = parts[3]
+    raw_field = '_'.join(parts[3:]) # Support fields with underscores
     field_map = {'price': 'price_250', 'score': 'quality_score', 'photo': 'photo'}
     field = field_map.get(raw_field, raw_field)
     prompts = dict(BEAN_ADD_STEPS)

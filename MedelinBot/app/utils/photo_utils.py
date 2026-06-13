@@ -59,6 +59,8 @@ async def process_photo(message: Message, bot: Bot = None) -> str | None:
 
         uploads_dir = get_uploads_dir()
         stem = uuid.uuid4().hex[:10]
+        
+        logger.info(f"Processing photo. Target directory: {uploads_dir}")
 
         # Try to convert to WEBP for efficiency
         try:
@@ -80,7 +82,7 @@ async def process_photo(message: Message, bot: Bot = None) -> str | None:
             filepath = uploads_dir / filename
             
             img.save(str(filepath), 'WEBP', quality=85, method=4)
-            logger.info(f"Saved processed photo: {filename}")
+            logger.info(f"Saved processed photo: {filepath}")
             return f'/uploads/{filename}'
         except Exception as e:
             logger.warning(f"Pillow conversion failed, saving raw: {e}")
@@ -90,6 +92,7 @@ async def process_photo(message: Message, bot: Bot = None) -> str | None:
             filename = f'{stem}{ext}'
             filepath = uploads_dir / filename
             filepath.write_bytes(file_bytes)
+            logger.info(f"Saved raw photo: {filepath}")
             return f'/uploads/{filename}'
 
     except Exception as e:
