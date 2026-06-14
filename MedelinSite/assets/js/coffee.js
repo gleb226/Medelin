@@ -106,7 +106,7 @@ function renderCoffeeData(coffeeData) {
                     ${item.processing ? `<div style="margin-bottom: 4px;"><strong>Обробка:</strong> ${item.processing}</div>` : ''}
                     ${item.descriptors || item.taste ? `<div style="margin-bottom: 4px;"><strong>Дескриптори:</strong> ${item.descriptors || item.taste}</div>` : ''}
                     ${item.roast ? `<div style="margin-bottom: 4px;"><strong>Обсмаження:</strong> ${item.roast}</div>` : ''}
-                    ${item.quality_score ? `<div><strong>Оцінка якості:</strong> ${item.quality_score}</div>` : ''}
+                    ${!isCommercial && item.quality_score ? `<div><strong>Оцінка якості:</strong> ${item.quality_score}</div>` : ''}
                 </div>
 
                 <div class="product-card__price-row">
@@ -216,7 +216,7 @@ function openBeanDetail(item, pushState = true) {
                     <div class="bean-full-view__primary-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; background: #fcf8f5; padding: 2.5rem; border-radius: 24px; border: 1px solid rgba(111, 78, 55, 0.2); flex-grow: 1; align-content: start; color: var(--color-dark-brown); box-shadow: var(--shadow-sm);">
                         ${item.species ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Склад</label><p style="font-size: 1.1rem; font-weight: 700; color: var(--color-dark-brown);">${item.species}</p></div>` : ''}
                         ${item.roast ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Обсмаження</label><p style="font-size: 1.1rem; font-weight: 700; color: var(--color-dark-brown);">${item.roast}</p></div>` : ''}
-                        ${score ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Оцінка якості</label><p style="font-size: 1.1rem; font-weight: 700; color: var(--color-dark-brown);">${score}</p></div>` : ''}
+                        ${!isCommercial && score ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Оцінка якості</label><p style="font-size: 1.1rem; font-weight: 700; color: var(--color-dark-brown);">${score}</p></div>` : ''}
                         ${item.harvest ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Врожай</label><p style="font-size: 1.1rem; font-weight: 700; color: var(--color-dark-brown);">${item.harvest}</p></div>` : ''}
                         
                         ${item.descriptors || item.taste ? `<div style="grid-column: span 2; border-top: 1px solid rgba(111, 78, 55, 0.1); padding-top: 1.5rem;"><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Дескриптори</label><p style="font-size: 1.2rem; font-weight: 700; color: var(--color-dark-brown);">${item.descriptors || item.taste}</p></div>` : ''}

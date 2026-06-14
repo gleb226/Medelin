@@ -1035,8 +1035,13 @@ def _bean_card_text(bean: dict) -> str:
         f"━━━━━━━━━━━━━━━",
         f"📊 Категорія: <b>{category}{grade_info}</b>{stock_info}",
         f"💰 Ціна 250г: <b>{bean.get('price_250', 0)} ₴</b>",
-        f"🔥 Обсмаження: <b>{html.escape(str(bean.get('roast') or '—'))}</b>",
-        f"📈 Оцінка: <b>{html.escape(score)}</b>",
+        f"🔥 Обсмаження: <b>{html.escape(str(bean.get('roast') or '—'))}</b>"
+    ]
+    
+    if is_specialty:
+        lines.append(f"📈 Оцінка: <b>{html.escape(score)}</b>")
+
+    lines.extend([
         f"🌿 Склад: <b>{html.escape(str(bean.get('species') or '—'))}</b>",
         f"🍓 Дескриптори: <b>{html.escape(str(bean.get('descriptors') or '—'))}</b>",
         f"🧬 Різновид: <b>{html.escape(str(bean.get('variety') or '—'))}</b>",
@@ -1046,7 +1051,7 @@ def _bean_card_text(bean: dict) -> str:
         f"━━━━━━━━━━━━━━━",
         f"📖 <b>Опис:</b>",
         f"{html.escape(str(bean.get('description') or '—'))}"
-    ]
+    ])
     return '\n'.join(lines)
 
 async def show_beans_page(callback: CallbackQuery, category: str = 'commercial'):
