@@ -8,31 +8,25 @@ ORDER_TYPE_NAMES = {
     'beans_booking': 'Зерна (Самовивіз)'
 }
 
-def get_admin_main_kb(role='boss'):
+def get_admin_main_kb(role='admin'):
     """
     Main Admin Menu Keyboard.
-    Roles: owner, developer, delivery_manager, boss/admin
+    Roles: owner, developer, admin
     """
-    # 1. Orders Block
+    # 1. Orders Block (All roles see this)
     keyboard = [
         [KeyboardButton(text='🆕 НОВІ'), KeyboardButton(text='📦 АКТИВНІ')],
     ]
     
-    # 2. Content Management Block (Owner & Developer)
-    if role in ('owner', 'developer', 'boss'):
+    # 2. Content & Staff Management (Owner & Developer only)
+    if role in ('owner', 'developer'):
         keyboard.append([KeyboardButton(text='☕️ ЗЕРНА')])
         keyboard.append([KeyboardButton(text='📍 ЛОКАЦІЇ'), KeyboardButton(text='📞 КОНТАКТИ')])
-    
-    # 3. System Management Block (Owner & Developer)
-    if role in ('owner', 'developer'):
-        keyboard.append([KeyboardButton(text='👤 ПЕРСОНАЛ'), KeyboardButton(text='📊 СТАТИСТИКА')])
-    
-    # 4. Settings/Info Block
-    # keyboard.append([KeyboardButton(text='🏠 ГОЛОВНЕ МЕНЮ')])
+        keyboard.append([KeyboardButton(text='👤 ПЕРСОНАЛ')])
     
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
-def get_admin_main_inline_kb(role='boss'):
+def get_admin_main_inline_kb(role='admin'):
     """
     Inline version of Admin Menu for message editing.
     """
@@ -40,11 +34,10 @@ def get_admin_main_inline_kb(role='boss'):
         [InlineKeyboardButton(text='🆕 НОВІ', callback_data='new_orders')],
         [InlineKeyboardButton(text='📦 АКТИВНІ', callback_data='active_orders')],
     ]
-    if role in ('owner', 'developer', 'boss'):
+    if role in ('owner', 'developer'):
         keyboard.append([InlineKeyboardButton(text='☕️ ЗЕРНА', callback_data='beans_manage')])
         keyboard.append([InlineKeyboardButton(text='📍 ЛОКАЦІЇ', callback_data='locations_manage'), InlineKeyboardButton(text='📞 КОНТАКТИ', callback_data='contacts_manage')])
-    if role in ('owner', 'developer'):
-        keyboard.append([InlineKeyboardButton(text='👤 ПЕРСОНАЛ', callback_data='staff_manage'), InlineKeyboardButton(text='📊 СТАТИСТИКА', callback_data='stats_show')])
+        keyboard.append([InlineKeyboardButton(text='👤 ПЕРСОНАЛ', callback_data='staff_manage')])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 def get_beans_manage_kb():

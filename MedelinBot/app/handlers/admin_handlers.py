@@ -51,6 +51,12 @@ logger = logging.getLogger(__name__)
 admin_router = Router()
 
 class AdminStates(StatesGroup):
+    # Staff management
+    adding_staff_identifier = State()
+    adding_staff_name = State()
+    confirming_staff = State()
+    
+    # Other states
     adding_admin_id = State()
     adding_admin_role = State()
     choosing_admin_locations = State()
@@ -799,30 +805,205 @@ async def _deduct_stock_from_cart(cart_text: str, bot: Bot):
                         logger.info(f"Deducted {count} stock for {bean_name} ({current} -> {new_stock})")
                         
                         if new_stock == 0:
-                            # Notify owner and developers
-                            admins = await admin_db.get_all_admins()
-                            dev_ids = [int(bid) for bid in DEVELOPER_IDS if bid.strip()]
+                            from app.utils.admin_notifications import send_admin_notification
                             
-                            notify_ids = set()
-                            for a in admins:
-                                if a.get('role') in ('owner', 'developer'):
-                                    notify_ids.add(int(a['user_id']))
-                            for d_id in dev_ids:
-                                notify_ids.add(d_id)
+                            kb = InlineKeyboardMarkup(inline_keyboard=[
+                                [InlineKeyboardButton(text='📦 ПОПОВНИТИ ЗАПАС', callback_data=f'bean_restock_{bean["_id"]}')],
+                                [InlineKeyboardButton(text='🗑 ВИДАЛИТИ ЛОТ', callback_data=f'bean_del_confirm_{bean["_id"]}')],
+                                [InlineKeyboardButton(text='⬅️ В МЕНЮ', callback_data='beans_manage')]
+                            ])
                             
-                            for admin_id in notify_ids:
-                                try:
-                                    kb = InlineKeyboardMarkup(inline_keyboard=[
-                                        [InlineKeyboardButton(text='📦 ПОПОВНИТИ ЗАПАС', callback_data=f'bean_restock_{bean["_id"]}')],
-                                        [InlineKeyboardButton(text='🗑 ВИДАЛИТИ ЛОТ', callback_data=f'bean_del_confirm_{bean["_id"]}')],
-                                        [InlineKeyboardButton(text='⬅️ В МЕНЮ', callback_data='beans_manage')]
-                                    ])
-                                    await bot.send_message(admin_id, f"⚠️ <b>ЗАПАС ВИЧЕРПАНО!</b>\n\nКава <b>{html.escape(bean_name)}</b> закінчилася і більше не відображається на сайті.\n\nБажаєте поповнити запас чи видалити лот?", reply_markup=kb, parse_mode='HTML')
-                                except Exception as e:
-                                    logger.warning(f"Failed to notify admin {admin_id}: {e}")
+                            text = f"⚠️ <b>ЗАПАС ВИЧЕРПАНО!</b>\n\nКава <b>{html.escape(bean_name)}</b> закінчилася і більше не відображається на сайті.\n\nБажаєте поповнити запас чи видалити лот?"
+                            await send_admin_notification(text, reply_markup=kb, notification_type='stock_alert')
+
+# --- STAFF MANAGEMENT ---
+
+@admin_router.callback_query(F.data == 'staff_manage')
+async def staff_manage_cb(callback: CallbackQuery):
+    await callback.message.answer('👤 <b>КЕРУВАННЯ ПЕРСОНАЛОМ:</b>\nДодавання адміністраторів та менеджерів.', reply_markup=akb.get_staff_manage_kb(), parse_mode='HTML')
+    await callback.answer()
+
+@admin_router.callback_query(F.data == 'staff_add')
+async def staff_add_start(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.answer(
+        "👤 <b>ДОДАВАННЯ СПІВРОБІТНИКА</b>\n\n"
+        "1. Введіть Telegram ID, @username або номер телефону співробітника:\n\n"
+        "<i>Співробітник має спочатку натиснути /start у боті.</i>\n"
+        "<i>Telegram ID можна дізнатися в @userinfobot або подібних.</i>",
+        parse_mode='HTML',
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='staff_manage')]])
+    )
+    await state.set_state(AdminStates.adding_staff_identifier)
+    await callback.answer()
+
+@admin_router.message(AdminStates.adding_staff_identifier)
+async def staff_identifier_input(message: Message, state: FSMContext):
+    identifier = (message.text or '').strip()
+    if not identifier: return
+    
+    target = await admin_db.find_admin_by_identifier(identifier)
+    if not target:
+        # Check in user_db directly if not found in find_admin_by_identifier
+        from app.databases.user_database import user_db
+        clean_id = identifier.replace('@', '')
+        user_info = None
+        if identifier.isdigit():
+            user_info = await user_db.get_user_by_id(int(identifier))
+        if not user_info:
+            user_info = await user_db.get_user_by_username(clean_id)
+        if not user_info:
+            from app.utils.phone_utils import normalize_phone
+            norm = normalize_phone(identifier)
+            if norm: user_info = await user_db.get_user_by_phone(norm)
+            
+        if user_info:
+            uid, name, uname, uphone = user_info
+            target = {'user_id': uid, 'display_name': name or uname or 'Користувач', 'username': uname}
+
+    if not target:
+        await message.answer("❌ <b>КОРИСТУВАЧА НЕ ЗНАЙДЕНО</b>\n\nВпевніться, що він натиснув /start у боті та ви ввели вірні дані.", parse_mode='HTML')
+        return
+
+    await state.update_data(target_uid=target['user_id'], target_uname=target.get('username'))
+    await message.answer(
+        f"✅ <b>ЗНАЙДЕНО:</b> {target.get('display_name')} (@{target.get('username') or '—'})\n\n"
+        "2. Введіть ім'я для команди (як його будуть бачити інші):",
+        parse_mode='HTML'
+    )
+    await state.set_state(AdminStates.adding_staff_name)
+
+@admin_router.message(AdminStates.adding_staff_name)
+async def staff_name_input(message: Message, state: FSMContext):
+    display_name = (message.text or '').strip()
+    if not display_name: return
+    
+    data = await state.get_data()
+    role = await get_user_role(message.from_user.id)
+    
+    # Role auto-assignment logic:
+    # Developer adds -> Owner
+    # Owner adds -> Admin
+    target_role = 'admin'
+    if role == 'developer':
+        target_role = 'owner'
+    elif role == 'owner':
+        target_role = 'admin'
+    else:
+        await message.answer("❌ У вас немає прав для додавання персоналу.")
+        await state.clear()
+        return
+
+    await state.update_data(display_name=display_name, target_role=target_role)
+    
+    role_label = "ВЛАСНИК" if target_role == 'owner' else "АДМІНІСТРАТОР"
+    
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='✅ ТАК, ДОДАТИ', callback_data='staff_confirm_yes')],
+        [InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='staff_manage')]
+    ])
+    
+    await message.answer(
+        f"👤 <b>ПЕРЕВІРКА ДАНИХ:</b>\n\n"
+        f"Користувач: {data.get('target_uname') or data.get('target_uid')}\n"
+        f"Ім'я в команді: <b>{display_name}</b>\n"
+        f"Роль: <b>{role_label}</b>\n\n"
+        f"Додати цього співробітника?",
+        parse_mode='HTML',
+        reply_markup=kb
+    )
+    await state.set_state(AdminStates.confirming_staff)
+
+@admin_router.callback_query(AdminStates.confirming_staff, F.data == 'staff_confirm_yes')
+async def staff_confirm_yes(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    uid = data['target_uid']
+    uname = data['target_uname'] or ''
+    dname = data['display_name']
+    role = data['target_role']
+    
+    await admin_db.add_admin(uid, uname, dname, callback.from_user.id, role)
+    await callback.message.answer(f"✅ Співробітника <b>{dname}</b> додано як <b>{role.upper()}</b>.", parse_mode='HTML', reply_markup=akb.get_staff_manage_kb())
+    await state.clear()
+    await callback.answer()
+
+@admin_router.callback_query(F.data == 'staff_list')
+async def staff_list_cb(callback: CallbackQuery):
+    admins = await admin_db.get_admins_basic()
+    if not admins:
+        await callback.message.answer("Список порожній.")
+        await callback.answer()
+        return
+    
+    text = "👤 <b>СПИСОК ПЕРСОНАЛУ:</b>\n\n"
+    keyboard = []
+    
+    for uid, uname, dname, role in admins:
+        role_label = {
+            'developer': '🛠 Developer',
+            'owner': '👑 Owner',
+            'admin': '🧑‍💼 Admin'
+        }.get(role, role.capitalize())
+        
+        text += f"• <b>{dname}</b> (@{uname or '—'}) — {role_label}\n"
+        keyboard.append([InlineKeyboardButton(text=f"🗑 Видалити {dname}", callback_data=f"staff_del_{uid}")])
+    
+    keyboard.append([InlineKeyboardButton(text='⬅️ НАЗАД', callback_data='staff_manage')])
+    await safe_edit_message(callback.message, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard), parse_mode='HTML')
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith('staff_del_'))
+async def staff_del_confirm(callback: CallbackQuery):
+    uid = int(callback.data.replace('staff_del_', ''))
+    me_id = callback.from_user.id
+    me_role = await get_user_role(me_id)
+    
+    target = await admin_db.get_admin_by_id(uid)
+    if not target:
+        await callback.answer("Співробітника не знайдено.")
+        return
+    
+    t_role = target.get('role')
+    t_name = target.get('display_name')
+
+    # Deletion rules:
+    # 1. Developer cannot delete anyone.
+    # 2. Owner can delete anyone (Owners, Admins).
+    # 3. Owner can delete themselves.
+    
+    if me_role == 'developer':
+        await callback.answer("🛠 Розробник не може видаляти персонал.", show_alert=True)
+        return
+    
+    if me_role != 'owner':
+        await callback.answer("❌ Тільки Власник може видаляти персонал.", show_alert=True)
+        return
+    
+    # If we are here, me_role is 'owner'
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='🗑 ТАК, ВИДАЛИТИ', callback_data=f'staff_finaldel_{uid}')],
+        [InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='staff_list')]
+    ])
+    
+    await safe_edit_message(callback.message, f"Ви впевнені, що хочете видалити співробітника <b>{t_name}</b> ({t_role})?", reply_markup=kb, parse_mode='HTML')
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith('staff_finaldel_'))
+async def staff_finaldel(callback: CallbackQuery):
+    uid = int(callback.data.replace('staff_finaldel_', ''))
+    await admin_db.remove_admin(uid)
+    await callback.answer("Видалено.")
+    await staff_list_cb(callback)
+
+# --- ORDERS BLOCK ACCESS CONTROL ---
 
 @admin_router.callback_query(F.data.startswith('confirm_order_'))
 async def confirm_order_handler(callback: CallbackQuery, bot: Bot):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer':
+        await callback.answer("🛠 У Розробника права тільки на перегляд.", show_alert=True)
+        return
+    
     oid = callback.data.replace('confirm_order_', '')
     order = await orders_db.get_order_by_id(oid)
     if not order:
@@ -854,6 +1035,11 @@ async def confirm_order_handler(callback: CallbackQuery, bot: Bot):
 
 @admin_router.callback_query(F.data.startswith('reject_order_'))
 async def reject_order_handler(callback: CallbackQuery, bot: Bot):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer':
+        await callback.answer("🛠 У Розробника права тільки на перегляд.", show_alert=True)
+        return
+        
     oid = callback.data.replace('reject_order_', '')
     order = await orders_db.get_order_by_id(oid)
     if not order:
@@ -866,6 +1052,11 @@ async def reject_order_handler(callback: CallbackQuery, bot: Bot):
 
 @admin_router.callback_query(F.data.startswith('finish_order_'))
 async def finish_order_handler(callback: CallbackQuery, bot: Bot):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer':
+        await callback.answer("🛠 У Розробника права тільки на перегляд.", show_alert=True)
+        return
+
     oid = callback.data.replace('finish_order_', '')
     await active_orders_db.delete_active_order(oid)
     await callback.answer('Замовлення завершено!')
@@ -880,7 +1071,7 @@ async def finish_order_handler(callback: CallbackQuery, bot: Bot):
 @admin_router.message(F.text == '☕️ ЗЕРНА', StateFilter(None))
 async def manage_beans_msg(message: Message):
     role = await get_user_role(message.from_user.id)
-    if role not in ('owner', 'developer', 'boss'): return
+    if role not in ('owner', 'developer'): return
     beans = _sorted_beans(await coffee_beans_db.get_all_beans(), 'commercial')
     text = "<b>КОМЕРЦІЙНА КАВА</b>\nСпочатку Espresso, потім Filter."
     if not beans:
@@ -890,7 +1081,7 @@ async def manage_beans_msg(message: Message):
 @admin_router.message(F.text == '📍 ЛОКАЦІЇ', StateFilter(None))
 async def manage_locations_msg(message: Message):
     role = await get_user_role(message.from_user.id)
-    if role not in ('owner', 'developer', 'boss'): return
+    if role not in ('owner', 'developer'): return
     await show_locations_page_message(message)
 
 async def show_locations_page_message(message: Message):
@@ -903,7 +1094,7 @@ async def show_locations_page_message(message: Message):
 @admin_router.message(F.text == '📞 КОНТАКТИ', StateFilter(None))
 async def manage_contacts_msg(message: Message):
     role = await get_user_role(message.from_user.id)
-    if role not in ('owner', 'developer', 'boss'): return
+    if role not in ('owner', 'developer'): return
     contacts = await contacts_db.get_all_contacts()
     text = "📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>"
     if not contacts:
@@ -917,12 +1108,6 @@ async def manage_staff_msg(message: Message):
     role = await get_user_role(message.from_user.id)
     if role not in ('owner', 'developer'): return
     await message.answer('👤 <b>КЕРУВАННЯ ПЕРСОНАЛОМ:</b>\nДодавання адміністраторів та менеджерів.', reply_markup=akb.get_staff_manage_kb(), parse_mode='HTML')
-
-@admin_router.message(F.text == '📊 СТАТИСТИКА', StateFilter(None))
-async def show_stats_msg(message: Message):
-    role = await get_user_role(message.from_user.id)
-    if role not in ('owner', 'developer'): return
-    await message.answer('📊 <b>СТАТИСТИКА ПРОДАЖІВ:</b>\n(Розділ знаходиться в розробці)', parse_mode='HTML')
 
 @admin_router.callback_query(F.data == 'beans_manage')
 async def manage_beans_cb(callback: CallbackQuery):

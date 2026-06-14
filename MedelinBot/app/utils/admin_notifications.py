@@ -1,40 +1,20 @@
 
 from app.common.bot_instance import bot
 
-async def send_admin_notification(text: str, reply_markup=None, location_id: str | None=None, include_boss: bool=True) -> None:
+async def send_admin_notification(text: str, reply_markup=None, location_id: str | None=None, notification_type: str = 'new_order') -> None:
 
     from app.databases.admin_database import admin_db
 
-    targets: set[int] = set()
-
-    # Get targets based on location
-    shift_ids = await admin_db.get_notification_targets(location_id)
-    targets.update(shift_ids)
-
-    # Always include developers
-    devs = await admin_db.get_developers()
-    targets.update(devs)
-
-    if include_boss:
-        # Also include owners and bosses for important notifications
-        db = await admin_db.connect() # just ensure connected
-        from app.databases.mongo_client import get_db
-        db_conn = await get_db()
-        rows = await db_conn.admins.find({'role': {'$in': ['owner', 'boss']}, 'receive_notifications': True}, {'user_id': 1}).to_list(length=None)
-        for r in rows:
-            targets.add(int(r['user_id']))
+    # Get targets based on role and notification type
+    targets = await admin_db.get_notification_targets(location_id, notification_type)
 
     if not targets:
         return
 
     for uid in targets:
-
         try:
-
             await bot.send_message(uid, text, parse_mode='HTML', reply_markup=reply_markup)
-
         except Exception:
-
             pass
 
 async def send_developer_error(error_text: str) -> None:

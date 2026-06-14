@@ -67,7 +67,68 @@ async def cleanup_old_data() -> None:
     except Exception as e:
         await log_activity(0, 'system', 'db_cleanup_error', str(e))
 
+from app.common.bot_instance import bot
+import html
+
+async def send_monthly_stats() -> None:
+    db = await get_db()
+    
+    # Calculate for the previous month
+    now = datetime.utcnow()
+    # Go to the first day of current month, then subtract one day to get into previous month
+    first_day_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    last_day_prev_month = first_day_this_month - timedelta(seconds=1)
+    first_day_prev_month = last_day_prev_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    query = {
+        'record_type': 'sale',
+        'timestamp': {'$gte': first_day_prev_month, '$lte': last_day_prev_month}
+    }
+    
+    sales = await db.sales.find(query).to_list(length=None)
+    
+    if not sales:
+        stats_text = f"📊 <b>ЗВІТ ЗА {first_day_prev_month.strftime('%m/%Y')}</b>\n\nПродажів не знайдено."
+    else:
+        total_sum = sum(s.get('total', 0) for s in sales)
+        order_count = len(sales)
+        unique_users = len(set(s.get('user_id') for s in sales if s.get('user_id')))
+        
+        # Estimate items sold from cart strings if possible, or just use order count
+        # For now, let's use order count as requested "кількість замовлень" and "продано товарів"
+        # Since 'items' is a string, parsing it accurately might be tricky, 
+        # but we can count lines or "xN" patterns.
+        total_items = 0
+        for s in sales:
+            items_str = s.get('items', '')
+            # Count lines starting with '-' or containing 'x'
+            lines = [l for l in items_str.split('\n') if l.strip()]
+            for l in lines:
+                match = re.search(r'x(\d+)', l)
+                if match: total_items += int(match.group(1))
+                else: total_items += 1
+
+        avg_check = total_sum / order_count if order_count > 0 else 0
+        
+        stats_text = (
+            f"📊 <b>ЗВІТ ЗА {first_day_prev_month.strftime('%m/%Y')}</b>\n\n"
+            f"📦 Продано товарів: <b>{total_items}</b>\n"
+            f"🧾 Кількість замовлень: <b>{order_count}</b>\n"
+            f"💰 Загальна сума: <b>{total_sum} ₴</b>\n"
+            f"📈 Середній чек: <b>{avg_check:.2f} ₴</b>"
+        )
+
+    # Send to developers
+    dev_ids = await admin_db.get_developers()
+    for dev_id in dev_ids:
+        try:
+            await bot.send_message(dev_id, stats_text, parse_mode='HTML')
+        except:
+            pass
+
 def start_scheduler() -> None:
     scheduler = AsyncIOScheduler()
     scheduler.add_job(cleanup_old_data, 'cron', hour=3, minute=0)
+    # Monthly stats on the 1st day of each month at 00:01
+    scheduler.add_job(send_monthly_stats, 'cron', day=1, hour=0, minute=1)
     scheduler.start()
