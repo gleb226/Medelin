@@ -10,6 +10,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.filters import StateFilter
 
 from app.databases.orders_database import orders_db
 
@@ -40,6 +41,8 @@ import logging
 from pathlib import Path
 
 import html
+import re
+import aiohttp
 
 import time
 
@@ -282,7 +285,15 @@ async def location_flow_input(message: Message, state: FSMContext, bot: Bot):
                 value = [s.strip() for s in value.split(',') if s.strip()]
         
         update_field = 'image_url' if field == 'photo' else field
-        await location_db.update_location(data['edit_loc_id'], {update_field: value})
+        update = {update_field: value}
+        
+        # Auto-extract coordinates if editing google_maps_url
+        if field == 'google_maps_url':
+            coords = await get_coordinates_from_url(value)
+            if coords:
+                update['coordinates'] = coords
+        
+        await location_db.update_location(data['edit_loc_id'], update)
         loc = await location_db.get_location_by_id(data['edit_loc_id'])
         await message.answer('✅ Поле оновлено.')
         await state.clear()
@@ -330,13 +341,49 @@ async def location_flow_input(message: Message, state: FSMContext, bot: Bot):
     await state.update_data(loc_step_index=step_index)
     await _ask_location_step(message, state)
 
+async def get_coordinates_from_url(url: str) -> dict | None:
+    """
+    Extract latitude and longitude from Google Maps URL.
+    Supports full and shortened URLs.
+    """
+    if not url or not url.startswith('http'):
+        return None
+    
+    try:
+        current_url = url
+        # Follow redirects for shortened links
+        if 'goo.gl' in url or 'maps.app.goo.gl' in url:
+            async with aiohttp.ClientSession() as session:
+                async with session.head(url, allow_redirects=True, timeout=5) as resp:
+                    current_url = str(resp.url)
+        
+        # 1. Try @lat,lon format
+        match = re.search(r'@(-?\d+\.\d+),(-?\d+\.\d+)', current_url)
+        if match:
+            return {'lat': float(match.group(1)), 'lon': float(match.group(2))}
+        
+        # 2. Try q=lat,lon format
+        match = re.search(r'[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)', current_url)
+        if match:
+            return {'lat': float(match.group(1)), 'lon': float(match.group(2))}
+            
+        # 3. Try ll=lat,lon format
+        match = re.search(r'[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)', current_url)
+        if match:
+            return {'lat': float(match.group(1)), 'lon': float(match.group(2))}
+            
+    except Exception as e:
+        logger.error(f"Error extracting coordinates: {e}")
+        
+    return None
+
 async def get_user_role(user_id: int) -> str:
     if str(user_id) in DEVELOPER_IDS: return 'developer'
     db = await get_db()
     admin = await db.admins.find_one({'user_id': int(user_id)})
     return admin.get('role', 'user') if admin else 'user'
 
-@admin_router.message(F.text == '🔐 АДМІН-ПАНЕЛЬ')
+@admin_router.message(F.text == '🔐 АДМІН-ПАНЕЛЬ', StateFilter(None))
 async def show_admin_panel(message: Message):
     role = await get_user_role(message.from_user.id)
     if role == 'user': return
@@ -350,7 +397,7 @@ async def back_to_admin_main(callback: CallbackQuery):
 
 # --- ORDERS BLOCK ---
 
-@admin_router.message(F.text == '🆕 НОВІ')
+@admin_router.message(F.text == '🆕 НОВІ', StateFilter(None))
 async def list_new_orders_msg(message: Message):
     if not await admin_db.is_admin(message.from_user.id): return
     await show_new_orders(message)
@@ -395,7 +442,7 @@ async def show_new_orders(message: Message):
         
         await message.answer(msg, reply_markup=akb.get_booking_manage_kb(oid, o.get('user_id') or -1), parse_mode='HTML')
 
-@admin_router.message(F.text == '📦 АКТИВНІ')
+@admin_router.message(F.text == '📦 АКТИВНІ', StateFilter(None))
 async def list_active_orders_msg(message: Message):
     if not await admin_db.is_admin(message.from_user.id): return
     await show_active_orders(message)
@@ -520,7 +567,7 @@ async def finish_order_handler(callback: CallbackQuery, bot: Bot):
 
 # --- CONTENT MANAGEMENT BLOCK ---
 
-@admin_router.message(F.text == '☕️ ЗЕРНА')
+@admin_router.message(F.text == '☕️ ЗЕРНА', StateFilter(None))
 async def manage_beans_msg(message: Message):
     role = await get_user_role(message.from_user.id)
     if role not in ('owner', 'developer', 'boss'): return
@@ -530,13 +577,20 @@ async def manage_beans_msg(message: Message):
         text += "\n\nСписок порожній."
     await message.answer(text, reply_markup=_bean_list_kb(beans, 'commercial'), parse_mode='HTML')
 
-@admin_router.message(F.text == '📍 ЛОКАЦІЇ')
+@admin_router.message(F.text == '📍 ЛОКАЦІЇ', StateFilter(None))
 async def manage_locations_msg(message: Message):
     role = await get_user_role(message.from_user.id)
     if role not in ('owner', 'developer', 'boss'): return
-    await message.answer('📍 <b>КЕРУВАННЯ ЛОКАЦІЯМИ:</b>\nНалаштування кав\'ярень та точок видачі.', reply_markup=akb.get_locations_manage_kb(), parse_mode='HTML')
+    await show_locations_page_message(message)
 
-@admin_router.message(F.text == '📞 КОНТАКТИ')
+async def show_locations_page_message(message: Message):
+    locations = await location_db.get_all_locations()
+    text = "📍 <b>КЕРУВАННЯ ЛОКАЦІЯМИ:</b>"
+    if not locations:
+        text += "\n\nСписок порожній."
+    await message.answer(text, reply_markup=_location_list_kb(locations), parse_mode='HTML')
+
+@admin_router.message(F.text == '📞 КОНТАКТИ', StateFilter(None))
 async def manage_contacts_msg(message: Message):
     role = await get_user_role(message.from_user.id)
     if role not in ('owner', 'developer', 'boss'): return
@@ -544,13 +598,13 @@ async def manage_contacts_msg(message: Message):
 
 # --- SYSTEM MANAGEMENT BLOCK ---
 
-@admin_router.message(F.text == '👤 ПЕРСОНАЛ')
+@admin_router.message(F.text == '👤 ПЕРСОНАЛ', StateFilter(None))
 async def manage_staff_msg(message: Message):
     role = await get_user_role(message.from_user.id)
     if role not in ('owner', 'developer'): return
     await message.answer('👤 <b>КЕРУВАННЯ ПЕРСОНАЛОМ:</b>\nДодавання адміністраторів та менеджерів.', reply_markup=akb.get_staff_manage_kb(), parse_mode='HTML')
 
-@admin_router.message(F.text == '📊 СТАТИСТИКА')
+@admin_router.message(F.text == '📊 СТАТИСТИКА', StateFilter(None))
 async def show_stats_msg(message: Message):
     role = await get_user_role(message.from_user.id)
     if role not in ('owner', 'developer'): return
@@ -991,5 +1045,8 @@ async def reject_admin_login(callback: CallbackQuery, bot: Bot):
         await callback.answer('Помилка.')
 
 async def deliver_guest_message(bot: Bot, order: dict, user_text: str, admin_text: str):
+    # DISABLED
+    return
+ user_text: str, admin_text: str):
     # DISABLED
     return

@@ -36,9 +36,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from aiogram.filters import StateFilter
+
 user_router = Router()
 
-@user_router.message(F.text == '/start')
+@user_router.message(F.text == '/start', StateFilter(None))
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     is_admin = await admin_db.is_admin(message.from_user.id)
