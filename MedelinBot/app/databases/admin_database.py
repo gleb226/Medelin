@@ -311,6 +311,10 @@ class AdminDatabase:
             
         return admin
 
+    async def get_all_admins(self) -> list:
+        db = await get_db()
+        return await db.admins.find({}, projection_without_mongo_id()).to_list(length=None)
+
     async def get_locations_for_admin(self, user_id: int) -> list:
 
         db = await get_db()

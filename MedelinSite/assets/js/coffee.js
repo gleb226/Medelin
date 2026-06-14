@@ -84,9 +84,9 @@ function renderCoffeeData(coffeeData) {
         // Stock logic for specialty
         const qScore = (item.quality_score || '').trim();
         const isCommercial = !qScore || qScore === '—' || qScore === '-' || qScore === '0';
-        const packs = item.stock_packs !== undefined ? parseInt(item.stock_packs) : 999;
+        const packs = (item.stock_packs !== undefined && item.stock_packs !== null) ? parseInt(item.stock_packs) : 999;
         
-        if (!isCommercial && packs <= 0) {
+        if (!isCommercial && (packs <= 0 || isNaN(packs))) {
             return; // Hide out-of-stock specialty
         }
 

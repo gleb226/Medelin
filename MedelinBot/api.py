@@ -97,12 +97,26 @@ def parse_price(value):
 
 def build_cart_text(cart: list) -> tuple[int, str]:
     total = 0
-    items = []
+    # Group items by name
+    grouped = {}
     for item in cart:
+        name = item.get('name', 'Невідомий товар')
         price = parse_price(item.get('price', 0))
         total += price
-        items.append(f"- {item['name']} ({price} грн)")
-    return (total, '\n'.join(items))
+        if name in grouped:
+            grouped[name]['qty'] += 1
+            grouped[name]['price'] += price
+        else:
+            grouped[name] = {'qty': 1, 'price': price}
+    
+    lines = []
+    for name, data in grouped.items():
+        if data['qty'] > 1:
+            lines.append(f"- {name} x{data['qty']} ({data['price']} грн)")
+        else:
+            lines.append(f"- {name} ({data['price']} грн)")
+            
+    return (total, '\n'.join(lines))
 
 from app.utils.nova_poshta import np_client
 

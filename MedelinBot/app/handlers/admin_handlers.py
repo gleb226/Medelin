@@ -751,9 +751,8 @@ async def _deduct_stock_from_cart(cart_text: str, bot: Bot):
     """Parses cart text and deducts stock for specialty beans. Handles multiples (xN)."""
     if not cart_text: return
     
-    # Split by newlines or markers
-    lines = re.split(r'\n|(?=- )|(?=ЗЕРНА: )', cart_text)
-    all_beans = None # Lazy load
+    # Split by newlines
+    lines = cart_text.split('\n')
     
     for line in lines:
         line = line.strip()
@@ -765,57 +764,62 @@ async def _deduct_stock_from_cart(cart_text: str, bot: Bot):
         # 1. Bot format: "ЗЕРНА: Name" or "ЗЕРНА: Name x2"
         if 'ЗЕРНА: ' in line:
             raw = line.split('ЗЕРНА: ', 1)[1].strip()
-            if ' x' in raw:
-                try:
-                    # Handle "Name x2 (price)" or just "Name x2"
-                    parts = raw.rsplit(' x', 1)
-                    bean_name = parts[0].strip()
-                    count_raw = parts[1].split('(')[0].strip()
-                    count = int(re.sub(r'[^\d]', '', count_raw))
-                except: bean_name = raw
+            # Regex to match "Name x2 (price)" or just "Name x2"
+            match = re.search(r'^(.*?)(?:\s+x(\d+))?(?:\s+\(.*\))?$', raw, re.IGNORECASE)
+            if match:
+                bean_name = match.group(1).strip()
+                if match.group(2):
+                    count = int(match.group(2))
             else:
                 bean_name = raw.split('(')[0].strip()
         
         # 2. Site format: "- Name (price грн)" or "- Name x2 (price грн)"
         elif line.startswith('- '):
             # Regex to match "- Name x2 (100 грн)" or "- Name (100 грн)"
-            match = re.search(r'[-•]\s*(.*?)(?:\s+x(\d+))?\s*\((\d+)\s*(?:грн|₴|uah)?\)', line, re.IGNORECASE)
+            match = re.search(r'^[-•]\s*(.*?)(?:\s+x(\d+))?\s*\((\d+)\s*(?:грн|₴|uah)?\)', line, re.IGNORECASE)
             if match:
                 bean_name = match.group(1).strip()
                 if match.group(2):
                     count = int(match.group(2))
             else:
+                # Fallback: remove "- " and anything after "("
                 bean_name = line[2:].strip().split('(')[0].strip()
         
         if bean_name:
-            if all_beans is None:
-                all_beans = await coffee_beans_db.get_all_beans()
+            # IMPORTANT: Reload bean from DB to avoid stale stock_packs values if the same bean appears on multiple lines
+            db = await get_db()
+            bean = await db.coffee_beans.find_one({'name': bean_name})
             
-            for b in all_beans:
-                if b.get('name') == bean_name:
-                    if _bean_category(b) == 'specialty':
-                        current = b.get('stock_packs', 0)
-                        if current > 0:
-                            new_stock = max(0, current - count)
-                            await coffee_beans_db.update_bean(b['_id'], {'stock_packs': new_stock})
-                            logger.info(f"Deducted {count} stock for {bean_name} ({current} -> {new_stock})")
+            if bean:
+                if _bean_category(bean) == 'specialty':
+                    current = bean.get('stock_packs', 0)
+                    if current > 0:
+                        new_stock = max(0, current - count)
+                        await coffee_beans_db.update_bean(str(bean['_id']), {'stock_packs': new_stock})
+                        logger.info(f"Deducted {count} stock for {bean_name} ({current} -> {new_stock})")
+                        
+                        if new_stock == 0:
+                            # Notify owner and developers
+                            admins = await admin_db.get_all_admins()
+                            dev_ids = [int(bid) for bid in DEVELOPER_IDS if bid.strip()]
                             
-                            if new_stock == 0:
-                                # Notify owner and developers
-                                from app.databases.admin_database import admin_db
-                                admins = await admin_db.get_all_admins()
-                                notify_ids = [a['user_id'] for a in admins if a.get('role') in ('owner', 'developer')]
-                                
-                                for admin_id in notify_ids:
-                                    try:
-                                        kb = InlineKeyboardMarkup(inline_keyboard=[
-                                            [InlineKeyboardButton(text='📦 ПОПОВНИТИ', callback_data=f'bean_restock_{b["_id"]}')],
-                                            [InlineKeyboardButton(text='🗑 ВИДАЛИТИ ЛОТ', callback_data=f'bean_del_confirm_{b["_id"]}')],
-                                            [InlineKeyboardButton(text='⬅️ В МЕНЮ', callback_data='beans_manage')]
-                                        ])
-                                        await bot.send_message(admin_id, f"⚠️ <b>ЗАПАС ВИЧЕРПАНО!</b>\n\nКава <b>{html.escape(bean_name)}</b> закінчилася і більше не відображається на сайті.\n\nБажаєте поповнити запас чи видалити лот?", reply_markup=kb, parse_mode='HTML')
-                                    except: pass
-                    break
+                            notify_ids = set()
+                            for a in admins:
+                                if a.get('role') in ('owner', 'developer'):
+                                    notify_ids.add(int(a['user_id']))
+                            for d_id in dev_ids:
+                                notify_ids.add(d_id)
+                            
+                            for admin_id in notify_ids:
+                                try:
+                                    kb = InlineKeyboardMarkup(inline_keyboard=[
+                                        [InlineKeyboardButton(text='📦 ПОПОВНИТИ ЗАПАС', callback_data=f'bean_restock_{bean["_id"]}')],
+                                        [InlineKeyboardButton(text='🗑 ВИДАЛИТИ ЛОТ', callback_data=f'bean_del_confirm_{bean["_id"]}')],
+                                        [InlineKeyboardButton(text='⬅️ В МЕНЮ', callback_data='beans_manage')]
+                                    ])
+                                    await bot.send_message(admin_id, f"⚠️ <b>ЗАПАС ВИЧЕРПАНО!</b>\n\nКава <b>{html.escape(bean_name)}</b> закінчилася і більше не відображається на сайті.\n\nБажаєте поповнити запас чи видалити лот?", reply_markup=kb, parse_mode='HTML')
+                                except Exception as e:
+                                    logger.warning(f"Failed to notify admin {admin_id}: {e}")
 
 @admin_router.callback_query(F.data.startswith('confirm_order_'))
 async def confirm_order_handler(callback: CallbackQuery, bot: Bot):
