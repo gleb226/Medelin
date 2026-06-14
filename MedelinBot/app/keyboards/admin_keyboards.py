@@ -100,9 +100,22 @@ def get_location_edit_fields_kb(loc_id):
 
 def get_contacts_manage_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='➕ ДОДАТИ КОНТАКТ', callback_data='contact_add')],
-        [InlineKeyboardButton(text='📞 СПИСОК / РЕДАГУВАННЯ', callback_data='contacts_list')],
+        [InlineKeyboardButton(text='📞 СПИСОК КОНТАКТІВ', callback_data='contacts_list')],
+        [InlineKeyboardButton(text='➕ ДОДАТИ КОНТАКТ', callback_data='contact_new')],
         [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')]
+    ])
+
+def get_contact_card_kb(contact_id):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ', callback_data=f'con_edit_fields_{contact_id}')],
+        [InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data=f'con_del_confirm_{contact_id}')],
+        [InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data='contacts_list')]
+    ])
+
+def get_contact_edit_fields_kb(contact_id):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='🏷 Назва', callback_data=f'con_fedit_{contact_id}_name'), InlineKeyboardButton(text='🔗 URL / Дані', callback_data=f'con_fedit_{contact_id}_url')],
+        [InlineKeyboardButton(text='⬅️ НАЗАД ДО КАРТКИ', callback_data=f'con_open_{contact_id}')]
     ])
 
 def get_staff_manage_kb():

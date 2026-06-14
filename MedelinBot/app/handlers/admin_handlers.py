@@ -63,6 +63,207 @@ class AdminStates(StatesGroup):
     adding_location_name = State()
     editing_location_field = State()
 
+    # Contact management states
+    adding_contact_name = State()
+    editing_contact_field = State()
+
+CONTACT_ADD_STEPS = [
+    ('name', '🏷 <b>Введіть назву контакту:</b>\n(напр. Instagram, Facebook, Телефон)'),
+    ('url', '🔗 <b>Введіть URL або номер/email:</b>\n(напр. https://instagram.com/..., tel:+380...)')
+]
+
+def _guess_contact_icon(name: str, url: str) -> str:
+    n = name.lower()
+    u = url.lower()
+    if 'insta' in n or 'instagram' in u: return '📸 Instagram'
+    if 'face' in n or 'facebook' in u or 'fb.' in u: return '👥 Facebook'
+    if 'tele' in n or 't.me' in u: return '✈️ Telegram'
+    if 'viber' in n or 'viber' in u: return '💜 Viber'
+    if 'tube' in n or 'youtu' in u: return '📺 YouTube'
+    if 'tik' in n or 'tiktok' in u: return '🎵 TikTok'
+    if 'mail' in n or 'email' in n or '@' in u or 'mailto:' in u: return '📧 Email'
+    if 'phone' in n or 'тел' in n or 'tel:' in u or (u.startswith('+') and u[1:].isdigit()): return '📞 Телефон'
+    return '🔗 Контакт'
+
+def _contact_list_kb(contacts: list[dict]) -> InlineKeyboardMarkup:
+    keyboard = []
+    # Grid: 2 columns
+    row = []
+    for c in contacts:
+        cid = str(c['_id'])
+        name = c.get('name', '')[:25]
+        row.append(InlineKeyboardButton(text=name, callback_data=f'con_open_{cid}'))
+        if len(row) == 2:
+            keyboard.append(row)
+            row = []
+    if row:
+        keyboard.append(row)
+    
+    keyboard.append([InlineKeyboardButton(text='➕ ДОДАТИ КОНТАКТ', callback_data='contact_new')])
+    keyboard.append([InlineKeyboardButton(text='⬅️ НАЗАД В МЕНЮ', callback_data='admin_panel_back')])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def _contact_card_text(con: dict) -> str:
+    name = con.get('name', 'Без назви')
+    url = con.get('url', '—')
+    icon_info = _guess_contact_icon(name, url)
+    
+    lines = [
+        f"📞 <b>КОНТАКТ: {html.escape(str(name))}</b>",
+        f"━━━━━━━━━━━━━━━",
+        f"Тип: <b>{icon_info}</b>",
+        f"Дані: <code>{html.escape(str(url))}</code>",
+        f"━━━━━━━━━━━━━━━",
+        f"<i>Цей контакт буде відображатися на сайті та в боті для клієнтів.</i>"
+    ]
+    return '\n'.join(lines)
+
+async def show_contacts_page(callback: CallbackQuery):
+    contacts = await contacts_db.get_all_contacts()
+    text = "📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>"
+    if not contacts:
+        text += "\n\nСписок порожній."
+    await safe_edit_message(callback.message, text, reply_markup=_contact_list_kb(contacts), parse_mode='HTML')
+    await callback.answer()
+
+async def show_contact_card(target, con: dict):
+    text = _contact_card_text(con)
+    kb = akb.get_contact_card_kb(str(con['_id']))
+    
+    if isinstance(target, Message):
+        await target.answer(text, reply_markup=kb, parse_mode='HTML', disable_web_page_preview=True)
+    else:
+        await target.message.answer(text, reply_markup=kb, parse_mode='HTML', disable_web_page_preview=True)
+
+# Contact Handlers
+
+@admin_router.callback_query(F.data == 'contacts_list')
+async def list_contacts_cb(callback: CallbackQuery):
+    await show_contacts_page(callback)
+
+@admin_router.callback_query(F.data == 'contact_new')
+async def add_contact_new(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await state.update_data(con_mode='add', con_step_index=0)
+    await callback.message.answer('➕ <b>ДОДАВАННЯ КОНТАКТУ</b>', parse_mode='HTML')
+    await _ask_contact_step(callback.message, state)
+    await state.set_state(AdminStates.adding_contact_name)
+    await callback.answer()
+
+async def _ask_contact_step(message: Message, state: FSMContext):
+    data = await state.get_data()
+    step_index = int(data.get('con_step_index', 0))
+    _, prompt = CONTACT_ADD_STEPS[step_index]
+    
+    cancel_kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='contact_cancel')]])
+    await message.answer(prompt, reply_markup=cancel_kb, parse_mode='HTML')
+
+@admin_router.callback_query(F.data == 'contact_cancel')
+async def contact_cancel(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await show_contacts_page(callback)
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith('con_open_'))
+async def open_contact_card(callback: CallbackQuery):
+    cid = callback.data.replace('con_open_', '')
+    con = await contacts_db.get_contact_by_id(cid)
+    if not con:
+        await callback.answer('Контакт не знайдено.', show_alert=True)
+        return
+    try:
+        await callback.message.delete()
+    except:
+        pass
+    await show_contact_card(callback.message, con)
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith('con_del_confirm_'))
+async def delete_contact_confirm(callback: CallbackQuery):
+    cid = callback.data.replace('con_del_confirm_', '')
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='🗑 ТАК, ВИДАЛИТИ', callback_data=f'con_del_final_{cid}')],
+        [InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data=f'con_open_{cid}')]
+    ])
+    await safe_edit_message(callback.message, "Видалити цей контакт?", reply_markup=kb)
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith('con_del_final_'))
+async def delete_contact_final(callback: CallbackQuery):
+    cid = callback.data.replace('con_del_final_', '')
+    await contacts_db.delete_contact(cid)
+    await callback.answer('Контакт видалено.')
+    await show_contacts_page(callback)
+
+@admin_router.callback_query(F.data.startswith('con_edit_fields_'))
+async def edit_contact_fields_menu(callback: CallbackQuery):
+    cid = callback.data.replace('con_edit_fields_', '')
+    con = await contacts_db.get_contact_by_id(cid)
+    if not con:
+        await callback.answer('Контакт не знайдено.', show_alert=True)
+        return
+    await safe_edit_message(callback.message, f"⚙️ <b>Оберіть поле для редагування:</b>\n{html.escape(str(con.get('name', '')))}", reply_markup=akb.get_contact_edit_fields_kb(cid), parse_mode='HTML')
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith('con_fedit_'))
+async def edit_contact_single_field_start(callback: CallbackQuery, state: FSMContext):
+    parts = callback.data.split('_')
+    cid = parts[2]
+    field = parts[3]
+    
+    prompts = dict(CONTACT_ADD_STEPS)
+    await state.clear()
+    await state.update_data(con_mode='single_edit', edit_con_id=cid, edit_single_field=field)
+    
+    cancel_kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='contact_cancel')]])
+    await callback.message.answer(prompts.get(field, 'Нове значення:'), reply_markup=cancel_kb, parse_mode='HTML')
+    await state.set_state(AdminStates.editing_contact_field)
+    await callback.answer()
+
+@admin_router.message(AdminStates.adding_contact_name)
+@admin_router.message(AdminStates.editing_contact_field)
+async def contact_flow_input(message: Message, state: FSMContext):
+    data = await state.get_data()
+    mode = data.get('con_mode')
+    
+    if mode == 'single_edit':
+        field = data.get('edit_single_field')
+        value = (message.text or '').strip()
+        if not value: return
+        
+        await contacts_db.update_contact(data['edit_con_id'], {field: value})
+        con = await contacts_db.get_contact_by_id(data['edit_con_id'])
+        await message.answer('✅ Контакт оновлено.')
+        await state.clear()
+        if con: await show_contact_card(message, con)
+        return
+
+    step_index = int(data.get('con_step_index', 0))
+    field, _ = CONTACT_ADD_STEPS[step_index]
+    
+    value = (message.text or '').strip()
+    if not value: return
+    await state.update_data(**{field: value})
+    
+    step_index += 1
+    if step_index >= len(CONTACT_ADD_STEPS):
+        # Finish flow
+        data = await state.get_data()
+        payload = {f: data[f] for f, _ in CONTACT_ADD_STEPS if f in data}
+        
+        await contacts_db.add_contact(**payload)
+        # add_contact returns None/Task, but it updates by name (upsert)
+        # To show the card, we need to find it back or just return to list
+        await message.answer('✅ Контакт додано/оновлено.')
+        await state.clear()
+        # Triggering list instead of card because add_contact uses name as key and might not return ID easily here
+        locations = await contacts_db.get_all_contacts()
+        await message.answer("📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>", reply_markup=_contact_list_kb(locations), parse_mode='HTML')
+        return
+    
+    await state.update_data(con_step_index=step_index)
+    await _ask_contact_step(message, state)
+
 LOCATION_ADD_STEPS = [
     ('name', '📝 <b>Введіть назву локації:</b>'),
     ('address', '🏠 <b>Введіть адресу:</b>'),
@@ -614,7 +815,11 @@ async def show_locations_page_message(message: Message):
 async def manage_contacts_msg(message: Message):
     role = await get_user_role(message.from_user.id)
     if role not in ('owner', 'developer', 'boss'): return
-    await message.answer('📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>\nРедагування посилань на соцмережі та контакти.', reply_markup=akb.get_contacts_manage_kb(), parse_mode='HTML')
+    contacts = await contacts_db.get_all_contacts()
+    text = "📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>"
+    if not contacts:
+        text += "\n\nСписок порожній."
+    await message.answer(text, reply_markup=_contact_list_kb(contacts), parse_mode='HTML')
 
 # --- SYSTEM MANAGEMENT BLOCK ---
 
@@ -640,7 +845,7 @@ async def manage_locations_cb(callback: CallbackQuery):
 
 @admin_router.callback_query(F.data == 'contacts_manage')
 async def manage_contacts_cb(callback: CallbackQuery):
-    await safe_edit_message(callback.message, '📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>', reply_markup=akb.get_contacts_manage_kb(), parse_mode='HTML')
+    await show_contacts_page(callback)
 
 
 BEAN_ADD_STEPS = [
