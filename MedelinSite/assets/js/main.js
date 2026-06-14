@@ -137,13 +137,14 @@ function escapeHtml(value) {
 window.fixImageUrl = function(url) {
     if (!url || url.startsWith('http') || url.startsWith('data:')) return url;
     
+    // If it starts with /uploads/, it's a bot-uploaded image
+    // Nginx handles /uploads/ as an absolute path from the domain root
+    if (url.startsWith('/uploads/')) {
+        return url;
+    }
+    
     const isRoot = !window.location.pathname.includes('/pages/');
     const prefix = isRoot ? '' : '../';
-    
-    // If it starts with /uploads/, it's a bot-uploaded image
-    if (url.startsWith('/uploads/')) {
-        return `${prefix}assets/images${url}`;
-    }
     
     // If it starts with ../ it's already relative but might need adjustment if we are at root
     if (url.startsWith('../')) {

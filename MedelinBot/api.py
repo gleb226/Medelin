@@ -63,10 +63,8 @@ app.add_middleware(
 )
 
 # Папка з сайтом
-_curr_path = pathlib.Path(__file__).parent.resolve()
-_site_dir = _curr_path.parent / 'MedelinSite'
-if not _site_dir.exists():
-    _site_dir = None
+from app.utils.paths import get_site_dir, get_uploads_dir
+_site_dir = get_site_dir()
 
 # --- Моделі ---
 class CheckoutRequest(BaseModel):
@@ -522,5 +520,5 @@ async def admin_delete_team(uid: int, admin: dict = Depends(get_current_admin)):
     return {'status': 'ok'}
 
 if _site_dir:
-    app.mount('/uploads', StaticFiles(directory=str(_site_dir / 'assets' / 'images' / 'uploads')), name='uploads')
+    app.mount('/uploads', StaticFiles(directory=str(get_uploads_dir())), name='uploads')
     app.mount('/', StaticFiles(directory=str(_site_dir), html=True), name='site')

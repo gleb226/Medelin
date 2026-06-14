@@ -18,6 +18,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копіюємо код бота
 COPY MedelinBot/ /app/
 
+# Створюємо папку для завантажень та кешу
+RUN mkdir -p /app/uploads /app/cache && chmod 777 /app/uploads /app/cache
+
 # Копіюємо сайт у папку Nginx
 COPY MedelinSite/ /usr/share/nginx/html/
 

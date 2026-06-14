@@ -4,6 +4,24 @@ import os
 from pathlib import Path
 
 
+def get_site_dir() -> Path:
+    """
+    Find where the MedelinSite files are located.
+    """
+    candidates = [
+        Path("/usr/share/nginx/html"),
+        Path("/app/MedelinSite"),
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    
+    # Dev fallback
+    repo_root = Path(__file__).resolve().parents[3]
+    dev_path = repo_root / "MedelinSite"
+    return dev_path
+
+
 def get_uploads_dir() -> Path:
     """
     Resolve a writable uploads directory across environments.
@@ -14,19 +32,25 @@ def get_uploads_dir() -> Path:
         p.mkdir(parents=True, exist_ok=True)
         return p
 
+    # Prefer a stable path in /app/uploads if we are in a container
+    # or the MedelinSite assets path if it's writable.
     candidates = [
-        Path("/usr/share/nginx/html/assets/images/uploads"),
-        Path("/app/MedelinSite/assets/images/uploads"),
         Path("/app/uploads"),
+        get_site_dir() / "assets" / "images" / "uploads",
     ]
     for p in candidates:
-        if p.exists() or p.parent.exists():
-            try:
+        try:
+            if not p.exists():
                 p.mkdir(parents=True, exist_ok=True)
-                return p
-            except Exception:
-                pass
+            # Test writability
+            test_file = p / ".write_test"
+            test_file.touch()
+            test_file.unlink()
+            return p
+        except Exception:
+            pass
 
+    # Dev fallback
     repo_root = Path(__file__).resolve().parents[3]
     dev_path = repo_root / "MedelinSite" / "assets" / "images" / "uploads"
     dev_path.mkdir(parents=True, exist_ok=True)

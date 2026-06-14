@@ -429,19 +429,20 @@ async def show_bean_card(target, bean: dict):
 
     if image:
         if image.startswith('/uploads/') or image.startswith('/photos/'):
-            # Try multiple possible local paths for robustness
-            filename = image.lstrip('/')
-            uploads_dir = get_uploads_dir()
-            repo_root = Path(__file__).resolve().parents[3]
+            # Resolve local path based on site_dir and uploads_dir
+            site_dir = Path("/usr/share/nginx/html")
+            if not site_dir.exists():
+                from app.utils.paths import get_site_dir
+                site_dir = get_site_dir()
             
-            # 1. Try directly in MedelinSite
-            local_path = repo_root / "MedelinSite" / filename
-            if not local_path.exists() and image.startswith('/uploads/'):
-                # 2. Try in assets/images/uploads (where it should be in site)
-                local_path = repo_root / "MedelinSite" / "assets" / "images" / filename
-            if not local_path.exists() and image.startswith('/uploads/'):
-                # 3. Try in the dynamic uploads_dir
-                local_path = uploads_dir / filename.replace('uploads/', '')
+            uploads_dir = get_uploads_dir()
+            
+            if image.startswith('/uploads/'):
+                filename = image.replace('/uploads/', '')
+                local_path = uploads_dir / filename
+            else: # /photos/
+                filename = image.lstrip('/')
+                local_path = site_dir / filename
             
             logger.info(f"Checking local photo at: {local_path}")
             
