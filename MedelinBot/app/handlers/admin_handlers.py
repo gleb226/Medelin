@@ -68,21 +68,33 @@ class AdminStates(StatesGroup):
     editing_contact_field = State()
 
 CONTACT_ADD_STEPS = [
-    ('name', '🏷 <b>Введіть назву контакту:</b>\n(напр. Instagram, Facebook, Телефон)'),
-    ('url', '🔗 <b>Введіть URL або номер/email:</b>\n(напр. https://instagram.com/..., tel:+380...)')
+    ('name', '🏷 <b>Введіть назву контакту:</b>'),
+    ('url', '🔗 <b>Введіть URL або дані:</b>')
 ]
 
 def _guess_contact_icon(name: str, url: str) -> str:
     n = name.lower()
     u = url.lower()
-    if 'insta' in n or 'instagram' in u: return '📸 Instagram'
-    if 'face' in n or 'facebook' in u or 'fb.' in u: return '👥 Facebook'
-    if 'tele' in n or 't.me' in u: return '✈️ Telegram'
-    if 'viber' in n or 'viber' in u: return '💜 Viber'
-    if 'tube' in n or 'youtu' in u: return '📺 YouTube'
-    if 'tik' in n or 'tiktok' in u: return '🎵 TikTok'
-    if 'mail' in n or 'email' in n or '@' in u or 'mailto:' in u: return '📧 Email'
-    if 'phone' in n or 'тел' in n or 'tel:' in u or (u.startswith('+') and u[1:].isdigit()): return '📞 Телефон'
+    
+    # 1. Instagram
+    if any(k in n for k in ['insta', 'інста']) or 'instagram' in u: return '📸 Instagram'
+    # 2. Facebook
+    if any(k in n for k in ['face', 'фейс', 'фб']) or 'facebook' in u or 'fb.' in u: return '👥 Facebook'
+    # 3. Telegram
+    if any(k in n for k in ['tele', 'теле', 'тг']) or 't.me' in u: return '✈️ Telegram'
+    # 4. Viber
+    if any(k in n for k in ['viber', 'вайбер']) or 'viber' in u: return '💜 Viber'
+    # 5. YouTube
+    if any(k in n for k in ['tube', 'ютуб']) or 'youtu' in u: return '📺 YouTube'
+    # 6. TikTok
+    if any(k in n for k in ['tik', 'тік']) or 'tiktok' in u: return '🎵 TikTok'
+    # 7. Email
+    if any(k in n for k in ['mail', 'мейл', 'пошт']) or '@' in u or 'mailto:' in u: return '📧 Email'
+    # 8. Phone
+    clean_u = re.sub(r'[\s\-()]+', '', u)
+    if any(k in n for k in ['phone', 'тел', 'номер']) or u.startswith('tel:') or clean_u.startswith('+') or (clean_u.isdigit() and len(clean_u) >= 9):
+        return '📞 Телефон'
+    
     return '🔗 Контакт'
 
 def _contact_list_kb(contacts: list[dict]) -> InlineKeyboardMarkup:

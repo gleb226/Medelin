@@ -140,6 +140,15 @@ function renderSocials(socials) {
     const socialsRoot = document.getElementById('socials-list');
     const footerSocials = document.getElementById('footer-socials');
 
+    const ensureAbsoluteUrl = (url) => {
+        if (!url) return '';
+        if (url.startsWith('http') || url.startsWith('tel:') || url.startsWith('mailto:')) return url;
+        if (url.startsWith('t.me') || url.startsWith('instagram.com') || url.startsWith('facebook.com') || url.startsWith('fb.com')) {
+            return 'https://' + url;
+        }
+        return url;
+    };
+
     if (socialsRoot) {
         socialsRoot.innerHTML = '<div class="contact-social-icons"></div>';
         const container = socialsRoot.querySelector('.contact-social-icons');
@@ -148,9 +157,10 @@ function renderSocials(socials) {
             const byUrl = guessSocialKeyFromUrl(soc.url);
             let iconClass = SOCIAL_ICONS[nameKey] || (byUrl ? SOCIAL_ICONS[byUrl] : null) || 'fas fa-link';
             const a = document.createElement('a');
-            a.href = soc.url;
+            a.href = ensureAbsoluteUrl(soc.url);
             a.className = 'social-icon';
             a.target = '_blank';
+            a.rel = 'noopener noreferrer';
             a.title = soc.name;
             a.innerHTML = `<i class="${iconClass}"></i><span style="font-size:0.7rem; font-weight:700; text-transform:uppercase;">${soc.name}</span>`;
             container.appendChild(a);
@@ -161,8 +171,9 @@ function renderSocials(socials) {
         footerSocials.innerHTML = '';
         socials.forEach((soc) => {
             const a = document.createElement('a');
-            a.href = soc.url;
+            a.href = ensureAbsoluteUrl(soc.url);
             a.target = '_blank';
+            a.rel = 'noopener noreferrer';
             a.className = 'footer__link';
             const nameKey = soc.name.toLowerCase().trim();
             const byUrl = guessSocialKeyFromUrl(soc.url);
