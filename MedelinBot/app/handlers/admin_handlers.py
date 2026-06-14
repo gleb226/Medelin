@@ -1076,20 +1076,20 @@ async def manage_beans_msg(message: Message):
     text = "<b>КОМЕРЦІЙНА КАВА</b>\nСпочатку Espresso, потім Filter."
     if not beans:
         text += "\n\nСписок порожній."
-    await message.answer(text, reply_markup=_bean_list_kb(beans, 'commercial'), parse_mode='HTML')
+    await message.answer(text, reply_markup=_bean_list_kb(beans, 'commercial', role=role), parse_mode='HTML')
 
 @admin_router.message(F.text == '📍 ЛОКАЦІЇ', StateFilter(None))
 async def manage_locations_msg(message: Message):
     role = await get_user_role(message.from_user.id)
     if role not in ('owner', 'developer'): return
-    await show_locations_page_message(message)
+    await show_locations_page_message(message, role=role)
 
-async def show_locations_page_message(message: Message):
+async def show_locations_page_message(message: Message, role='owner'):
     locations = await location_db.get_all_locations()
     text = "📍 <b>КЕРУВАННЯ ЛОКАЦІЯМИ:</b>"
     if not locations:
         text += "\n\nСписок порожній."
-    await message.answer(text, reply_markup=_location_list_kb(locations), parse_mode='HTML')
+    await message.answer(text, reply_markup=_location_list_kb(locations, role=role), parse_mode='HTML')
 
 @admin_router.message(F.text == '📞 КОНТАКТИ', StateFilter(None))
 async def manage_contacts_msg(message: Message):
@@ -1099,7 +1099,7 @@ async def manage_contacts_msg(message: Message):
     text = "📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>"
     if not contacts:
         text += "\n\nСписок порожній."
-    await message.answer(text, reply_markup=_contact_list_kb(contacts), parse_mode='HTML')
+    await message.answer(text, reply_markup=_contact_list_kb(contacts, role=role), parse_mode='HTML')
 
 # --- SYSTEM MANAGEMENT BLOCK ---
 
@@ -1107,19 +1107,22 @@ async def manage_contacts_msg(message: Message):
 async def manage_staff_msg(message: Message):
     role = await get_user_role(message.from_user.id)
     if role not in ('owner', 'developer'): return
-    await message.answer('👤 <b>КЕРУВАННЯ ПЕРСОНАЛОМ:</b>\nДодавання адміністраторів та менеджерів.', reply_markup=akb.get_staff_manage_kb(), parse_mode='HTML')
+    await message.answer('👤 <b>КЕРУВАННЯ ПЕРСОНАЛОМ:</b>\nДодавання адміністраторів та менеджерів.', reply_markup=akb.get_staff_manage_kb(role=role), parse_mode='HTML')
 
 @admin_router.callback_query(F.data == 'beans_manage')
 async def manage_beans_cb(callback: CallbackQuery):
-    await show_beans_page(callback, 'commercial')
+    role = await get_user_role(callback.from_user.id)
+    await show_beans_page(callback, 'commercial', role=role)
 
 @admin_router.callback_query(F.data == 'locations_manage')
 async def manage_locations_cb(callback: CallbackQuery):
-    await show_locations_page(callback)
+    role = await get_user_role(callback.from_user.id)
+    await show_locations_page(callback, role=role)
 
 @admin_router.callback_query(F.data == 'contacts_manage')
 async def manage_contacts_cb(callback: CallbackQuery):
-    await show_contacts_page(callback)
+    role = await get_user_role(callback.from_user.id)
+    await show_contacts_page(callback, role=role)
 
 
 BEAN_ADD_STEPS = [
@@ -1239,17 +1242,21 @@ def _bean_card_text(bean: dict) -> str:
     ])
     return '\n'.join(lines)
 
-async def show_beans_page(callback: CallbackQuery, category: str = 'commercial'):
+async def show_beans_page(callback: CallbackQuery, category: str = 'commercial', role='owner'):
     beans = _sorted_beans(await coffee_beans_db.get_all_beans(), category)
     title = '<b>КОМЕРЦІЙНА КАВА</b>' if category == 'commercial' else '<b>СПЕШЕЛТІ КАВА</b>'
     text = f"{title}\n<i>Спочатку Espresso, потім Filter.</i>"
     if not beans:
         text += "\n\nСписок порожній."
-    await safe_edit_message(callback.message, text, reply_markup=_bean_list_kb(beans, category), parse_mode='HTML')
+    await safe_edit_message(callback.message, text, reply_markup=_bean_list_kb(beans, category, role=role), parse_mode='HTML')
     await callback.answer()
 
 @admin_router.callback_query(F.data.startswith('bean_edit_fields_'))
 async def edit_bean_fields_menu(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer':
+        await callback.answer("🛠 У Розробника права тільки на перегляд.", show_alert=True)
+        return
     bid = callback.data.replace('bean_edit_fields_', '')
     bean = await coffee_beans_db.get_bean_by_id(bid)
     if not bean:
@@ -1259,11 +1266,11 @@ async def edit_bean_fields_menu(callback: CallbackQuery):
     await safe_edit_message(callback.message, f"⚙️ <b>Оберіть поле для редагування:</b>\n{html.escape(str(bean.get('name', '')))}", reply_markup=akb.get_bean_edit_fields_kb(bid, category), parse_mode='HTML')
     await callback.answer()
 
-async def show_bean_card(target, bean: dict):
+async def show_bean_card(target, bean: dict, role='owner'):
     category = _bean_category(bean)
     is_specialty = category == 'specialty'
     text = _bean_card_text(bean)
-    kb = akb.get_bean_card_kb(str(bean['_id']), category, is_specialty)
+    kb = akb.get_bean_card_kb(str(bean['_id']), category, is_specialty, role=role)
     
     image = str(bean.get('image_url') or '').strip()
     photo = None
@@ -1379,6 +1386,7 @@ async def _ask_bean_step(message: Message, state: FSMContext):
     await message.answer(prompt, reply_markup=_cancel_kb(), parse_mode='HTML')
 
 async def _finish_bean_flow(message: Message, state: FSMContext):
+    role = await get_user_role(message.from_user.id)
     data = await state.get_data()
     payload = {field: data[field] for field in BEAN_EDIT_FIELDS if field in data}
     if data.get('image_url'):
@@ -1413,17 +1421,21 @@ async def _finish_bean_flow(message: Message, state: FSMContext):
         bean = await coffee_beans_db.get_bean_by_id(bid)
         await message.answer('✅ Зерно оновлено.')
         if bean:
-            await show_bean_card(message, bean)
+            await show_bean_card(message, bean, role=role)
     else:
         bid = await coffee_beans_db.add_bean(**payload)
         bean = await coffee_beans_db.get_bean_by_id(bid)
         await message.answer('✅ Зерно додано.')
         if bean:
-            await show_bean_card(message, bean)
+            await show_bean_card(message, bean, role=role)
     await state.clear()
 
 @admin_router.callback_query(F.data.startswith('bean_restock_'))
 async def bean_restock_start(callback: CallbackQuery, state: FSMContext):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer':
+        await callback.answer("🛠 У Розробника права тільки на перегляд.", show_alert=True)
+        return
     bid = callback.data.replace('bean_restock_', '')
     bean = await coffee_beans_db.get_bean_by_id(bid)
     if not bean:
@@ -1437,6 +1449,8 @@ async def bean_restock_start(callback: CallbackQuery, state: FSMContext):
 
 @admin_router.message(AdminStates.restocking_bean)
 async def bean_restock_input(message: Message, state: FSMContext):
+    role = await get_user_role(message.from_user.id)
+    if role == 'developer': return
     data = await state.get_data()
     bid = data['restock_bid']
     packs_to_add = _parse_stock(message.text or '')
@@ -1452,19 +1466,25 @@ async def bean_restock_input(message: Message, state: FSMContext):
     await message.answer(f"✅ Додано <b>{packs_to_add}</b> пачок.\nТепер усього: <b>{new_total}</b>", parse_mode='HTML')
     await state.clear()
     bean = await coffee_beans_db.get_bean_by_id(bid)
-    if bean: await show_bean_card(message, bean)
+    if bean: await show_bean_card(message, bean, role=role)
 
 @admin_router.callback_query(F.data.in_(['beans_list', 'beans_list_edit', 'beans_list_del', 'beans_page_commercial', 'beans_page_specialty']))
 async def list_beans_admin(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
     category = 'specialty' if callback.data.endswith('specialty') else 'commercial'
-    await show_beans_page(callback, category)
+    await show_beans_page(callback, category, role=role)
 
 @admin_router.callback_query(F.data == 'bean_add')
 async def add_bean_start(callback: CallbackQuery):
-    await show_beans_page(callback, 'commercial')
+    role = await get_user_role(callback.from_user.id)
+    await show_beans_page(callback, 'commercial', role=role)
 
 @admin_router.callback_query(F.data == 'bean_new')
 async def add_bean_new(callback: CallbackQuery, state: FSMContext):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer':
+        await callback.answer("🛠 У Розробника права тільки на перегляд.", show_alert=True)
+        return
     await state.clear()
     await state.update_data(bean_mode='add', bean_step_index=0, bean_steps=BEAN_ADD_STEPS)
     await callback.message.answer('➕ <b>ДОДАВАННЯ КАВИ</b>', parse_mode='HTML')
@@ -1474,12 +1494,14 @@ async def add_bean_new(callback: CallbackQuery, state: FSMContext):
 
 @admin_router.callback_query(F.data == 'bean_add_cancel')
 async def add_bean_cancel(callback: CallbackQuery, state: FSMContext):
+    role = await get_user_role(callback.from_user.id)
     await state.clear()
-    await safe_edit_message(callback.message, '❌ Дію скасовано.', reply_markup=akb.get_beans_manage_kb(), parse_mode='HTML')
+    await safe_edit_message(callback.message, '❌ Дію скасовано.', reply_markup=akb.get_beans_manage_kb(role=role), parse_mode='HTML')
     await callback.answer()
 
 @admin_router.callback_query(F.data.startswith('bean_open_'))
 async def open_bean_card(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
     bid = callback.data.replace('bean_open_', '')
     bean = await coffee_beans_db.get_bean_by_id(bid)
     if not bean:
@@ -1489,11 +1511,15 @@ async def open_bean_card(callback: CallbackQuery):
         await callback.message.delete()
     except Exception:
         pass
-    await show_bean_card(callback.message, bean)
+    await show_bean_card(callback.message, bean, role=role)
     await callback.answer()
 
 @admin_router.callback_query(F.data.startswith('bean_del_confirm_'))
 async def delete_bean_confirm(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer':
+        await callback.answer("🛠 У Розробника права тільки на перегляд.", show_alert=True)
+        return
     bid = callback.data.replace('bean_del_confirm_', '')
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='🗑 ТАК, ВИДАЛИТИ', callback_data=f'bean_del_final_{bid}')],
@@ -1504,15 +1530,19 @@ async def delete_bean_confirm(callback: CallbackQuery):
 
 @admin_router.callback_query(F.data.startswith('bean_del_final_'))
 async def delete_bean_final(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer': return
     bid = callback.data.replace('bean_del_final_', '')
     bean = await coffee_beans_db.get_bean_by_id(bid)
     category = _bean_category(bean or {})
     await coffee_beans_db.delete_bean(bid)
     await callback.answer('Зерно видалено.')
-    await show_beans_page(callback, category)
+    await show_beans_page(callback, category, role=role)
 
 @admin_router.callback_query(F.data.startswith('bean_fedit_'))
 async def edit_bean_single_field_start(callback: CallbackQuery, state: FSMContext):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer': return
     parts = callback.data.split('_')
     bid = parts[2]
     raw_field = '_'.join(parts[3:]) # Support fields with underscores
@@ -1535,6 +1565,8 @@ async def edit_bean_single_field_start(callback: CallbackQuery, state: FSMContex
 
 @admin_router.callback_query(F.data.startswith('bean_set_category_'))
 async def set_bean_category(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer': return
     payload = callback.data.replace('bean_set_category_', '')
     bid, category = payload.rsplit('_', 1)
     update = {'category': category}
@@ -1544,11 +1576,13 @@ async def set_bean_category(callback: CallbackQuery):
     bean = await coffee_beans_db.get_bean_by_id(bid)
     await callback.answer('Категорію оновлено.')
     if bean:
-        await show_bean_card(callback.message, bean)
+        await show_bean_card(callback.message, bean, role=role)
 
 @admin_router.message(AdminStates.adding_bean_name)
 @admin_router.message(AdminStates.editing_bean_field)
 async def bean_flow_input(message: Message, state: FSMContext, bot: Bot):
+    role = await get_user_role(message.from_user.id)
+    if role == 'developer': return
     data = await state.get_data()
     mode = data.get('bean_mode')
     if mode == 'single_edit':
@@ -1572,7 +1606,7 @@ async def bean_flow_input(message: Message, state: FSMContext, bot: Bot):
         await message.answer('✅ Поле оновлено.')
         await state.clear()
         if bean:
-            await show_bean_card(message, bean)
+            await show_bean_card(message, bean, role=role)
         return
 
     steps = data.get('bean_steps') or BEAN_ADD_STEPS
@@ -1580,7 +1614,6 @@ async def bean_flow_input(message: Message, state: FSMContext, bot: Bot):
     field, _ = steps[step_index]
     if field == 'photo':
         value = await process_photo(message, bot)
-        # value is "" if process_photo failed OR if user sent "-"
         if not value and (message.text or '').strip() != '-':
             await message.answer('Не вдалося отримати фото. Надішліть фото з галереї або посилання (або - для пропуску).')
             return

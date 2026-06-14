@@ -40,24 +40,24 @@ def get_admin_main_inline_kb(role='admin'):
         keyboard.append([InlineKeyboardButton(text='👤 ПЕРСОНАЛ', callback_data='staff_manage')])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-def get_beans_manage_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[
+def get_beans_manage_kb(role='owner'):
+    kb = [
         [InlineKeyboardButton(text='Комерційна', callback_data='beans_page_commercial'), InlineKeyboardButton(text='Спешелті', callback_data='beans_page_specialty')],
-        [InlineKeyboardButton(text='➕ ДОДАТИ НОВУ КАВУ', callback_data='bean_new')],
-        [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')]
-    ])
-
-def get_bean_card_kb(bean_id, category='commercial', is_specialty=False):
-    buttons = [
-        [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ', callback_data=f'bean_edit_fields_{bean_id}')]
     ]
-    if is_specialty:
-        buttons.append([InlineKeyboardButton(text='📦 ПОПОВНИТИ ЗАПАС', callback_data=f'bean_restock_{bean_id}')])
+    if role != 'developer':
+        kb.append([InlineKeyboardButton(text='➕ ДОДАТИ НОВУ КАВУ', callback_data='bean_new')])
+    kb.append([InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')])
+    return InlineKeyboardMarkup(inline_keyboard=kb)
+
+def get_bean_card_kb(bean_id, category='commercial', is_specialty=False, role='owner'):
+    buttons = []
+    if role != 'developer':
+        buttons.append([InlineKeyboardButton(text='✏️ РЕДАГУВАТИ', callback_data=f'bean_edit_fields_{bean_id}')])
+        if is_specialty:
+            buttons.append([InlineKeyboardButton(text='📦 ПОПОВНИТИ ЗАПАС', callback_data=f'bean_restock_{bean_id}')])
+        buttons.append([InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data=f'bean_del_confirm_{bean_id}')])
     
-    buttons.extend([
-        [InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data=f'bean_del_confirm_{bean_id}')],
-        [InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data=f'beans_page_{category}')]
-    ])
+    buttons.append([InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data=f'beans_page_{category}')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_bean_edit_fields_kb(bean_id, category='commercial'):
@@ -80,19 +80,20 @@ def get_bean_edit_fields_kb(bean_id, category='commercial'):
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def get_locations_manage_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='📍 СПИСОК ЛОКАЦІЙ', callback_data='locations_list')],
-        [InlineKeyboardButton(text='➕ ДОДАТИ ЛОКАЦІЮ', callback_data='location_new')],
-        [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')]
-    ])
+def get_locations_manage_kb(role='owner'):
+    kb = [[InlineKeyboardButton(text='📍 СПИСОК ЛОКАЦІЙ', callback_data='locations_list')]]
+    if role != 'developer':
+        kb.append([InlineKeyboardButton(text='➕ ДОДАТИ ЛОКАЦІЮ', callback_data='location_new')])
+    kb.append([InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')])
+    return InlineKeyboardMarkup(inline_keyboard=kb)
 
-def get_location_card_kb(loc_id):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ', callback_data=f'loc_edit_fields_{loc_id}')],
-        [InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data=f'loc_del_confirm_{loc_id}')],
-        [InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data='locations_list')]
-    ])
+def get_location_card_kb(loc_id, role='owner'):
+    buttons = []
+    if role != 'developer':
+        buttons.append([InlineKeyboardButton(text='✏️ РЕДАГУВАТИ', callback_data=f'loc_edit_fields_{loc_id}')])
+        buttons.append([InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data=f'loc_del_confirm_{loc_id}')])
+    buttons.append([InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data='locations_list')])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_location_edit_fields_kb(loc_id):
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -103,19 +104,20 @@ def get_location_edit_fields_kb(loc_id):
         [InlineKeyboardButton(text='⬅️ НАЗАД ДО КАРТКИ', callback_data=f'loc_open_{loc_id}')]
     ])
 
-def get_contacts_manage_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='📞 СПИСОК КОНТАКТІВ', callback_data='contacts_list')],
-        [InlineKeyboardButton(text='➕ ДОДАТИ КОНТАКТ', callback_data='contact_new')],
-        [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')]
-    ])
+def get_contacts_manage_kb(role='owner'):
+    kb = [[InlineKeyboardButton(text='📞 СПИСОК КОНТАКТІВ', callback_data='contacts_list')]]
+    if role != 'developer':
+        kb.append([InlineKeyboardButton(text='➕ ДОДАТИ КОНТАКТ', callback_data='contact_new')])
+    kb.append([InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')])
+    return InlineKeyboardMarkup(inline_keyboard=kb)
 
-def get_contact_card_kb(contact_id):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ', callback_data=f'con_edit_fields_{contact_id}')],
-        [InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data=f'con_del_confirm_{contact_id}')],
-        [InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data='contacts_list')]
-    ])
+def get_contact_card_kb(contact_id, role='owner'):
+    buttons = []
+    if role != 'developer':
+        buttons.append([InlineKeyboardButton(text='✏️ РЕДАГУВАТИ', callback_data=f'con_edit_fields_{contact_id}')])
+        buttons.append([InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data=f'con_del_confirm_{contact_id}')])
+    buttons.append([InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data='contacts_list')])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_contact_edit_fields_kb(contact_id):
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -123,7 +125,8 @@ def get_contact_edit_fields_kb(contact_id):
         [InlineKeyboardButton(text='⬅️ НАЗАД ДО КАРТКИ', callback_data=f'con_open_{contact_id}')]
     ])
 
-def get_staff_manage_kb():
+def get_staff_manage_kb(role='owner'):
+    # Developer and Owner can add staff (Developer adds Owners, Owner adds Admins)
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='➕ ДОДАТИ ПЕРСОНАЛ', callback_data='staff_add')],
         [InlineKeyboardButton(text='👤 СПИСОК ПЕРСОНАЛУ', callback_data='staff_list')],
@@ -137,21 +140,19 @@ def get_active_types_kb():
         [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')]
     ])
 
-def get_active_orders_list_kb(orders):
-    buttons = []
-    for o in orders:
-        oid = str(o['_id'])
-        user = o.get('user_name', 'Гість')
-        type_name = ORDER_TYPE_NAMES.get(o.get('order_type'), 'Замовлення')
-        buttons.append([InlineKeyboardButton(text=f"📦 {type_name} - {user}", callback_data=f"finish_order_{oid}")])
-    buttons.append([InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-
-def get_booking_manage_kb(order_id, user_id=-1):
+def get_booking_manage_kb(order_id, user_id=-1, role='admin'):
+    if role == 'developer':
+        return None # Developer sees no action buttons
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='✅ ПІДТВЕРДИТИ', callback_data=f'confirm_order_{order_id}')],
         [InlineKeyboardButton(text='❌ ВІДХИЛИТИ', callback_data=f'reject_order_{order_id}')]
+    ])
+
+def get_active_finish_kb(order_id, role='admin'):
+    if role == 'developer':
+        return None
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='✅ ЗАВЕРШИТИ', callback_data=f'finish_order_{order_id}')]
     ])
 
 def get_admin_auth_kb(user_id):
