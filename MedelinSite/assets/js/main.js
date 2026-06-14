@@ -538,6 +538,18 @@ window.openCartModal = function () {
     const activeCart = isBeans ? cart_beans : cart_menu;
     const typeLabel = isBeans ? 'beans' : 'menu';
 
+    // Group items by ID and Weight to show Qty
+    const grouped = [];
+    activeCart.forEach((item) => {
+        const key = item.id + (item.weight || '');
+        const existing = grouped.find(g => (g.id + (g.weight || '')) === key);
+        if (existing) {
+            existing.qty++;
+        } else {
+            grouped.push({ ...item, qty: 1 });
+        }
+    });
+
     let html = `
     <div class="cart-modal__overlay" data-action="close-cart-modal"></div>
     <div class="cart-modal__content">
@@ -546,12 +558,36 @@ window.openCartModal = function () {
         <div class="cart-modal__body">
             <ul class="cart-modal__list">`;
 
-    if (activeCart.length === 0) {
+    if (grouped.length === 0) {
         html += `<li class="cart-modal__empty">Кошик порожній</li>`;
     } else {
-        activeCart.forEach((item, index) => {
-            html += `<li><div><strong>${item.name}</strong><div class="cart-modal__item-price">${item.price} ₴</div></div>
-            <div class="cart-item-end"><button class="cart-modal__remove-btn" type="button" data-action="remove-from-cart" data-cart-type="${typeLabel}" data-cart-index="${index}"><i class="fas fa-trash"></i></button></div></li>`;
+        grouped.forEach((item, index) => {
+            // Find stock if specialty
+            let maxStock = 999;
+            if (isBeans && typeof allCoffeeData !== 'undefined') {
+                const bean = allCoffeeData.find(b => (b.id || b._id) === item.id);
+                if (bean && bean.stock_packs !== undefined) {
+                    const q = (bean.quality_score || '').trim();
+                    const isSpec = q && q !== '—' && q !== '-' && q !== '0';
+                    if (isSpec) maxStock = parseInt(bean.stock_packs);
+                }
+            }
+
+            html += `
+            <li>
+                <div class="cart-item-info">
+                    <strong>${item.name}</strong>
+                    <div class="cart-modal__item-price">${item.price * item.qty} ₴</div>
+                </div>
+                <div class="cart-item-end">
+                    <div class="cart-qty-stepper">
+                        <button class="cart-qty-btn" type="button" onclick="window.updateCartQty('${typeLabel}', '${item.id}', '${item.weight || ''}', -1)" ${item.qty <= 1 ? 'disabled' : ''}><i class="fas fa-minus"></i></button>
+                        <span class="cart-qty-val">${item.qty}</span>
+                        <button class="cart-qty-btn" type="button" onclick="window.updateCartQty('${typeLabel}', '${item.id}', '${item.weight || ''}', 1)" ${item.qty >= maxStock ? 'disabled' : ''}><i class="fas fa-plus"></i></button>
+                    </div>
+                    <button class="cart-modal__remove-btn" type="button" onclick="window.removeFromCartById('${typeLabel}', '${item.id}', '${item.weight || ''}')"><i class="fas fa-trash"></i></button>
+                </div>
+            </li>`;
         });
     }
 
@@ -612,6 +648,38 @@ window.openCartModal = function () {
 
     const btn = document.getElementById('btn-open-checkout');
     if (btn) btn.setAttribute('data-action', 'open-checkout-modal');
+};
+
+window.updateCartQty = function(type, id, weight, delta) {
+    const cart = type === 'beans' ? cart_beans : cart_menu;
+    if (delta > 0) {
+        // Add one
+        const item = cart.find(i => i.id === id && (i.weight || '') === weight);
+        if (item) {
+            cart.push({ ...item });
+        }
+    } else {
+        // Remove one
+        const idx = cart.findLastIndex(i => i.id === id && (i.weight || '') === weight);
+        if (idx !== -1) {
+            cart.splice(idx, 1);
+        }
+    }
+    if (type === 'beans') cart_beans = cart; else cart_menu = cart;
+    saveCart();
+    updateCartBadge();
+    window.openCartModal();
+};
+
+window.removeFromCartById = function(type, id, weight) {
+    if (type === 'beans') {
+        cart_beans = cart_beans.filter(i => !(i.id === id && (i.weight || '') === weight));
+    } else {
+        cart_menu = cart_menu.filter(i => !(i.id === id && (i.weight || '') === weight));
+    }
+    saveCart();
+    updateCartBadge();
+    window.openCartModal();
 };
 
 window.repeatOrder = function (idx) {
