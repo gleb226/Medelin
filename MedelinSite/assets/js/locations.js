@@ -77,10 +77,6 @@ function renderLocations(locations) {
                             <i class="fas fa-clock popup__info-icon"></i>
                             <div><strong class="popup__info-label">Графік</strong><span class="popup__info-value">${loc.schedule}</span></div>
                         </div>
-                        <div class="popup__info-item">
-                            <i class="fas fa-phone-alt popup__info-icon"></i>
-                            <div><strong class="popup__info-label">Телефон</strong><span class="popup__info-value">${loc.phone}</span></div>
-                        </div>
                     </div>
                     <div class="amenities-tags">
                         ${(loc.amenities || []).map((a) => `<span class="tag">${a}</span>`).join('')}

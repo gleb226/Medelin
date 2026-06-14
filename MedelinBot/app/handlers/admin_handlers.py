@@ -187,7 +187,7 @@ async def _ask_location_step(message: Message, state: FSMContext):
 @admin_router.callback_query(F.data == 'location_cancel')
 async def location_cancel(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await safe_edit_message(callback.message, '❌ Дію скасовано.', reply_markup=akb.get_locations_manage_kb(), parse_mode='HTML')
+    await show_locations_page(callback)
     await callback.answer()
 
 @admin_router.callback_query(F.data.startswith('loc_open_'))
@@ -312,6 +312,13 @@ async def location_flow_input(message: Message, state: FSMContext, bot: Bot):
         if field == 'amenities':
             value = [s.strip() for s in value.split(',') if s.strip()]
         await state.update_data(**{field: value})
+        
+        # Auto-extract coordinates if we just got a Google Maps URL
+        if field == 'google_maps_url':
+            coords = await get_coordinates_from_url(value)
+            if coords:
+                await state.update_data(coordinates=coords)
+                logger.info(f"Auto-extracted coordinates: {coords}")
     
     step_index += 1
     if step_index >= len(steps):
@@ -319,6 +326,7 @@ async def location_flow_input(message: Message, state: FSMContext, bot: Bot):
         data = await state.get_data()
         payload = {f: data[f] for f, _ in LOCATION_ADD_STEPS if f in data}
         if data.get('image_url'): payload['image_url'] = data['image_url']
+        if data.get('coordinates'): payload['coordinates'] = data['coordinates']
         
         if mode == 'edit':
             lid = data['edit_loc_id']
@@ -340,36 +348,52 @@ async def location_flow_input(message: Message, state: FSMContext, bot: Bot):
 async def get_coordinates_from_url(url: str) -> dict | None:
     """
     Extract latitude and longitude from Google Maps URL.
-    Supports full and shortened URLs.
+    Supports full, shortened, and view-center URLs.
     """
-    if not url or not url.startswith('http'):
+    if not url:
         return None
+    
+    # Add protocol if missing
+    if not url.startswith('http'):
+        if 'google.com' in url or 'goo.gl' in url:
+            url = 'https://' + url
+        else:
+            return None
     
     try:
         current_url = url
-        # Follow redirects for shortened links
-        if 'goo.gl' in url or 'maps.app.goo.gl' in url:
+        # Follow redirects for shortened links (maps.app.goo.gl, goo.gl)
+        if 'goo.gl' in url:
             async with aiohttp.ClientSession() as session:
-                async with session.head(url, allow_redirects=True, timeout=5) as resp:
+                async with session.get(url, allow_redirects=True, timeout=10) as resp:
                     current_url = str(resp.url)
+                    logger.info(f"Resolved shortened URL to: {current_url}")
         
-        # 1. Try @lat,lon format
+        # 1. Try marker data pattern (e.g. ...!3d48.6118969!4d22.2956774...)
+        # This is usually the exact location of the place
+        match = re.search(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)', current_url)
+        if match:
+            coords = {'lat': float(match.group(1)), 'lon': float(match.group(2))}
+            logger.info(f"Extracted coords from marker data: {coords}")
+            return coords
+
+        # 2. Try @lat,lon format (e.g. .../@48.6188374,22.2568452,14z/...)
+        # This is the view center
         match = re.search(r'@(-?\d+\.\d+),(-?\d+\.\d+)', current_url)
         if match:
-            return {'lat': float(match.group(1)), 'lon': float(match.group(2))}
+            coords = {'lat': float(match.group(1)), 'lon': float(match.group(2))}
+            logger.info(f"Extracted coords from @ view center: {coords}")
+            return coords
         
-        # 2. Try q=lat,lon format
-        match = re.search(r'[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)', current_url)
+        # 3. Try q=lat,lon or ll=lat,lon format
+        match = re.search(r'[?&](?:q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)', current_url)
         if match:
-            return {'lat': float(match.group(1)), 'lon': float(match.group(2))}
-            
-        # 3. Try ll=lat,lon format
-        match = re.search(r'[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)', current_url)
-        if match:
-            return {'lat': float(match.group(1)), 'lon': float(match.group(2))}
+            coords = {'lat': float(match.group(1)), 'lon': float(match.group(2))}
+            logger.info(f"Extracted coords from query pattern: {coords}")
+            return coords
             
     except Exception as e:
-        logger.error(f"Error extracting coordinates: {e}")
+        logger.error(f"Error extracting coordinates from {url}: {e}")
         
     return None
 
@@ -612,11 +636,12 @@ async def manage_beans_cb(callback: CallbackQuery):
 
 @admin_router.callback_query(F.data == 'locations_manage')
 async def manage_locations_cb(callback: CallbackQuery):
-    await safe_edit_message(callback.message, '📍 <b>КЕРУВАННЯ ЛОКАЦІЯМИ:</b>', reply_markup=akb.get_locations_manage_kb(), parse_mode='HTML')
+    await show_locations_page(callback)
 
 @admin_router.callback_query(F.data == 'contacts_manage')
 async def manage_contacts_cb(callback: CallbackQuery):
     await safe_edit_message(callback.message, '📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>', reply_markup=akb.get_contacts_manage_kb(), parse_mode='HTML')
+
 
 BEAN_ADD_STEPS = [
     ('name', '📝 <b>Введіть назву кави:</b>'),

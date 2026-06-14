@@ -406,11 +406,6 @@ BEANS_DATA = [
 ]
 
 LOCATIONS_DATA = [
-    {'name': 'Medelin (Корзо)', 'address': 'вул. Корзо, 15, Ужгород', 'schedule': 'Пн–Нд: 08:00 – 20:00',
-     'coords': (48.6233102, 22.2981488),
-     'url': 'https://www.google.com/maps?q=48.6233102,22.2981488', 'img': PHOTO_URL_LOCATION,
-     'amenities': ['Безкоштовний Wi‑Fi', 'Багато розеток', 'Зручна робоча зона', 'Pet-friendly', 'Оплата карткою'],
-     'atmosphere': 'Затишна кавʼярня у центрі міста з фірмовою кавою та десертами. Зручно для зустрічей і роботи.'},
     {'name': 'Medelin на Корятовича', 'address': 'пл. Корятовича, 5, Ужгород', 'schedule': 'Пн–Нд: 08:00 – 19:00',
      'coords': (48.62538364323062, 22.298050477352465), 'url': 'https://maps.app.goo.gl/9XpWHWgnYnUHt4348',
      'img': PHOTO_URL_LOCATION,
@@ -427,11 +422,22 @@ LOCATIONS_DATA = [
      'url': 'https://maps.app.goo.gl/BE2cRUdy3DE2FNBP7', 'img': PHOTO_URL_LOCATION,
      'amenities': ['Безкоштовний Wi‑Fi', 'Багато розеток', 'Зручна робоча зона', 'Pet-friendly', 'Оплата карткою'],
      'atmosphere': 'Класична локація Medelin з комфортною посадкою та швидким сервісом. Добре підходить для роботи й зустрічей.'},
-    {'name': 'Medelin на Корятовича', 'address': 'Слов\'янська набережна, Ужгород', 'schedule': 'Пн–Нд: 08:00 – 20:00',
-     'coords': (48.6244831, 22.2982141),
-     'url': 'https://www.google.com/maps?q=48.6244831,22.2982141', 'img': PHOTO_URL_LOCATION,
+    {'name': 'Medelin на Слов\'янській набережній', 'address': 'Слов\'янська набережна, Ужгород', 'schedule': 'Пн–Нд: 08:00 – 20:00',
+     'coords': (48.6186250051158, 22.263607041534797),
+     'url': 'https://maps.app.goo.gl/Pr29moHWRyQEAzxo7', 'img': PHOTO_URL_LOCATION,
      'amenities': ['Безкоштовний Wi‑Fi', 'Багато розеток', 'Зручна робоча зона', 'Pet-friendly', 'Оплата карткою'],
      'atmosphere': 'Класична локація Medelin з комфортною посадкою та швидким сервісом. Добре підходить для роботи й зустрічей.'},
+    {'name': 'Medelin & Chiken Hut', 'address': 'вул. Новака 2, Ужгород', 'schedule': 'Пн–Нд: 08:00 – 19:00',
+     'coords': (48.619107667735875, 22.296194690456993),
+     'url': 'https://maps.app.goo.gl/XwbnzY4sDYxrfVjz9', 'img': PHOTO_URL_LOCATION,
+     'amenities': ['Безкоштовний Wi‑Fi', 'Багато розеток', 'Зручна робоча зона', 'Pet-friendly', 'Оплата карткою'],
+     'atmosphere': 'Класична локація Medelin з комфортною посадкою та швидким сервісом. Добре підходить для роботи й зустрічей.'},
+    {'name': 'Medelin в Мукачево', 'address': 'пл. Кирила і Мефодія, 10\\12, Мукачево', 'schedule': 'Пн–Нд: 08:00 – 20:00',
+     'coords': (48.46811474382326, 22.718511803587017),
+     'url': 'https://maps.app.goo.gl/otFGHBk8xjwymZUj6', 'img': PHOTO_URL_LOCATION,
+     'amenities': ['Безкоштовний Wi‑Fi', 'Багато розеток', 'Зручна робоча зона', 'Pet-friendly', 'Оплата карткою'],
+     'atmosphere': 'Класична локація Medelin з комфортною посадкою та швидким сервісом. Добре підходить для роботи й зустрічей.'},
+    
 ]
 
 SOCIALS_DATA = [
@@ -439,8 +445,10 @@ SOCIALS_DATA = [
     {'name': 'Email', 'url': 'mailto:medelin.social@gmail.com'},
     {'name': 'Facebook', 'url': 'https://www.facebook.com/medelin.coffee/'},
     {'name': 'Instagram', 'url': 'https://www.instagram.com/medelin_uzh/'},
-    {'name': 'Instagram Kabinet', 'url': 'https://www.instagram.com/kabinet.by.medelin/'},
-    {'name': 'Instagram Bozdosh', 'url': 'https://www.instagram.com/medelincoffee.bozdosh/'},
+    {'name': 'Instagram Кабінет', 'url': 'https://www.instagram.com/kabinet.by.medelin/'},
+    {'name': 'Instagram Боздош', 'url': 'https://www.instagram.com/medelincoffee.bozdosh/'},
+    {'name': 'Instagram Швабська', 'url': 'https://www.instagram.com/medelin.shvabska.uzh/'},
+    {'name': 'Instagram Свалява', 'url': 'https://www.instagram.com/medelin.svaliava/'},
 ]
 
 
