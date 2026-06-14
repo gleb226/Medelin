@@ -1,4 +1,3 @@
-
 from aiogram import Router, F, Bot
 
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
@@ -107,7 +106,7 @@ def _guess_contact_emoji(name: str, url: str) -> str:
     
     return '🔗'
 
-def _contact_list_kb(contacts: list[dict]) -> InlineKeyboardMarkup:
+def _contact_list_kb(contacts: list[dict], role='owner') -> InlineKeyboardMarkup:
     keyboard = []
     # Grid: 2 columns
     row = []
@@ -124,7 +123,8 @@ def _contact_list_kb(contacts: list[dict]) -> InlineKeyboardMarkup:
     if row:
         keyboard.append(row)
     
-    keyboard.append([InlineKeyboardButton(text='➕ ДОДАТИ КОНТАКТ', callback_data='contact_new')])
+    if role != 'developer':
+        keyboard.append([InlineKeyboardButton(text='➕ ДОДАТИ КОНТАКТ', callback_data='contact_new')])
     keyboard.append([InlineKeyboardButton(text='⬅️ НАЗАД В МЕНЮ', callback_data='admin_panel_back')])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
@@ -143,17 +143,17 @@ def _contact_card_text(con: dict) -> str:
     ]
     return '\n'.join(lines)
 
-async def show_contacts_page(callback: CallbackQuery):
+async def show_contacts_page(callback: CallbackQuery, role='owner'):
     contacts = await contacts_db.get_all_contacts()
     text = "📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>"
     if not contacts:
         text += "\n\nСписок порожній."
-    await safe_edit_message(callback.message, text, reply_markup=_contact_list_kb(contacts), parse_mode='HTML')
+    await safe_edit_message(callback.message, text, reply_markup=_contact_list_kb(contacts, role=role), parse_mode='HTML')
     await callback.answer()
 
-async def show_contact_card(target, con: dict):
+async def show_contact_card(target, con: dict, role='owner'):
     text = _contact_card_text(con)
-    kb = akb.get_contact_card_kb(str(con['_id']))
+    kb = akb.get_contact_card_kb(str(con['_id']), role=role)
     
     if isinstance(target, Message):
         await target.answer(text, reply_markup=kb, parse_mode='HTML', disable_web_page_preview=True)
@@ -164,10 +164,15 @@ async def show_contact_card(target, con: dict):
 
 @admin_router.callback_query(F.data == 'contacts_list')
 async def list_contacts_cb(callback: CallbackQuery):
-    await show_contacts_page(callback)
+    role = await get_user_role(callback.from_user.id)
+    await show_contacts_page(callback, role=role)
 
 @admin_router.callback_query(F.data == 'contact_new')
 async def add_contact_new(callback: CallbackQuery, state: FSMContext):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer':
+        await callback.answer("🛠 У Розробника права тільки на перегляд.", show_alert=True)
+        return
     await state.clear()
     await state.update_data(con_mode='add', con_step_index=0)
     await callback.message.answer('➕ <b>ДОДАВАННЯ КОНТАКТУ</b>', parse_mode='HTML')
@@ -185,12 +190,14 @@ async def _ask_contact_step(message: Message, state: FSMContext):
 
 @admin_router.callback_query(F.data == 'contact_cancel')
 async def contact_cancel(callback: CallbackQuery, state: FSMContext):
+    role = await get_user_role(callback.from_user.id)
     await state.clear()
-    await show_contacts_page(callback)
+    await show_contacts_page(callback, role=role)
     await callback.answer()
 
 @admin_router.callback_query(F.data.startswith('con_open_'))
 async def open_contact_card(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
     cid = callback.data.replace('con_open_', '')
     con = await contacts_db.get_contact_by_id(cid)
     if not con:
@@ -200,11 +207,15 @@ async def open_contact_card(callback: CallbackQuery):
         await callback.message.delete()
     except:
         pass
-    await show_contact_card(callback.message, con)
+    await show_contact_card(callback.message, con, role=role)
     await callback.answer()
 
 @admin_router.callback_query(F.data.startswith('con_del_confirm_'))
 async def delete_contact_confirm(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer':
+        await callback.answer("🛠 У Розробника права тільки на перегляд.", show_alert=True)
+        return
     cid = callback.data.replace('con_del_confirm_', '')
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='🗑 ТАК, ВИДАЛИТИ', callback_data=f'con_del_final_{cid}')],
@@ -215,13 +226,19 @@ async def delete_contact_confirm(callback: CallbackQuery):
 
 @admin_router.callback_query(F.data.startswith('con_del_final_'))
 async def delete_contact_final(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer': return
     cid = callback.data.replace('con_del_final_', '')
     await contacts_db.delete_contact(cid)
     await callback.answer('Контакт видалено.')
-    await show_contacts_page(callback)
+    await show_contacts_page(callback, role=role)
 
 @admin_router.callback_query(F.data.startswith('con_edit_fields_'))
 async def edit_contact_fields_menu(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer':
+        await callback.answer("🛠 У Розробника права тільки на перегляд.", show_alert=True)
+        return
     cid = callback.data.replace('con_edit_fields_', '')
     con = await contacts_db.get_contact_by_id(cid)
     if not con:
@@ -232,6 +249,8 @@ async def edit_contact_fields_menu(callback: CallbackQuery):
 
 @admin_router.callback_query(F.data.startswith('con_fedit_'))
 async def edit_contact_single_field_start(callback: CallbackQuery, state: FSMContext):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer': return
     parts = callback.data.split('_')
     cid = parts[2]
     field = parts[3]
@@ -248,6 +267,8 @@ async def edit_contact_single_field_start(callback: CallbackQuery, state: FSMCon
 @admin_router.message(AdminStates.adding_contact_name)
 @admin_router.message(AdminStates.editing_contact_field)
 async def contact_flow_input(message: Message, state: FSMContext):
+    role = await get_user_role(message.from_user.id)
+    if role == 'developer': return
     data = await state.get_data()
     mode = data.get('con_mode')
     
@@ -260,7 +281,7 @@ async def contact_flow_input(message: Message, state: FSMContext):
         con = await contacts_db.get_contact_by_id(data['edit_con_id'])
         await message.answer('✅ Контакт оновлено.')
         await state.clear()
-        if con: await show_contact_card(message, con)
+        if con: await show_contact_card(message, con, role=role)
         return
 
     step_index = int(data.get('con_step_index', 0))
@@ -277,13 +298,11 @@ async def contact_flow_input(message: Message, state: FSMContext):
         payload = {f: data[f] for f, _ in CONTACT_ADD_STEPS if f in data}
         
         await contacts_db.add_contact(**payload)
-        # add_contact returns None/Task, but it updates by name (upsert)
-        # To show the card, we need to find it back or just return to list
         await message.answer('✅ Контакт додано/оновлено.')
         await state.clear()
         # Triggering list instead of card because add_contact uses name as key and might not return ID easily here
-        locations = await contacts_db.get_all_contacts()
-        await message.answer("📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>", reply_markup=_contact_list_kb(locations), parse_mode='HTML')
+        contacts = await contacts_db.get_all_contacts()
+        await message.answer("📞 <b>КЕРУВАННЯ КОНТАКТАМИ:</b>", reply_markup=_contact_list_kb(contacts, role=role), parse_mode='HTML')
         return
     
     await state.update_data(con_step_index=step_index)
@@ -301,7 +320,7 @@ LOCATION_ADD_STEPS = [
 
 LOCATION_EDIT_FIELDS = [field for field, _ in LOCATION_ADD_STEPS]
 
-def _location_list_kb(locations: list[dict]) -> InlineKeyboardMarkup:
+def _location_list_kb(locations: list[dict], role='owner') -> InlineKeyboardMarkup:
     keyboard = []
     # Grid: 2 columns
     row = []
@@ -315,7 +334,8 @@ def _location_list_kb(locations: list[dict]) -> InlineKeyboardMarkup:
     if row:
         keyboard.append(row)
     
-    keyboard.append([InlineKeyboardButton(text='➕ ДОДАТИ НОВУ ЛОКАЦІЮ', callback_data='location_new')])
+    if role != 'developer':
+        keyboard.append([InlineKeyboardButton(text='➕ ДОДАТИ НОВУ ЛОКАЦІЮ', callback_data='location_new')])
     keyboard.append([InlineKeyboardButton(text='⬅️ НАЗАД В МЕНЮ', callback_data='admin_panel_back')])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
@@ -333,17 +353,17 @@ def _location_card_text(loc: dict) -> str:
     ]
     return '\n'.join(lines)
 
-async def show_locations_page(callback: CallbackQuery):
+async def show_locations_page(callback: CallbackQuery, role='owner'):
     locations = await location_db.get_all_locations()
     text = "📍 <b>КЕРУВАННЯ ЛОКАЦІЯМИ:</b>"
     if not locations:
         text += "\n\nСписок порожній."
-    await safe_edit_message(callback.message, text, reply_markup=_location_list_kb(locations), parse_mode='HTML')
+    await safe_edit_message(callback.message, text, reply_markup=_location_list_kb(locations, role=role), parse_mode='HTML')
     await callback.answer()
 
-async def show_location_card(target, loc: dict):
+async def show_location_card(target, loc: dict, role='owner'):
     text = _location_card_text(loc)
-    kb = akb.get_location_card_kb(str(loc['_id']))
+    kb = akb.get_location_card_kb(str(loc['_id']), role=role)
     
     image = str(loc.get('image_url') or '').strip()
     photo = None
@@ -390,10 +410,15 @@ async def show_location_card(target, loc: dict):
 
 @admin_router.callback_query(F.data == 'locations_list')
 async def list_locations_cb(callback: CallbackQuery):
-    await show_locations_page(callback)
+    role = await get_user_role(callback.from_user.id)
+    await show_locations_page(callback, role=role)
 
 @admin_router.callback_query(F.data == 'location_new')
 async def add_location_new(callback: CallbackQuery, state: FSMContext):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer':
+        await callback.answer("🛠 У Розробника права тільки на перегляд.", show_alert=True)
+        return
     await state.clear()
     await state.update_data(loc_mode='add', loc_step_index=0, loc_steps=LOCATION_ADD_STEPS)
     await callback.message.answer('➕ <b>ДОДАВАННЯ ЛОКАЦІЇ</b>', parse_mode='HTML')
@@ -412,12 +437,14 @@ async def _ask_location_step(message: Message, state: FSMContext):
 
 @admin_router.callback_query(F.data == 'location_cancel')
 async def location_cancel(callback: CallbackQuery, state: FSMContext):
+    role = await get_user_role(callback.from_user.id)
     await state.clear()
-    await show_locations_page(callback)
+    await show_locations_page(callback, role=role)
     await callback.answer()
 
 @admin_router.callback_query(F.data.startswith('loc_open_'))
 async def open_location_card(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
     lid = callback.data.replace('loc_open_', '')
     loc = await location_db.get_location_by_id(lid)
     if not loc:
@@ -427,11 +454,15 @@ async def open_location_card(callback: CallbackQuery):
         await callback.message.delete()
     except:
         pass
-    await show_location_card(callback.message, loc)
+    await show_location_card(callback.message, loc, role=role)
     await callback.answer()
 
 @admin_router.callback_query(F.data.startswith('loc_del_confirm_'))
 async def delete_location_confirm(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer':
+        await callback.answer("🛠 У Розробника права тільки на перегляд.", show_alert=True)
+        return
     lid = callback.data.replace('loc_del_confirm_', '')
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='🗑 ТАК, ВИДАЛИТИ', callback_data=f'loc_del_final_{lid}')],
@@ -442,13 +473,19 @@ async def delete_location_confirm(callback: CallbackQuery):
 
 @admin_router.callback_query(F.data.startswith('loc_del_final_'))
 async def delete_location_final(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer': return
     lid = callback.data.replace('loc_del_final_', '')
     await location_db.delete_location(lid)
     await callback.answer('Локацію видалено.')
-    await show_locations_page(callback)
+    await show_locations_page(callback, role=role)
 
 @admin_router.callback_query(F.data.startswith('loc_edit_fields_'))
 async def edit_location_fields_menu(callback: CallbackQuery):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer':
+        await callback.answer("🛠 У Розробника права тільки на перегляд.", show_alert=True)
+        return
     lid = callback.data.replace('loc_edit_fields_', '')
     loc = await location_db.get_location_by_id(lid)
     if not loc:
@@ -459,6 +496,8 @@ async def edit_location_fields_menu(callback: CallbackQuery):
 
 @admin_router.callback_query(F.data.startswith('loc_fedit_'))
 async def edit_location_single_field_start(callback: CallbackQuery, state: FSMContext):
+    role = await get_user_role(callback.from_user.id)
+    if role == 'developer': return
     parts = callback.data.split('_')
     lid = parts[2]
     field = '_'.join(parts[3:])
@@ -475,6 +514,8 @@ async def edit_location_single_field_start(callback: CallbackQuery, state: FSMCo
 @admin_router.message(AdminStates.adding_location_name)
 @admin_router.message(AdminStates.editing_location_field)
 async def location_flow_input(message: Message, state: FSMContext, bot: Bot):
+    role = await get_user_role(message.from_user.id)
+    if role == 'developer': return
     data = await state.get_data()
     mode = data.get('loc_mode')
     
@@ -504,7 +545,7 @@ async def location_flow_input(message: Message, state: FSMContext, bot: Bot):
         loc = await location_db.get_location_by_id(data['edit_loc_id'])
         await message.answer('✅ Поле оновлено.')
         await state.clear()
-        if loc: await show_location_card(message, loc)
+        if loc: await show_location_card(message, loc, role=role)
         return
 
     steps = data.get('loc_steps') or LOCATION_ADD_STEPS
@@ -544,12 +585,12 @@ async def location_flow_input(message: Message, state: FSMContext, bot: Bot):
             await location_db.update_location(lid, payload)
             loc = await location_db.get_location_by_id(lid)
             await message.answer('✅ Локацію оновлено.')
-            if loc: await show_location_card(message, loc)
+            if loc: await show_location_card(message, loc, role=role)
         else:
             lid = await location_db.add_location(**payload)
             loc = await location_db.get_location_by_id(lid)
             await message.answer('✅ Локацію додано.')
-            if loc: await show_location_card(message, loc)
+            if loc: await show_location_card(message, loc, role=role)
         await state.clear()
         return
     
@@ -614,16 +655,25 @@ async def get_user_role(user_id: int) -> str:
     admin = await db.admins.find_one({'user_id': int(user_id)})
     return admin.get('role', 'user') if admin else 'user'
 
+def get_role_label(role: str) -> str:
+    return {
+        'developer': 'developer',
+        'owner': 'власник',
+        'admin': 'адмін'
+    }.get(role, role)
+
 @admin_router.message(F.text == '🔐 АДМІН-ПАНЕЛЬ', StateFilter(None))
 async def show_admin_panel(message: Message):
     role = await get_user_role(message.from_user.id)
     if role == 'user': return
-    await message.answer(f'🔐 <b>АДМІН-ПАНЕЛЬ</b>\nВаша роль: <b>{role.upper()}</b>\n\nВиберіть розділ керування:', reply_markup=akb.get_admin_main_kb(role), parse_mode='HTML')
+    label = get_role_label(role)
+    await message.answer(f'🔐 <b>АДМІН-ПАНЕЛЬ</b>\nВаша роль: <b>{label}</b>\n\nВиберіть розділ керування:', reply_markup=akb.get_admin_main_kb(role), parse_mode='HTML')
 
 @admin_router.callback_query(F.data == 'admin_panel_back')
 async def back_to_admin_main(callback: CallbackQuery):
     role = await get_user_role(callback.from_user.id)
-    await safe_edit_message(callback.message, f'🔐 <b>АДМІН-ПАНЕЛЬ</b>\nВаша роль: <b>{role.upper()}</b>\n\nВиберіть розділ керування:', reply_markup=akb.get_admin_main_inline_kb(role), parse_mode='HTML')
+    label = get_role_label(role)
+    await safe_edit_message(callback.message, f'🔐 <b>АДМІН-ПАНЕЛЬ</b>\nВаша роль: <b>{label}</b>\n\nВиберіть розділ керування:', reply_markup=akb.get_admin_main_inline_kb(role), parse_mode='HTML')
 
 
 # --- ORDERS BLOCK ---
@@ -640,6 +690,7 @@ async def list_new_orders_cb(callback: CallbackQuery):
 
 async def show_new_orders(message: Message):
     orders = await orders_db.get_new_orders()
+    role = await get_user_role(message.from_user.id)
     if not orders:
         await message.answer('🆕 <b>НОВІ:</b>\nНаразі нових замовлень немає.', parse_mode='HTML')
         return
@@ -671,7 +722,8 @@ async def show_new_orders(message: Message):
         msg += f"🛒 {o.get('cart')}\n\n"
         msg += f"📝 ПОБАЖАННЯ: <b>{o.get('wishes') or '—'}</b>"
         
-        await message.answer(msg, reply_markup=akb.get_booking_manage_kb(oid, o.get('user_id') or -1), parse_mode='HTML')
+        kb = akb.get_booking_manage_kb(oid, o.get('user_id') or -1, role=role)
+        await message.answer(msg, reply_markup=kb, parse_mode='HTML')
 
 @admin_router.message(F.text == '📦 АКТИВНІ', StateFilter(None))
 async def list_active_orders_msg(message: Message):
@@ -685,6 +737,7 @@ async def list_active_orders_cb(callback: CallbackQuery):
 
 async def show_active_orders(message: Message):
     orders = await active_orders_db.get_all_active_orders()
+    role = await get_user_role(message.from_user.id)
     if not orders:
         await message.answer('📦 <b>АКТИВНІ:</b>\nНаразі активних замовлень немає.', parse_mode='HTML')
         return
@@ -718,9 +771,7 @@ async def show_active_orders(message: Message):
         msg += f"🛒 {full_o.get('cart')}\n\n"
         msg += f"📝 ПОБАЖАННЯ: <b>{full_o.get('wishes') or '—'}</b>"
         
-        kb_finish = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text='✅ ЗАВЕРШИТИ', callback_data=f'finish_order_{oid}')]
-        ])
+        kb_finish = akb.get_active_finish_kb(oid, role=role)
         await message.answer(msg, reply_markup=kb_finish, parse_mode='HTML')
 
 @admin_router.message(F.text.startswith('/view_order_'))
@@ -732,6 +783,7 @@ async def view_order_details(message: Message, bot: Bot):
         await message.answer("Замовлення не знайдено.")
         return
     
+    role = await get_user_role(message.from_user.id)
     order_num = order.get('order_number', '—')
     status_label = "НОВЕ" if order.get('status') == 'new' else "ОПЛАЧЕНО"
     type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Доставка', 'beans_delivery': 'Зерна', 'beans_booking': 'Зерна (Самовивіз)' }
@@ -751,7 +803,8 @@ async def view_order_details(message: Message, bot: Bot):
     msg += f"🛒 <b>СКЛАД:</b>\n{order.get('cart')}\n\n"
     msg += f"📝 ПОБАЖАННЯ: <b>{order.get('wishes') or '—'}</b>"
     
-    await message.answer(msg, reply_markup=akb.get_booking_manage_kb(oid, order.get('user_id') or -1), parse_mode='HTML')
+    kb = akb.get_booking_manage_kb(oid, order.get('user_id') or -1, role=role)
+    await message.answer(msg, reply_markup=kb, parse_mode='HTML')
 
 async def _deduct_stock_from_cart(cart_text: str, bot: Bot):
     """Parses cart text and deducts stock for specialty beans. Handles multiples (xN)."""
@@ -820,7 +873,8 @@ async def _deduct_stock_from_cart(cart_text: str, bot: Bot):
 
 @admin_router.callback_query(F.data == 'staff_manage')
 async def staff_manage_cb(callback: CallbackQuery):
-    await callback.message.answer('👤 <b>КЕРУВАННЯ ПЕРСОНАЛОМ:</b>\nДодавання адміністраторів та менеджерів.', reply_markup=akb.get_staff_manage_kb(), parse_mode='HTML')
+    role = await get_user_role(callback.from_user.id)
+    await callback.message.answer('👤 <b>КЕРУВАННЯ ПЕРСОНАЛОМ:</b>\nДодавання адміністраторів та менеджерів.', reply_markup=akb.get_staff_manage_kb(role=role), parse_mode='HTML')
     await callback.answer()
 
 @admin_router.callback_query(F.data == 'staff_add')
@@ -830,7 +884,7 @@ async def staff_add_start(callback: CallbackQuery, state: FSMContext):
         "👤 <b>ДОДАВАННЯ СПІВРОБІТНИКА</b>\n\n"
         "1. Введіть Telegram ID, @username або номер телефону співробітника:\n\n"
         "<i>Співробітник має спочатку натиснути /start у боті.</i>\n"
-        "<i>Telegram ID можна дізнатися в @userinfobot або подібних.</i>",
+        "<i>Telegram ID можно дізнатися в @userinfobot або подібних.</i>",
         parse_mode='HTML',
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='staff_manage')]])
     )
@@ -896,7 +950,7 @@ async def staff_name_input(message: Message, state: FSMContext):
 
     await state.update_data(display_name=display_name, target_role=target_role)
     
-    role_label = "ВЛАСНИК" if target_role == 'owner' else "АДМІНІСТРАТОР"
+    role_label = "власник" if target_role == 'owner' else "адмін"
     
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='✅ ТАК, ДОДАТИ', callback_data='staff_confirm_yes')],
@@ -923,7 +977,8 @@ async def staff_confirm_yes(callback: CallbackQuery, state: FSMContext):
     role = data['target_role']
     
     await admin_db.add_admin(uid, uname, dname, callback.from_user.id, role)
-    await callback.message.answer(f"✅ Співробітника <b>{dname}</b> додано як <b>{role.upper()}</b>.", parse_mode='HTML', reply_markup=akb.get_staff_manage_kb())
+    label = get_role_label(role)
+    await callback.message.answer(f"✅ Співробітника <b>{dname}</b> додано як <b>{label}</b>.", parse_mode='HTML', reply_markup=akb.get_staff_manage_kb())
     await state.clear()
     await callback.answer()
 
@@ -939,11 +994,7 @@ async def staff_list_cb(callback: CallbackQuery):
     keyboard = []
     
     for uid, uname, dname, role in admins:
-        role_label = {
-            'developer': '🛠 Developer',
-            'owner': '👑 Owner',
-            'admin': '🧑‍💼 Admin'
-        }.get(role, role.capitalize())
+        role_label = get_role_label(role)
         
         text += f"• <b>{dname}</b> (@{uname or '—'}) — {role_label}\n"
         keyboard.append([InlineKeyboardButton(text=f"🗑 Видалити {dname}", callback_data=f"staff_del_{uid}")])
@@ -965,6 +1016,7 @@ async def staff_del_confirm(callback: CallbackQuery):
     
     t_role = target.get('role')
     t_name = target.get('display_name')
+    label = get_role_label(t_role)
 
     # Deletion rules:
     # 1. Developer cannot delete anyone.
@@ -985,7 +1037,7 @@ async def staff_del_confirm(callback: CallbackQuery):
         [InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='staff_list')]
     ])
     
-    await safe_edit_message(callback.message, f"Ви впевнені, що хочете видалити співробітника <b>{t_name}</b> ({t_role})?", reply_markup=kb, parse_mode='HTML')
+    await safe_edit_message(callback.message, f"Ви впевнені, що хочете видалити співробітника <b>{t_name}</b> ({label})?", reply_markup=kb, parse_mode='HTML')
     await callback.answer()
 
 @admin_router.callback_query(F.data.startswith('staff_finaldel_'))

@@ -68,7 +68,14 @@ async def cmd_start(message: Message, state: FSMContext):
         return
 
     role = await admin_db.get_admin_role(message.from_user.id)
-    await message.answer(f'🔐 <b>ВІТАЄМО В АДМІН-ПАНЕЛІ!</b>\nВаша роль: <b>{role.upper()}</b>', reply_markup=akb.get_admin_main_kb(role), parse_mode='HTML')
+    
+    role_label = {
+        'developer': 'developer',
+        'owner': 'власник',
+        'admin': 'адмін'
+    }.get(role, role)
+    
+    await message.answer(f'🔐 <b>ВІТАЄМО В АДМІН-ПАНЕЛІ!</b>\nВаша роль: <b>{role_label}</b>', reply_markup=akb.get_admin_main_kb(role), parse_mode='HTML')
 
 @user_router.message(F.contact)
 async def handle_contact(message: Message):
