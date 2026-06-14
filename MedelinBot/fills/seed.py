@@ -14,8 +14,10 @@ from app.databases.mongo_client import close_client
 PHOTO_URL_BEANS = 'https://images.unsplash.com/photo-1685798830559-c116586a0d33?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
 PHOTO_URL_LOCATION = 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1074&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
 
+
 def _norm(s: str) -> str:
     return ' '.join(str(s or '').strip().split()).casefold()
+
 
 BEANS_DATA = [
     # --- COMMERCIAL (15 items) ---
@@ -404,19 +406,44 @@ BEANS_DATA = [
 ]
 
 LOCATIONS_DATA = [
-    {'name': 'Medelin (Корзо)', 'address': 'вул. Корзо, 15, Ужгород', 'schedule': 'Пн–Нд: 08:00 – 20:00', 'phone': '+38 (050) 377-59-06', 'email': 'medelin.social@gmail.com', 'coords': (48.6233102, 22.2981488), 'url': 'https://www.google.com/maps?q=48.6233102,22.2981488', 'tables': 12, 'img': PHOTO_URL_LOCATION, 'amenities': ['Безкоштовний Wi‑Fi', 'Багато розеток', 'Зручна робоча зона', 'Pet-friendly', 'Оплата карткою'], 'atmosphere': 'Затишна кавʼярня у центрі міста з фірмовою кавою та десертами. Зручно для зустрічей і роботи.'},
-    {'name': 'Medelin (Корятовича)', 'address': 'пл. Корятовича, 5А, Ужгород', 'schedule': 'Пн–Нд: 08:00 – 20:00', 'phone': '+38 (050) 377-59-06', 'email': 'medelin.social@gmail.com', 'coords': (48.6244831, 22.2982141), 'url': 'https://www.google.com/maps?q=48.6244831,22.2982141', 'tables': 12, 'img': PHOTO_URL_LOCATION, 'amenities': ['Безкоштовний Wi‑Fi', 'Багато розеток', 'Зручна робоча зона', 'Pet-friendly', 'Оплата карткою'], 'atmosphere': 'Класична локація Medelin з комфортною посадкою та швидким сервісом. Добре підходить для роботи й зустрічей.'},
-    {'name': 'Medelin (Петефі)', 'address': 'пл. Шандора Петефі, 5/2, Ужгород', 'schedule': 'Пн–Нд: 08:00 – 20:00', 'phone': '+38 (050) 377-59-06', 'email': 'medelin.social@gmail.com', 'coords': (48.6193363, 22.2974372), 'url': 'https://www.google.com/maps?q=48.6193363,22.2974372', 'tables': 10, 'img': PHOTO_URL_LOCATION, 'amenities': ['Безкоштовний Wi‑Fi', 'Багато розеток', 'Зручна робоча зона', 'Pet-friendly', 'Оплата карткою'], 'atmosphere': 'Світла міська кавʼярня з фірмовими напоями та десертами. Ідеально для короткої паузи в центрі.'},
+    {'name': 'Medelin (Корзо)', 'address': 'вул. Корзо, 15, Ужгород', 'schedule': 'Пн–Нд: 08:00 – 20:00',
+     'phone': '+38 (050) 377-59-06', 'email': 'medelin.social@gmail.com', 'coords': (48.6233102, 22.2981488),
+     'url': 'https://www.google.com/maps?q=48.6233102,22.2981488', 'img': PHOTO_URL_LOCATION,
+     'amenities': ['Безкоштовний Wi‑Fi', 'Багато розеток', 'Зручна робоча зона', 'Pet-friendly', 'Оплата карткою'],
+     'atmosphere': 'Затишна кавʼярня у центрі міста з фірмовою кавою та десертами. Зручно для зустрічей і роботи.'},
+    {'name': 'Medelin на Корятовича', 'address': 'пл. Корятовича, 5, Ужгород', 'schedule': 'Пн–Нд: 08:00 – 19:00',
+     'phone': '+38 (050) 377-59-06', 'email': 'medelin.social@gmail.com',
+     'coords': (48.62538364323062, 22.298050477352465), 'url': 'https://maps.app.goo.gl/9XpWHWgnYnUHt4348',
+     'img': PHOTO_URL_LOCATION,
+     'amenities': ['Безкоштовний Wi‑Fi', 'Багато розеток', 'Зручна робоча зона', 'Pet-friendly', 'Оплата карткою'],
+     'atmosphere': 'Класична локація Medelin з комфортною посадкою та швидким сервісом. Добре підходить для роботи й зустрічей.'},
+    {'name': 'Medelin на Закарпатській', 'address': 'вул. Закарпатська, 44, Ужгород',
+     'schedule': 'Пн–Нд: 08:00 – 20:00', 'phone': '+38 (050) 377-59-06', 'email': 'medelin.social@gmail.com',
+     'coords': (48.633559654109824, 22.277708453416906), 'url': 'https://maps.app.goo.gl/CwpbgANPg8wVCFUU8',
+     'img': PHOTO_URL_LOCATION,
+     'amenities': ['Безкоштовний Wi‑Fi', 'Багато розеток', 'Зручна робоча зона', 'Pet-friendly', 'Оплата карткою'],
+     'atmosphere': 'Класична локація Medelin з комфортною посадкою та швидким сервісом. Добре підходить для роботи й зустрічей.'},
+    {'name': 'Medelin "Кабінет', 'address': 'вул. Гойди, 10, Ужгород', 'schedule': 'Пн–Нд: 08:00 – 19:00',
+     'phone': '+38 (050) 573-29-16', 'email': 'medelin.social@gmail.com', 'coords': (48.629018203803916, 22.287751077097603),
+     'url': 'https://maps.app.goo.gl/BE2cRUdy3DE2FNBP7', 'img': PHOTO_URL_LOCATION,
+     'amenities': ['Безкоштовний Wi‑Fi', 'Багато розеток', 'Зручна робоча зона', 'Pet-friendly', 'Оплата карткою'],
+     'atmosphere': 'Класична локація Medelin з комфортною посадкою та швидким сервісом. Добре підходить для роботи й зустрічей.'},
+    {'name': 'Medelin на Корятовича', 'address': 'пл. Корятовича, 5, Ужгород', 'schedule': 'Пн–Нд: 08:00 – 19:00',
+     'phone': '+38 (050) 377-59-06', 'email': 'medelin.social@gmail.com', 'coords': (48.6244831, 22.2982141),
+     'url': 'https://www.google.com/maps?q=48.6244831,22.2982141', 'img': PHOTO_URL_LOCATION,
+     'amenities': ['Безкоштовний Wi‑Fi', 'Багато розеток', 'Зручна робоча зона', 'Pet-friendly', 'Оплата карткою'],
+     'atmosphere': 'Класична локація Medelin з комфортною посадкою та швидким сервісом. Добре підходить для роботи й зустрічей.'},
 ]
 
 SOCIALS_DATA = [
-    {'name': '📞 Телефон', 'url': 'tel:+380503775906'},
-    {'name': '📧 Email', 'url': 'mailto:medelin.social@gmail.com'},
-    {'name': 'Instagram', 'url': 'https://www.instagram.com/medelin_uzh/'},
+    {'name': 'Телефон', 'url': 'tel:+380503775906'},
+    {'name': 'Email', 'url': 'mailto:medelin.social@gmail.com'},
     {'name': 'Facebook', 'url': 'https://www.facebook.com/medelin.coffee/'},
-    {'name': 'Telegram', 'url': 'https://t.me/medelin_bot'},
-    {'name': 'Website', 'url': 'https://medelin.com/'}
+    {'name': 'Instagram', 'url': 'https://www.instagram.com/medelin_uzh/'},
+    {'name': 'Instagram Kabinet', 'url': 'https://www.instagram.com/kabinet.by.medelin/'},
+    {'name': 'Instagram Bozdosh', 'url': 'https://www.instagram.com/medelincoffee.bozdosh/'},
 ]
+
 
 async def seed():
     await coffee_beans_db.connect()
@@ -434,7 +461,7 @@ async def seed():
         except:
             pass
         roast = (b.get('roast') or '').lower()
-        
+
         # Determine category image
         if not b.get('quality_score') or score < 80:
             img_url = '/photos/Comercial.png'
@@ -446,34 +473,35 @@ async def seed():
             img_url = '/photos/Comercial.png'
 
         await coffee_beans_db.add_bean(
-            name=b['name'], 
-            price_250=b['price_250'], 
-            description=b['description'], 
-            species=b['species'], 
-            taste=b['taste'], 
-            roast=b['roast'], 
-            image_url=img_url, 
-            altitude=b['altitude'], 
-            processing=b['processing'], 
+            name=b['name'],
+            price_250=b['price_250'],
+            description=b['description'],
+            species=b['species'],
+            taste=b['taste'],
+            roast=b['roast'],
+            image_url=img_url,
+            altitude=b['altitude'],
+            processing=b['processing'],
             descriptors=b.get('descriptors', ''),
-            variety=b['variety'], 
-            quality_score=b['quality_score'], 
+            variety=b['variety'],
+            quality_score=b['quality_score'],
             harvest=b['harvest']
         )
 
     for l in LOCATIONS_DATA:
         await location_db.add_location(
-            name=l['name'], address=l['address'], schedule=l['schedule'], 
-            phone=l['phone'], email=l['email'], google_maps_url=l['url'], 
-            coordinates={'lat': l['coords'][0], 'lon': l['coords'][1]}, 
-            max_tables=l['tables'], image_url=l['img'], 
+            name=l['name'], address=l['address'], schedule=l['schedule'],
+            phone=l['phone'], email=l['email'], google_maps_url=l['url'],
+            coordinates={'lat': l['coords'][0], 'lon': l['coords'][1]},
+            image_url=l['img'],
             amenities=l.get('amenities', []), atmosphere=l.get('atmosphere', '')
         )
-    
+
     for s in SOCIALS_DATA:
         await contacts_db.add_contact(s['name'], s['url'])
-        
+
     await close_client()
+
 
 if __name__ == '__main__':
     asyncio.run(seed())

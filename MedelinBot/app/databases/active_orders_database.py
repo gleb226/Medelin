@@ -31,7 +31,7 @@ class ActiveOrdersDatabase:
             upsert=True
         )
 
-    async def add_active_order(self, order_id, user_id, fullname, phone, location_id, cart, order_type, table_number='', total=0, payment_mode='', wishes=''):
+    async def add_active_order(self, order_id, user_id, fullname, phone, location_id, cart, order_type, total=0, payment_mode='', wishes=''):
         db = await get_db()
         await db.active_orders.update_one(
             {'order_id': str(order_id)},
@@ -42,7 +42,6 @@ class ActiveOrdersDatabase:
                 'location_id': str(location_id),
                 'cart': cart,
                 'order_type': order_type,
-                'table_number': table_number,
                 'total': int(total or 0),
                 'payment_mode': payment_mode or '',
                 'wishes': wishes or '',

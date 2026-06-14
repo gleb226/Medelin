@@ -202,7 +202,7 @@ async def process_checkout(req: CheckoutRequest):
     except Exception as e:
         logger.error(f"User sync failed: {e}")
 
-    oid = await orders_db.add_order(user_id=user_id, username=tg_nick, fullname=user.get('name', '—'), phone=phone, location_id=loc_id, wishes=wishes_str, cart=items_text, order_type=order_type, payment_mode=payment_mode, table_number=user.get('table_number', ''), total_amount=total, delivery_info=delivery_info)
+    oid = await orders_db.add_order(user_id=user_id, username=tg_nick, fullname=user.get('name', '—'), phone=phone, location_id=loc_id, wishes=wishes_str, cart=items_text, order_type=order_type, payment_mode=payment_mode, total_amount=total, delivery_info=delivery_info)
     order = await orders_db.get_order_by_id(oid)
     order_num = order.get('order_number', 0)
 
@@ -395,7 +395,6 @@ async def confirm_order(order_id: str, admin: dict = Depends(get_current_admin))
             location_id=order.get('location_id'),
             cart=order.get('cart'),
             order_type=order.get('order_type'),
-            table_number=order.get('table_number', ''),
             total=order.get('total_amount', 0),
             payment_mode=order.get('payment_mode', ''),
             wishes=order.get('wishes', '')

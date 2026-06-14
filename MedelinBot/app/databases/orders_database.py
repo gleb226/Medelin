@@ -35,7 +35,7 @@ class OrdersDatabase:
             return 1
         return seq
 
-    async def add_order(self, user_id, username, fullname, phone, location_id, wishes, cart, date_time=None, people_count=None, order_type='order', payment_mode='cashier', table_number='', total_amount=0, delivery_info=''):
+    async def add_order(self, user_id, username, fullname, phone, location_id, wishes, cart, date_time=None, order_type='order', payment_mode='cashier', total_amount=0, delivery_info=''):
         db = await get_db()
         digits = normalize_phone(phone)
         oid = ObjectId()
@@ -52,14 +52,12 @@ class OrdersDatabase:
             'location_id': str(location_id), 
             'delivery_info': delivery_info,
             'date_time': date_time, 
-            'people_count': people_count, 
             'wishes': wishes, 
             'cart': cart, 
             'total_amount': total_amount, 
             'status': 'new', 
             'order_type': order_type, 
             'payment_mode': payment_mode, 
-            'table_number': table_number or '', 
             'payment_id': None, 
             'provider_payment_id': None, 
             'notified_admin_ids': [], 

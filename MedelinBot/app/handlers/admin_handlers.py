@@ -535,7 +535,7 @@ async def confirm_order_handler(callback: CallbackQuery, bot: Bot):
     await active_orders_db.add_active_order(
         oid, order.get('user_id'), order.get('fullname'), order.get('phone'), 
         order.get('location_id'), order.get('cart'), order.get('order_type'), 
-        order.get('table_number', ''), order.get('total_amount'), 
+        order.get('total_amount'), 
         order.get('payment_mode'), order.get('wishes')
     )
     
