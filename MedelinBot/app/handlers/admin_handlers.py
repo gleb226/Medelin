@@ -1047,6 +1047,3 @@ async def reject_admin_login(callback: CallbackQuery, bot: Bot):
 async def deliver_guest_message(bot: Bot, order: dict, user_text: str, admin_text: str):
     # DISABLED
     return
- user_text: str, admin_text: str):
-    # DISABLED
-    return
