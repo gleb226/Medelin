@@ -76,9 +76,27 @@ def get_bean_edit_fields_kb(bean_id, category='commercial'):
 
 def get_locations_manage_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='➕ ДОДАТИ ЛОКАЦІЮ', callback_data='location_add')],
-        [InlineKeyboardButton(text='📍 СПИСОК / РЕДАГУВАННЯ', callback_data='locations_list')],
+        [InlineKeyboardButton(text='📍 СПИСОК ЛОКАЦІЙ', callback_data='locations_list')],
+        [InlineKeyboardButton(text='➕ ДОДАТИ ЛОКАЦІЮ', callback_data='location_new')],
         [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')]
+    ])
+
+def get_location_card_kb(loc_id):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ ПАРАМЕТРИ', callback_data=f'loc_edit_fields_{loc_id}')],
+        [InlineKeyboardButton(text='📝 РЕДАГУВАТИ ВСЕ', callback_data=f'loc_full_edit_{loc_id}')],
+        [InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data=f'loc_del_confirm_{loc_id}')],
+        [InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data='locations_list')]
+    ])
+
+def get_location_edit_fields_kb(loc_id):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='🏷 Назва', callback_data=f'loc_fedit_{loc_id}_name'), InlineKeyboardButton(text='🏠 Адреса', callback_data=f'loc_fedit_{loc_id}_address')],
+        [InlineKeyboardButton(text='📅 Графік', callback_data=f'loc_fedit_{loc_id}_schedule'), InlineKeyboardButton(text='📞 Телефон', callback_data=f'loc_fedit_{loc_id}_phone')],
+        [InlineKeyboardButton(text='📧 Email', callback_data=f'loc_fedit_{loc_id}_email'), InlineKeyboardButton(text='🗺 Google Maps', callback_data=f'loc_fedit_{loc_id}_google_maps_url')],
+        [InlineKeyboardButton(text='🪑 Столики', callback_data=f'loc_fedit_{loc_id}_max_tables'), InlineKeyboardButton(text='📸 Фото', callback_data=f'loc_fedit_{loc_id}_photo')],
+        [InlineKeyboardButton(text='✨ Зручності', callback_data=f'loc_fedit_{loc_id}_amenities'), InlineKeyboardButton(text='☁️ Атмосфера', callback_data=f'loc_fedit_{loc_id}_atmosphere')],
+        [InlineKeyboardButton(text='⬅️ НАЗАД ДО КАРТКИ', callback_data=f'loc_open_{loc_id}')]
     ])
 
 def get_contacts_manage_kb():

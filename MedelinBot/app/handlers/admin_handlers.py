@@ -54,11 +54,281 @@ class AdminStates(StatesGroup):
     
     # Bean management states
     adding_bean_name = State()
-    
     editing_bean_field = State()
     
+    # Location management states
     adding_location_name = State()
-    adding_location_address = State()
+    editing_location_field = State()
+
+LOCATION_ADD_STEPS = [
+    ('name', '📝 <b>Введіть назву локації:</b>'),
+    ('address', '🏠 <b>Введіть адресу:</b>'),
+    ('schedule', '📅 <b>Введіть графік роботи</b> (напр. Пн-Нд 08:00-20:00):'),
+    ('phone', '📞 <b>Введіть номер телефону:</b>'),
+    ('email', '📧 <b>Введіть email:</b>'),
+    ('google_maps_url', '🗺 <b>Введіть посилання на Google Maps:</b>'),
+    ('photo', '📸 <b>Надішліть фото локації</b> (або - якщо немає):'),
+    ('amenities', '✨ <b>Зручності</b> (через кому):'),
+    ('atmosphere', '☁️ <b>Опис атмосфери:</b>')
+]
+
+LOCATION_EDIT_FIELDS = [field for field, _ in LOCATION_ADD_STEPS]
+
+def _location_list_kb(locations: list[dict]) -> InlineKeyboardMarkup:
+    keyboard = []
+    # Grid: 2 columns
+    row = []
+    for l in locations:
+        lid = str(l['_id'])
+        name = l.get('name', '')[:25]
+        row.append(InlineKeyboardButton(text=name, callback_data=f'loc_open_{lid}'))
+        if len(row) == 2:
+            keyboard.append(row)
+            row = []
+    if row:
+        keyboard.append(row)
+    
+    keyboard.append([InlineKeyboardButton(text='➕ ДОДАТИ НОВУ ЛОКАЦІЮ', callback_data='location_new')])
+    keyboard.append([InlineKeyboardButton(text='⬅️ НАЗАД В МЕНЮ', callback_data='admin_panel_back')])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def _location_card_text(loc: dict) -> str:
+    lines = [
+        f"📍 <b>{html.escape(str(loc.get('name') or 'Без назви'))}</b>",
+        f"━━━━━━━━━━━━━━━",
+        f"🏠 Адреса: <b>{html.escape(str(loc.get('address') or '—'))}</b>",
+        f"📅 Графік: <b>{html.escape(str(loc.get('schedule') or '—'))}</b>",
+        f"📞 Тел: <code>{html.escape(str(loc.get('phone') or '—'))}</code>",
+        f"📧 Email: <code>{html.escape(str(loc.get('email') or '—'))}</code>",
+        f"🗺 Google Maps: <a href=\"{loc.get('google_maps_url', '#')}\">Відкрити</a>",
+        f"✨ Зручності: <b>{html.escape(', '.join(loc.get('amenities', [])) if isinstance(loc.get('amenities'), list) else str(loc.get('amenities', '—')))}</b>",
+        f"━━━━━━━━━━━━━━━",
+        f"☁️ <b>Атмосфера:</b>",
+        f"{html.escape(str(loc.get('atmosphere') or '—'))}"
+    ]
+    return '\n'.join(lines)
+
+async def show_locations_page(callback: CallbackQuery):
+    locations = await location_db.get_all_locations()
+    text = "📍 <b>КЕРУВАННЯ ЛОКАЦІЯМИ:</b>"
+    if not locations:
+        text += "\n\nСписок порожній."
+    await safe_edit_message(callback.message, text, reply_markup=_location_list_kb(locations), parse_mode='HTML')
+    await callback.answer()
+
+async def show_location_card(target, loc: dict):
+    text = _location_card_text(loc)
+    kb = akb.get_location_card_kb(str(loc['_id']))
+    
+    image = str(loc.get('image_url') or '').strip()
+    photo = None
+    
+    if image:
+        if image.startswith('/uploads/') or image.startswith('/photos/'):
+            # (Reuse existing logic for resolving local path)
+            site_dir = Path("/usr/share/nginx/html")
+            if not site_dir.exists():
+                from app.utils.paths import get_site_dir
+                site_dir = get_site_dir()
+            uploads_dir = get_uploads_dir()
+            if image.startswith('/uploads/'):
+                filename = image.replace('/uploads/', '')
+                local_path = uploads_dir / filename
+            else:
+                filename = image.lstrip('/')
+                local_path = site_dir / filename
+            if local_path.exists():
+                photo = FSInputFile(local_path)
+            elif WEB_APP_URL:
+                photo = f"{WEB_APP_URL.rstrip('/')}{image}"
+        elif image.startswith('http'):
+            photo = image
+        elif len(image) > 10 and '/' not in image:
+            photo = image
+
+    try:
+        if photo:
+            if isinstance(target, Message):
+                await target.answer_photo(photo, caption=text, reply_markup=kb, parse_mode='HTML')
+            else:
+                await target.message.answer_photo(photo, caption=text, reply_markup=kb, parse_mode='HTML')
+            return
+    except Exception as e:
+        logger.warning(f"Failed to send location photo: {e}")
+
+    if isinstance(target, Message):
+        await target.answer(text, reply_markup=kb, parse_mode='HTML', disable_web_page_preview=True)
+    else:
+        await target.message.answer(text, reply_markup=kb, parse_mode='HTML', disable_web_page_preview=True)
+
+# Location Handlers
+
+@admin_router.callback_query(F.data == 'locations_list')
+async def list_locations_cb(callback: CallbackQuery):
+    await show_locations_page(callback)
+
+@admin_router.callback_query(F.data == 'location_new')
+async def add_location_new(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await state.update_data(loc_mode='add', loc_step_index=0, loc_steps=LOCATION_ADD_STEPS)
+    await callback.message.answer('➕ <b>ДОДАВАННЯ ЛОКАЦІЇ</b>', parse_mode='HTML')
+    await _ask_location_step(callback.message, state)
+    await state.set_state(AdminStates.adding_location_name)
+    await callback.answer()
+
+async def _ask_location_step(message: Message, state: FSMContext):
+    data = await state.get_data()
+    step_index = int(data.get('loc_step_index', 0))
+    steps = data.get('loc_steps') or LOCATION_ADD_STEPS
+    field, prompt = steps[step_index]
+    
+    cancel_kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='location_cancel')]])
+    await message.answer(prompt, reply_markup=cancel_kb, parse_mode='HTML')
+
+@admin_router.callback_query(F.data == 'location_cancel')
+async def location_cancel(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await safe_edit_message(callback.message, '❌ Дію скасовано.', reply_markup=akb.get_locations_manage_kb(), parse_mode='HTML')
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith('loc_open_'))
+async def open_location_card(callback: CallbackQuery):
+    lid = callback.data.replace('loc_open_', '')
+    loc = await location_db.get_location_by_id(lid)
+    if not loc:
+        await callback.answer('Локацію не знайдено.', show_alert=True)
+        return
+    try:
+        await callback.message.delete()
+    except:
+        pass
+    await show_location_card(callback.message, loc)
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith('loc_del_confirm_'))
+async def delete_location_confirm(callback: CallbackQuery):
+    lid = callback.data.replace('loc_del_confirm_', '')
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='🗑 ТАК, ВИДАЛИТИ', callback_data=f'loc_del_final_{lid}')],
+        [InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data=f'loc_open_{lid}')]
+    ])
+    await safe_edit_message(callback.message, "Видалити цю локацію?", reply_markup=kb)
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith('loc_del_final_'))
+async def delete_location_final(callback: CallbackQuery):
+    lid = callback.data.replace('loc_del_final_', '')
+    await location_db.delete_location(lid)
+    await callback.answer('Локацію видалено.')
+    await show_locations_page(callback)
+
+@admin_router.callback_query(F.data.startswith('loc_edit_fields_'))
+async def edit_location_fields_menu(callback: CallbackQuery):
+    lid = callback.data.replace('loc_edit_fields_', '')
+    loc = await location_db.get_location_by_id(lid)
+    if not loc:
+        await callback.answer('Локацію не знайдено.', show_alert=True)
+        return
+    await safe_edit_message(callback.message, f"⚙️ <b>Оберіть поле для редагування:</b>\n{html.escape(str(loc.get('name', '')))}", reply_markup=akb.get_location_edit_fields_kb(lid), parse_mode='HTML')
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith('loc_full_edit_'))
+async def edit_location_full_start(callback: CallbackQuery, state: FSMContext):
+    lid = callback.data.replace('loc_full_edit_', '')
+    loc = await location_db.get_location_by_id(lid)
+    if not loc:
+        await callback.answer('Локацію не знайдено.', show_alert=True)
+        return
+    await state.clear()
+    steps = [(field, f"{prompt}\nПоточне значення: {loc.get(field, '')}") for field, prompt in LOCATION_ADD_STEPS]
+    await state.update_data(loc_mode='edit', edit_loc_id=lid, loc_step_index=0, loc_steps=steps)
+    await callback.message.answer(f"✏️ <b>РЕДАГУВАННЯ: {html.escape(str(loc.get('name') or ''))}</b>", parse_mode='HTML')
+    await _ask_location_step(callback.message, state)
+    await state.set_state(AdminStates.editing_location_field)
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith('loc_fedit_'))
+async def edit_location_single_field_start(callback: CallbackQuery, state: FSMContext):
+    parts = callback.data.split('_')
+    lid = parts[2]
+    field = '_'.join(parts[3:])
+    
+    prompts = dict(LOCATION_ADD_STEPS)
+    await state.clear()
+    await state.update_data(loc_mode='single_edit', edit_loc_id=lid, edit_single_field=field)
+    
+    cancel_kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='location_cancel')]])
+    await callback.message.answer(prompts.get(field, 'Нове значення:'), reply_markup=cancel_kb, parse_mode='HTML')
+    await state.set_state(AdminStates.editing_location_field)
+    await callback.answer()
+
+@admin_router.message(AdminStates.adding_location_name)
+@admin_router.message(AdminStates.editing_location_field)
+async def location_flow_input(message: Message, state: FSMContext, bot: Bot):
+    data = await state.get_data()
+    mode = data.get('loc_mode')
+    
+    if mode == 'single_edit':
+        field = data.get('edit_single_field')
+        if field == 'photo':
+            value = await process_photo(message, bot)
+            if not value:
+                await message.answer('Не вдалося отримати фото. Надішліть фото з галереї або посилання.')
+                return
+        else:
+            value = (message.text or '').strip()
+            if not value: return
+            if field == 'amenities':
+                value = [s.strip() for s in value.split(',') if s.strip()]
+        
+        update_field = 'image_url' if field == 'photo' else field
+        await location_db.update_location(data['edit_loc_id'], {update_field: value})
+        loc = await location_db.get_location_by_id(data['edit_loc_id'])
+        await message.answer('✅ Поле оновлено.')
+        await state.clear()
+        if loc: await show_location_card(message, loc)
+        return
+
+    steps = data.get('loc_steps') or LOCATION_ADD_STEPS
+    step_index = int(data.get('loc_step_index', 0))
+    field, _ = steps[step_index]
+    
+    if field == 'photo':
+        value = await process_photo(message, bot)
+        if not value and (message.text or '').strip() != '-':
+            await message.answer('Надішліть фото або - для пропуску.')
+            return
+        await state.update_data(image_url=value)
+    else:
+        value = (message.text or '').strip()
+        if not value: return
+        if field == 'amenities':
+            value = [s.strip() for s in value.split(',') if s.strip()]
+        await state.update_data(**{field: value})
+    
+    step_index += 1
+    if step_index >= len(steps):
+        # Finish flow
+        data = await state.get_data()
+        payload = {f: data[f] for f, _ in LOCATION_ADD_STEPS if f in data}
+        if data.get('image_url'): payload['image_url'] = data['image_url']
+        
+        if mode == 'edit':
+            lid = data['edit_loc_id']
+            await location_db.update_location(lid, payload)
+            loc = await location_db.get_location_by_id(lid)
+            await message.answer('✅ Локацію оновлено.')
+            if loc: await show_location_card(message, loc)
+        else:
+            lid = await location_db.add_location(**payload)
+            loc = await location_db.get_location_by_id(lid)
+            await message.answer('✅ Локацію додано.')
+            if loc: await show_location_card(message, loc)
+        await state.clear()
+        return
+    
+    await state.update_data(loc_step_index=step_index)
+    await _ask_location_step(message, state)
 
 async def get_user_role(user_id: int) -> str:
     if str(user_id) in DEVELOPER_IDS: return 'developer'
