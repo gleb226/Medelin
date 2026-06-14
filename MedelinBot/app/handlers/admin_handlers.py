@@ -1454,9 +1454,8 @@ async def _finish_bean_flow(message: Message, state: FSMContext):
 
     payload['category'] = 'specialty' if is_specialty else 'commercial'
     
-    # ALWAYS ask for stock if it's not in data yet (for both Specialty and Commercial)
-    # Check for 'stock' key in data (which we set in _validate_bean_value for the 'stock' field)
-    if 'stock' not in data:
+    # ONLY ask for stock if it's Specialty and not in data yet
+    if is_specialty and 'stock' not in data:
         # We haven't asked for stock yet. Update steps and ask.
         await state.update_data(bean_steps=BEAN_ADD_STEPS + [('stock', '📦 <b>Скільки кави є в наявності?</b>\n\nВведіть у КГ (напр. <code>10 кг</code>) або кількість пачок по 250г (напр. <code>40</code>).')])
         await state.update_data(bean_step_index=len(BEAN_ADD_STEPS))
@@ -1465,8 +1464,8 @@ async def _finish_bean_flow(message: Message, state: FSMContext):
         await state.set_state(AdminStates.editing_bean_field)
         return
 
-    # If we are here, 'stock' is in data
-    payload['stock_packs'] = data['stock']
+    # If we are here, it's either commercial or stock is already in data
+    payload['stock_packs'] = data.get('stock', 999) if is_specialty else 999
 
     if data.get('bean_mode') == 'edit':
         bid = data['edit_bean_id']
