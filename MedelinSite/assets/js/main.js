@@ -692,8 +692,37 @@ window.repeatOrder = function (idx) {
         return;
     }
 
+    const isBeans = normalizeOrderKind(order.type, order.items_text) === 'beans';
+    
+    // Group items from past order to check stock
+    const groupedPast = {};
+    items.forEach(item => {
+        const key = item.id + (item.weight || '');
+        if (!groupedPast[key]) groupedPast[key] = { ...item, count: 0 };
+        groupedPast[key].count++;
+    });
+
+    // Check against available stock
+    if (isBeans && typeof allCoffeeData !== 'undefined') {
+        for (const key in groupedPast) {
+            const item = groupedPast[key];
+            const bean = allCoffeeData.find(b => (b.id || b._id) === item.id);
+            if (bean && bean.stock_packs !== undefined) {
+                const q = (bean.quality_score || '').trim();
+                const isSpec = q && q !== '—' && q !== '-' && q !== '0';
+                if (isSpec) {
+                    const available = parseInt(bean.stock_packs);
+                    if (item.count > available) {
+                        alert(`Вибачте, ${bean.name} залишилося лише ${available} пачок. Ваше минуле замовлення містило ${item.count}.`);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
     clearPendingPayment();
-    if (normalizeOrderKind(order.type, order.items_text) === 'beans') {
+    if (isBeans) {
         cart_beans = [...cart_beans, ...items];
     } else {
         cart_menu = [...cart_menu, ...items];
@@ -703,6 +732,26 @@ window.repeatOrder = function (idx) {
     window.openCartModal();
     window.showToast('Замовлення додано до кошика', 'success');
 };
+
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+    const action = target.dataset.action;
+
+    if (action === 'repeat-order') {
+        const idx = target.dataset.orderIndex;
+        if (idx !== undefined) window.repeatOrder(parseInt(idx));
+    }
+    if (action === 'close-cart-modal') window.closeCartModal();
+    if (action === 'close-checkout-modal') window.closeCheckoutModal();
+    if (action === 'go-to-payment-step') window.goToPaymentStep();
+    if (action === 'back-to-details') window.backToDetails();
+    if (action === 'submit-checkout') {
+        const method = target.dataset.method;
+        window.submitCheckout(method);
+    }
+    if (action === 'open-checkout-modal') window.openCheckoutModal();
+});
 
 window.closeCartModal = function () {
     const c = document.getElementById('cart-modal-container');

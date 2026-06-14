@@ -92,7 +92,7 @@ function renderCoffeeData(coffeeData) {
 
         let stockLabel = '';
         if (!isCommercial && packs <= 5) {
-            stockLabel = `<div class="stock-badge"><i class="fas fa-hourglass-half"></i> Завершується: ${packs}</div>`;
+            stockLabel = `<div class="stock-badge"><i class="fas fa-hourglass-half"></i> Лишилося: ${packs}</div>`;
         }
 
         art.innerHTML = `
