@@ -72,30 +72,30 @@ CONTACT_ADD_STEPS = [
     ('url', '🔗 <b>Введіть URL або дані:</b>')
 ]
 
-def _guess_contact_icon(name: str, url: str) -> str:
+def _guess_contact_emoji(name: str, url: str) -> str:
     n = name.lower()
     u = url.lower()
     
     # 1. Instagram
-    if any(k in n for k in ['insta', 'інста']) or 'instagram' in u: return '📸 Instagram'
+    if any(k in n for k in ['insta', 'інста']) or 'instagram' in u: return '📸'
     # 2. Facebook
-    if any(k in n for k in ['face', 'фейс', 'фб']) or 'facebook' in u or 'fb.' in u: return '👥 Facebook'
+    if any(k in n for k in ['face', 'фейс', 'фб']) or 'facebook' in u or 'fb.' in u: return '👥'
     # 3. Telegram
-    if any(k in n for k in ['tele', 'теле', 'тг']) or 't.me' in u: return '✈️ Telegram'
+    if any(k in n for k in ['tele', 'теле', 'тг']) or 't.me' in u: return '✈️'
     # 4. Viber
-    if any(k in n for k in ['viber', 'вайбер']) or 'viber' in u: return '💜 Viber'
+    if any(k in n for k in ['viber', 'вайбер']) or 'viber' in u: return '💜'
     # 5. YouTube
-    if any(k in n for k in ['tube', 'ютуб']) or 'youtu' in u: return '📺 YouTube'
+    if any(k in n for k in ['tube', 'ютуб']) or 'youtu' in u: return '📺'
     # 6. TikTok
-    if any(k in n for k in ['tik', 'тік']) or 'tiktok' in u: return '🎵 TikTok'
+    if any(k in n for k in ['tik', 'тік']) or 'tiktok' in u: return '🎵'
     # 7. Email
-    if any(k in n for k in ['mail', 'мейл', 'пошт']) or '@' in u or 'mailto:' in u: return '📧 Email'
+    if any(k in n for k in ['mail', 'мейл', 'пошт']) or '@' in u or 'mailto:' in u: return '📧'
     # 8. Phone
     clean_u = re.sub(r'[\s\-()]+', '', u)
     if any(k in n for k in ['phone', 'тел', 'номер']) or u.startswith('tel:') or clean_u.startswith('+') or (clean_u.isdigit() and len(clean_u) >= 9):
-        return '📞 Телефон'
+        return '📞'
     
-    return '🔗 Контакт'
+    return '🔗'
 
 def _contact_list_kb(contacts: list[dict]) -> InlineKeyboardMarkup:
     keyboard = []
@@ -103,8 +103,11 @@ def _contact_list_kb(contacts: list[dict]) -> InlineKeyboardMarkup:
     row = []
     for c in contacts:
         cid = str(c['_id'])
-        name = c.get('name', '')[:25]
-        row.append(InlineKeyboardButton(text=name, callback_data=f'con_open_{cid}'))
+        name = c.get('name', 'Без назви')
+        url = c.get('url', '')
+        emoji = _guess_contact_emoji(name, url)
+        btn_text = f"{emoji} {name}"[:25]
+        row.append(InlineKeyboardButton(text=btn_text, callback_data=f'con_open_{cid}'))
         if len(row) == 2:
             keyboard.append(row)
             row = []
@@ -118,12 +121,12 @@ def _contact_list_kb(contacts: list[dict]) -> InlineKeyboardMarkup:
 def _contact_card_text(con: dict) -> str:
     name = con.get('name', 'Без назви')
     url = con.get('url', '—')
-    icon_info = _guess_contact_icon(name, url)
+    emoji = _guess_contact_emoji(name, url)
     
     lines = [
         f"📞 <b>КОНТАКТ: {html.escape(str(name))}</b>",
         f"━━━━━━━━━━━━━━━",
-        f"Тип: <b>{icon_info}</b>",
+        f"Тип: <b>{emoji} {html.escape(str(name))}</b>",
         f"Дані: <code>{html.escape(str(url))}</code>",
         f"━━━━━━━━━━━━━━━",
         f"<i>Цей контакт буде відображатися на сайті та в боті для клієнтів.</i>"
@@ -442,21 +445,6 @@ async def edit_location_fields_menu(callback: CallbackQuery):
         await callback.answer('Локацію не знайдено.', show_alert=True)
         return
     await safe_edit_message(callback.message, f"⚙️ <b>Оберіть поле для редагування:</b>\n{html.escape(str(loc.get('name', '')))}", reply_markup=akb.get_location_edit_fields_kb(lid), parse_mode='HTML')
-    await callback.answer()
-
-@admin_router.callback_query(F.data.startswith('loc_full_edit_'))
-async def edit_location_full_start(callback: CallbackQuery, state: FSMContext):
-    lid = callback.data.replace('loc_full_edit_', '')
-    loc = await location_db.get_location_by_id(lid)
-    if not loc:
-        await callback.answer('Локацію не знайдено.', show_alert=True)
-        return
-    await state.clear()
-    steps = [(field, f"{prompt}\nПоточне значення: {loc.get(field, '')}") for field, prompt in LOCATION_ADD_STEPS]
-    await state.update_data(loc_mode='edit', edit_loc_id=lid, loc_step_index=0, loc_steps=steps)
-    await callback.message.answer(f"✏️ <b>РЕДАГУВАННЯ: {html.escape(str(loc.get('name') or ''))}</b>", parse_mode='HTML')
-    await _ask_location_step(callback.message, state)
-    await state.set_state(AdminStates.editing_location_field)
     await callback.answer()
 
 @admin_router.callback_query(F.data.startswith('loc_fedit_'))
@@ -1156,21 +1144,6 @@ async def delete_bean_final(callback: CallbackQuery):
     await coffee_beans_db.delete_bean(bid)
     await callback.answer('Зерно видалено.')
     await show_beans_page(callback, category)
-
-@admin_router.callback_query(F.data.startswith('bean_full_edit_'))
-async def edit_bean_full_start(callback: CallbackQuery, state: FSMContext):
-    bid = callback.data.replace('bean_full_edit_', '')
-    bean = await coffee_beans_db.get_bean_by_id(bid)
-    if not bean:
-        await callback.answer('Зерно не знайдено.', show_alert=True)
-        return
-    await state.clear()
-    steps = [(field, f"{prompt}\nПоточне значення: {bean.get('price_250') if field == 'price_250' else bean.get('image_url') if field == 'photo' else bean.get(field, '')}") for field, prompt in BEAN_ADD_STEPS]
-    await state.update_data(bean_mode='edit', edit_bean_id=bid, bean_step_index=0, bean_steps=steps)
-    await callback.message.answer(f"✏️ <b>РЕДАГУВАННЯ: {html.escape(str(bean.get('name') or ''))}</b>", parse_mode='HTML')
-    await _ask_bean_step(callback.message, state)
-    await state.set_state(AdminStates.editing_bean_field)
-    await callback.answer()
 
 @admin_router.callback_query(F.data.startswith('bean_fedit_'))
 async def edit_bean_single_field_start(callback: CallbackQuery, state: FSMContext):

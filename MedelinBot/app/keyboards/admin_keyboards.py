@@ -56,8 +56,7 @@ def get_beans_manage_kb():
 
 def get_bean_card_kb(bean_id, category='commercial'):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ ПАРАМЕТРИ', callback_data=f'bean_edit_fields_{bean_id}')],
-        [InlineKeyboardButton(text='📝 РЕДАГУВАТИ ВСЕ', callback_data=f'bean_full_edit_{bean_id}')],
+        [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ', callback_data=f'bean_edit_fields_{bean_id}')],
         [InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data=f'bean_del_confirm_{bean_id}')],
         [InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data=f'beans_page_{category}')]
     ])
@@ -83,8 +82,7 @@ def get_locations_manage_kb():
 
 def get_location_card_kb(loc_id):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ ПАРАМЕТРИ', callback_data=f'loc_edit_fields_{loc_id}')],
-        [InlineKeyboardButton(text='📝 РЕДАГУВАТИ ВСЕ', callback_data=f'loc_full_edit_{loc_id}')],
+        [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ', callback_data=f'loc_edit_fields_{loc_id}')],
         [InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data=f'loc_del_confirm_{loc_id}')],
         [InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data='locations_list')]
     ])
