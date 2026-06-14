@@ -165,28 +165,21 @@ class AdminDatabase:
             res = await db.admins.find_one({'$or': [{'phone_digits': norm}, {'phone': {'$regex': re.escape(norm)}}]}, projection_without_mongo_id())
             if res: return res
 
-        # 2. Search in users table and check if developer
+        # 2. Search in users collection
         from app.databases.user_database import user_db
         user_info = None
+        
         if identifier.isdigit():
-            target_id = int(identifier)
-            if str(target_id) in DEVELOPER_IDS:
-                user_info = await user_db.get_user_by_id(target_id)
-                if user_info:
-                    uid, name, uname, uphone = user_info
-                    return {'user_id': uid, 'display_name': name or 'Developer', 'role': 'developer', 'username': uname}
-                return {'user_id': target_id, 'display_name': 'Developer', 'role': 'developer'}
-
-        if norm and len(norm) >= 10:
+            user_info = await user_db.get_user_by_id(int(identifier))
+        if not user_info and norm and len(norm) >= 10:
             user_info = await user_db.get_user_by_phone(norm)
-            
         if not user_info:
             user_info = await user_db.get_user_by_username(clean_id)
             
         if user_info:
             uid, name, uname, uphone = user_info
-            if str(uid) in DEVELOPER_IDS:
-                return {'user_id': uid, 'display_name': name or 'Developer', 'role': 'developer', 'username': uname}
+            role = 'developer' if str(uid) in DEVELOPER_IDS else 'user'
+            return {'user_id': uid, 'display_name': name or uname or 'Користувач', 'username': uname, 'role': role}
 
         return None
 

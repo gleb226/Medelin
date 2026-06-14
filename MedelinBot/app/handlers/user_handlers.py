@@ -43,14 +43,53 @@ user_router = Router()
 @user_router.message(F.text == '/start', StateFilter(None))
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
+    
+    # Register user in DB so they can be added to staff later
+    await user_db.add_user(
+        message.from_user.id, 
+        message.from_user.first_name, 
+        message.from_user.username
+    )
+    
     is_admin = await admin_db.is_admin(message.from_user.id)
     
     if not is_admin:
-        await message.answer('🔒 <b>Цей бот призначений тільки для адміністраторів Medelin.</b>\n\nБудь ласка, використовуйте наш сайт для замовлення: medelin.com', parse_mode='HTML')
+        kb_contact = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text='📱 ПОДІЛИТИСЯ КОНТАКТОМ', request_contact=True)]],
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
+        await message.answer(
+            '🔒 <b>Цей бот призначений тільки для адміністраторів Medelin.</b>\n\n'
+            'Щоб власник міг додати вас до команди за номером телефону, натисніть кнопку нижче 👇', 
+            reply_markup=kb_contact,
+            parse_mode='HTML'
+        )
         return
 
     role = await admin_db.get_admin_role(message.from_user.id)
     await message.answer(f'🔐 <b>ВІТАЄМО В АДМІН-ПАНЕЛІ!</b>\nВаша роль: <b>{role.upper()}</b>', reply_markup=akb.get_admin_main_kb(role), parse_mode='HTML')
+
+@user_router.message(F.contact)
+async def handle_contact(message: Message):
+    if not message.contact: return
+    
+    # Check if contact belongs to the user
+    if message.contact.user_id != message.from_user.id:
+        await message.answer("❌ Будь ласка, надішліть свій власний контакт.")
+        return
+        
+    await user_db.set_phone(message.from_user.id, message.contact.phone_number)
+    
+    is_admin = await admin_db.is_admin(message.from_user.id)
+    if not is_admin:
+        await message.answer(
+            "✅ <b>Дякуємо! Ваш номер збережено.</b>\n\nТепер власник може додати вас до команди. Очікуйте повідомлення про призначення ролі.", 
+            parse_mode='HTML',
+            reply_markup=ReplyKeyboardMarkup(keyboard=[], remove_keyboard=True) # Hide keyboard
+        )
+    else:
+        await message.answer("✅ Номер телефону оновлено.", reply_markup=ReplyKeyboardMarkup(keyboard=[], remove_keyboard=True))
 
 @user_router.message()
 async def block_all_other_messages(message: Message):
