@@ -106,7 +106,7 @@ const SOCIAL_ICONS = {
 };
 
 function guessSocialKeyFromUrl(url) {
-    const u = String(url || '').toLowerCase();
+    const u = String(url || '').toLowerCase().trim();
     if (u.includes('instagram.')) return 'instagram';
     if (u.includes('tiktok.')) return 'tiktok';
     if (u.includes('facebook.') || u.includes('fb.')) return 'facebook';
@@ -114,7 +114,7 @@ function guessSocialKeyFromUrl(url) {
     if (u.includes('telegram.') || u.includes('t.me/')) return 'telegram';
     if (u.includes('viber.')) return 'viber';
     if (u.includes('github.')) return 'github';
-    if (u.startsWith('tel:')) return 'phone';
+    if (u.startsWith('tel:') || u.startsWith('+') || /^\d{7,}$/.test(u.replace(/[\s\-()]/g, ''))) return 'phone';
     if (u.startsWith('mailto:')) return 'email';
     return null;
 }
@@ -142,11 +142,19 @@ function renderSocials(socials) {
 
     const ensureAbsoluteUrl = (url) => {
         if (!url) return '';
-        if (url.startsWith('http') || url.startsWith('tel:') || url.startsWith('mailto:')) return url;
-        if (url.startsWith('t.me') || url.startsWith('instagram.com') || url.startsWith('facebook.com') || url.startsWith('fb.com')) {
-            return 'https://' + url;
+        const u = url.trim();
+        if (u.startsWith('http') || u.startsWith('tel:') || u.startsWith('mailto:')) return u;
+        
+        // Check if it's a phone number (starts with + or digits)
+        const clean = u.replace(/[\s\-()]/g, '');
+        if (u.startsWith('+') || (clean.length >= 9 && /^\d+$/.test(clean))) {
+            return 'tel:' + u;
         }
-        return url;
+
+        if (u.startsWith('t.me') || u.startsWith('instagram.com') || u.startsWith('facebook.com') || u.startsWith('fb.com')) {
+            return 'https://' + u;
+        }
+        return u;
     };
 
     if (socialsRoot) {

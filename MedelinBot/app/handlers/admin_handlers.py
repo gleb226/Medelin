@@ -77,12 +77,19 @@ def _guess_contact_emoji(name: str, url: str) -> str:
     n = name.lower()
     u = url.lower()
     
+    # 0. Phone (Check first to avoid 'теле' conflict)
+    clean_u = re.sub(r'[\s\-()]+', '', u)
+    is_phone_name = any(k in n for k in ['телефон', 'phone', 'номер'])
+    is_phone_url = u.startswith('tel:') or clean_u.startswith('+') or (clean_u.isdigit() and len(clean_u) >= 9)
+    if is_phone_name or is_phone_url:
+        return '📞'
+
     # 1. Instagram
     if any(k in n for k in ['insta', 'інста']) or 'instagram' in u: return '📸'
     # 2. Facebook
     if any(k in n for k in ['face', 'фейс', 'фб']) or 'facebook' in u or 'fb.' in u: return '👥'
     # 3. Telegram
-    if any(k in n for k in ['tele', 'теле', 'тг']) or 't.me' in u: return '✈️'
+    if any(k in n for k in ['telegram', 'тг']) or 't.me' in u: return '✈️'
     # 4. Viber
     if any(k in n for k in ['viber', 'вайбер']) or 'viber' in u: return '💜'
     # 5. YouTube
@@ -91,12 +98,6 @@ def _guess_contact_emoji(name: str, url: str) -> str:
     if any(k in n for k in ['tik', 'тік']) or 'tiktok' in u: return '🎵'
     # 7. Email
     if any(k in n for k in ['mail', 'мейл', 'пошт']) or '@' in u or 'mailto:' in u: return '📧'
-    # 8. Phone
-    clean_u = re.sub(r'[\s\-()]+', '', u)
-    is_phone_name = any(k in n for k in ['phone', 'тел', 'номер'])
-    is_phone_url = u.startswith('tel:') or clean_u.startswith('+') or (clean_u.isdigit() and len(clean_u) >= 9)
-    if is_phone_name or is_phone_url:
-        return '📞'
     
     return '🔗'
 

@@ -88,7 +88,8 @@ class PublicDataCache:
                     'harvest': i.get('harvest', ''),
                     'category': i.get('category', ''),
                     'taste': i.get('taste', ''),
-                    'descriptors': i.get('descriptors', '')
+                    'descriptors': i.get('descriptors', ''),
+                    'stock_packs': i.get('stock_packs')
                 })
             logger.info(f"Refreshed coffee: {len(formatted)} items")
             return self.set('coffee', formatted)
