@@ -81,9 +81,24 @@ function renderCoffeeData(coffeeData) {
         // Remove ANY emojis from name
         displayName = displayName.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
 
+        // Stock logic for specialty
+        const qScore = (item.quality_score || '').trim();
+        const isCommercial = !qScore || qScore === '—' || qScore === '-' || qScore === '0';
+        const packs = item.stock_packs !== undefined ? parseInt(item.stock_packs) : 999;
+        
+        if (!isCommercial && packs <= 0) {
+            return; // Hide out-of-stock specialty
+        }
+
+        let stockLabel = '';
+        if (!isCommercial && packs <= 5) {
+            stockLabel = `<div style="background: #e74c3c; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px; font-weight: 800;">🛑 ЗАВЕРШУЄТЬСЯ (лишилося ${packs})</div>`;
+        }
+
         art.innerHTML = `
             <div class="product-card__image" style="background-image: url('${window.fixImageUrl(item.image_url) || defImg}');"></div>
             <div class="product-card__content">
+                ${stockLabel}
                 <h3 class="product-card__title">${displayName}</h3>
                 
                 <div class="product-card__info-brief" style="margin-bottom: 1.5rem; font-size: 0.9rem; color: #6b4f3a;">
@@ -106,10 +121,7 @@ function renderCoffeeData(coffeeData) {
         art.onclick = () => openBeanDetail(item);
 
         // Categorization logic
-        const qScore = (item.quality_score || '').trim();
         const roast = (item.roast || '').toLowerCase();
-        
-        const isCommercial = !qScore || qScore === '—' || qScore === '-' || qScore === '0';
 
         if (isCommercial) {
             commercialRoot.appendChild(art);

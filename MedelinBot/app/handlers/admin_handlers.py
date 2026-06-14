@@ -58,6 +58,7 @@ class AdminStates(StatesGroup):
     # Bean management states
     adding_bean_name = State()
     editing_bean_field = State()
+    restocking_bean = State()
     
     # Location management states
     adding_location_name = State()
@@ -92,7 +93,9 @@ def _guess_contact_emoji(name: str, url: str) -> str:
     if any(k in n for k in ['mail', 'мейл', 'пошт']) or '@' in u or 'mailto:' in u: return '📧'
     # 8. Phone
     clean_u = re.sub(r'[\s\-()]+', '', u)
-    if any(k in n for k in ['phone', 'тел', 'номер']) or u.startswith('tel:') or clean_u.startswith('+') or (clean_u.isdigit() and len(clean_u) >= 9):
+    is_phone_name = any(k in n for k in ['phone', 'тел', 'номер'])
+    is_phone_url = u.startswith('tel:') or clean_u.startswith('+') or (clean_u.isdigit() and len(clean_u) >= 9)
+    if is_phone_name or is_phone_url:
         return '📞'
     
     return '🔗'
@@ -889,8 +892,12 @@ def _roast_rank(bean: dict) -> int:
     return 2
 
 def _sorted_beans(beans: list[dict], category: str) -> list[dict]:
+    filtered = [b for b in beans if _bean_category(b) == category]
+    if category == 'specialty':
+        # Hide specialty if out of stock
+        filtered = [b for b in filtered if b.get('stock_packs', 1) > 0]
     return sorted(
-        [b for b in beans if _bean_category(b) == category],
+        filtered,
         key=lambda b: (_roast_rank(b), str(b.get('name') or '').casefold())
     )
 
@@ -904,6 +911,10 @@ def _bean_list_kb(beans: list[dict], category: str) -> InlineKeyboardMarkup:
     for i, b in enumerate(beans):
         bid = str(b['_id'])
         name = b.get('name', '')[:25]
+        # Show stock for specialty
+        if category == 'specialty':
+            packs = b.get('stock_packs', 0)
+            name = f"{name} ({packs}📦)"
         row.append(InlineKeyboardButton(text=name, callback_data=f'bean_open_{bid}'))
         if len(row) == 2:
             keyboard.append(row)
@@ -918,11 +929,16 @@ def _bean_list_kb(beans: list[dict], category: str) -> InlineKeyboardMarkup:
 
 def _bean_card_text(bean: dict) -> str:
     score = _bean_score(bean) or '—'
-    category = 'Комерційна' if _bean_category(bean) == 'commercial' else 'Спешелті'
+    is_specialty = _bean_category(bean) == 'specialty'
+    category = 'Комерційна' if not is_specialty else 'Спешелті'
     
     # Auto sorting grade for commercial
     grade_info = ""
-    if _bean_category(bean) == 'commercial':
+    stock_info = ""
+    if is_specialty:
+        packs = bean.get('stock_packs', 0)
+        stock_info = f"\n📦 Запас: <b>{packs} пачок</b> (≈ {packs*0.25:.1f} кг)"
+    elif _bean_category(bean) == 'commercial':
         low_score = score.lower()
         if 'зелен' in low_score or 'green' in low_score: grade_info = " (Зелена)"
         elif 'жовт' in low_score or 'yellow' in low_score: grade_info = " (Жовта)"
@@ -931,7 +947,7 @@ def _bean_card_text(bean: dict) -> str:
     lines = [
         f"<b>{html.escape(str(bean.get('name') or 'Без назви'))}</b>",
         f"━━━━━━━━━━━━━━━",
-        f"📊 Категорія: <b>{category}{grade_info}</b>",
+        f"📊 Категорія: <b>{category}{grade_info}</b>{stock_info}",
         f"💰 Ціна 250г: <b>{bean.get('price_250', 0)} ₴</b>",
         f"🔥 Обсмаження: <b>{html.escape(str(bean.get('roast') or '—'))}</b>",
         f"📈 Оцінка: <b>{html.escape(score)}</b>",
@@ -969,8 +985,9 @@ async def edit_bean_fields_menu(callback: CallbackQuery):
 
 async def show_bean_card(target, bean: dict):
     category = _bean_category(bean)
+    is_specialty = category == 'specialty'
     text = _bean_card_text(bean)
-    kb = akb.get_bean_card_kb(str(bean['_id']), category)
+    kb = akb.get_bean_card_kb(str(bean['_id']), category, is_specialty)
     
     image = str(bean.get('image_url') or '').strip()
     photo = None
@@ -1028,6 +1045,20 @@ async def show_bean_card(target, bean: dict):
 def _cancel_kb():
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='❌ СКАСУВАТИ', callback_data='bean_add_cancel')]])
 
+def _parse_stock(text: str) -> int:
+    """Parse stock input. Returns number of packs (250g)."""
+    text = text.lower().replace(',', '.').strip()
+    if 'кг' in text:
+        try:
+            val = float(text.replace('кг', '').strip())
+            return int(val * 4) # 1kg = 4 packs of 250g
+        except: return 0
+    try:
+        # Extract only digits
+        digits = re.sub(r'[^\d]', '', text)
+        return int(digits) if digits else 0
+    except: return 0
+
 def _validate_bean_value(field: str, value: str, data: dict):
     value = (value or '').strip()
     if field == 'price_250':
@@ -1053,6 +1084,11 @@ def _validate_bean_value(field: str, value: str, data: dict):
         if 'filter' in low or 'фільтр' in low:
             return 'Filter', None
         return None, 'Введіть Espresso або Filter.'
+    if field == 'stock':
+        packs = _parse_stock(value)
+        if packs <= 0:
+            return None, 'Введіть коректну кількість (напр. 5 кг або 20).'
+        return packs, None
     if not value:
         return None, 'Поле не може бути порожнім.'
     if value == '-':
@@ -1071,8 +1107,26 @@ async def _finish_bean_flow(message: Message, state: FSMContext):
     payload = {field: data[field] for field in BEAN_EDIT_FIELDS if field in data}
     if data.get('image_url'):
         payload['image_url'] = data['image_url']
+    
     score = str(payload.get('quality_score') or '').strip()
-    payload['category'] = 'commercial' if score == '-' else 'specialty'
+    is_specialty = False
+    try:
+        if score != '-' and float(score.replace(',', '.')) >= 80:
+            is_specialty = True
+    except: pass
+
+    payload['category'] = 'specialty' if is_specialty else 'commercial'
+    
+    # Check if we need to ask for stock (only for new specialty or if specialty and no stock yet)
+    if is_specialty and 'stock' not in data and 'stock_packs' not in payload:
+        await state.update_data(bean_steps=BEAN_ADD_STEPS + [('stock', '📦 <b>Скільки кави є в наявності?</b>\n\nВведіть у КГ (напр. <code>10 кг</code>) або кількість пачок по 250г (напр. <code>40</code>).')])
+        await state.update_data(bean_step_index=len(BEAN_ADD_STEPS))
+        await _ask_bean_step(message, state)
+        return
+
+    if 'stock' in data:
+        payload['stock_packs'] = data['stock']
+
     if data.get('bean_mode') == 'edit':
         bid = data['edit_bean_id']
         await coffee_beans_db.update_bean(bid, payload)
@@ -1087,6 +1141,38 @@ async def _finish_bean_flow(message: Message, state: FSMContext):
         if bean:
             await show_bean_card(message, bean)
     await state.clear()
+
+@admin_router.callback_query(F.data.startswith('bean_restock_'))
+async def bean_restock_start(callback: CallbackQuery, state: FSMContext):
+    bid = callback.data.replace('bean_restock_', '')
+    bean = await coffee_beans_db.get_bean_by_id(bid)
+    if not bean:
+        await callback.answer('Зерно не знайдено.')
+        return
+    await state.clear()
+    await state.update_data(restock_bid=bid)
+    await callback.message.answer(f"📦 <b>ПОПОВНЕННЯ: {html.escape(bean['name'])}</b>\n\nВведіть скільки ДОДАТИ:\n- у КГ (напр. <code>5 кг</code>)\n- або пачок (напр. <code>20</code>)", parse_mode='HTML', reply_markup=_cancel_kb())
+    await state.set_state(AdminStates.restocking_bean)
+    await callback.answer()
+
+@admin_router.message(AdminStates.restocking_bean)
+async def bean_restock_input(message: Message, state: FSMContext):
+    data = await state.get_data()
+    bid = data['restock_bid']
+    packs_to_add = _parse_stock(message.text or '')
+    if packs_to_add <= 0:
+        await message.answer("Будь ласка, введіть число (напр. 5 або 2 кг).")
+        return
+    
+    bean = await coffee_beans_db.get_bean_by_id(bid)
+    current = bean.get('stock_packs', 0)
+    new_total = current + packs_to_add
+    await coffee_beans_db.update_bean(bid, {'stock_packs': new_total})
+    
+    await message.answer(f"✅ Додано <b>{packs_to_add}</b> пачок.\nТепер усього: <b>{new_total}</b>", parse_mode='HTML')
+    await state.clear()
+    bean = await coffee_beans_db.get_bean_by_id(bid)
+    if bean: await show_bean_card(message, bean)
 
 @admin_router.callback_query(F.data.in_(['beans_list', 'beans_list_edit', 'beans_list_del', 'beans_page_commercial', 'beans_page_specialty']))
 async def list_beans_admin(callback: CallbackQuery):

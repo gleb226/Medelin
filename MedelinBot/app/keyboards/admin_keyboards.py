@@ -54,12 +54,18 @@ def get_beans_manage_kb():
         [InlineKeyboardButton(text='⬅️ ПОВЕРНУТИСЯ НАЗАД', callback_data='admin_panel_back')]
     ])
 
-def get_bean_card_kb(bean_id, category='commercial'):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ', callback_data=f'bean_edit_fields_{bean_id}')],
+def get_bean_card_kb(bean_id, category='commercial', is_specialty=False):
+    buttons = [
+        [InlineKeyboardButton(text='✏️ РЕДАГУВАТИ', callback_data=f'bean_edit_fields_{bean_id}')]
+    ]
+    if is_specialty:
+        buttons.append([InlineKeyboardButton(text='📦 ПОПОВНИТИ ЗАПАС', callback_data=f'bean_restock_{bean_id}')])
+    
+    buttons.extend([
         [InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data=f'bean_del_confirm_{bean_id}')],
         [InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data=f'beans_page_{category}')]
     ])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_bean_edit_fields_kb(bean_id, category='commercial'):
     return InlineKeyboardMarkup(inline_keyboard=[
