@@ -1175,7 +1175,7 @@ def _sorted_beans(beans: list[dict], category: str) -> list[dict]:
         key=lambda b: (_roast_rank(b), str(b.get('name') or '').casefold())
     )
 
-def _bean_list_kb(beans: list[dict], category: str) -> InlineKeyboardMarkup:
+def _bean_list_kb(beans: list[dict], category: str, role='owner') -> InlineKeyboardMarkup:
     other = 'specialty' if category == 'commercial' else 'commercial'
     other_text = 'ПЕРЕЙТИ ДО СПЕШЕЛТІ' if other == 'specialty' else 'ПЕРЕЙТИ ДО КОМЕРЦІЙНОЇ'
     keyboard = []
@@ -1197,7 +1197,8 @@ def _bean_list_kb(beans: list[dict], category: str) -> InlineKeyboardMarkup:
         keyboard.append(row)
     
     keyboard.append([InlineKeyboardButton(text=other_text, callback_data=f'beans_page_{other}')])
-    keyboard.append([InlineKeyboardButton(text='➕ ДОДАТИ НОВУ КАВУ', callback_data='bean_new')])
+    if role != 'developer':
+        keyboard.append([InlineKeyboardButton(text='➕ ДОДАТИ НОВУ КАВУ', callback_data='bean_new')])
     keyboard.append([InlineKeyboardButton(text='⬅️ НАЗАД В МЕНЮ', callback_data='admin_panel_back')])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
