@@ -107,7 +107,6 @@ class PublicDataCache:
                     'name': l.get('name', ''),
                     'address': l.get('address', ''),
                     'schedule': l.get('schedule', ''),
-                    'phone': l.get('phone', ''),
                     'image_url': l.get('image_url', ''),
                     'google_maps_url': l.get('google_maps_url', ''),
                     'coordinates': l.get('coordinates', {}),

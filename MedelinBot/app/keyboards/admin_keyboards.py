@@ -92,9 +92,8 @@ def get_location_card_kb(loc_id):
 def get_location_edit_fields_kb(loc_id):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='🏷 Назва', callback_data=f'loc_fedit_{loc_id}_name'), InlineKeyboardButton(text='🏠 Адреса', callback_data=f'loc_fedit_{loc_id}_address')],
-        [InlineKeyboardButton(text='📅 Графік', callback_data=f'loc_fedit_{loc_id}_schedule'), InlineKeyboardButton(text='📞 Телефон', callback_data=f'loc_fedit_{loc_id}_phone')],
-        [InlineKeyboardButton(text='📧 Email', callback_data=f'loc_fedit_{loc_id}_email'), InlineKeyboardButton(text='🗺 Google Maps', callback_data=f'loc_fedit_{loc_id}_google_maps_url')],
-        [InlineKeyboardButton(text='📸 Фото', callback_data=f'loc_fedit_{loc_id}_photo')],
+        [InlineKeyboardButton(text='📅 Графік', callback_data=f'loc_fedit_{loc_id}_schedule')],
+        [InlineKeyboardButton(text='🗺 Google Maps', callback_data=f'loc_fedit_{loc_id}_google_maps_url'), InlineKeyboardButton(text='📸 Фото', callback_data=f'loc_fedit_{loc_id}_photo')],
         [InlineKeyboardButton(text='✨ Зручності', callback_data=f'loc_fedit_{loc_id}_amenities'), InlineKeyboardButton(text='☁️ Атмосфера', callback_data=f'loc_fedit_{loc_id}_atmosphere')],
         [InlineKeyboardButton(text='⬅️ НАЗАД ДО КАРТКИ', callback_data=f'loc_open_{loc_id}')]
     ])

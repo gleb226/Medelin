@@ -73,14 +73,9 @@ async def show_location_details(callback: CallbackQuery):
         return
 
     text = f"📍 <b>{loc['name']}</b>\n\n"
-
     text += f"🏠 <b>Адреса:</b> {loc['address']}\n"
-
     text += f"🕒 <b>Графік:</b> {loc['schedule']}\n"
 
-    if loc.get('phone'):
-
-        text += f"📞 <b>Тел:</b> {loc['phone']}\n"
 
     if loc.get('atmosphere'):
 
