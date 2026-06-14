@@ -747,8 +747,8 @@ async def view_order_details(message: Message, bot: Bot):
     
     await message.answer(msg, reply_markup=akb.get_booking_manage_kb(oid, order.get('user_id') or -1), parse_mode='HTML')
 
-async def _deduct_stock_from_cart(cart_text: str):
-    """Parses cart text and deducts stock for specialty beans."""
+async def _deduct_stock_from_cart(cart_text: str, bot: Bot):
+    """Parses cart text and deducts stock for specialty beans. Handles multiples."""
     if not cart_text: return
     
     lines = cart_text.split('\n')
@@ -759,14 +759,27 @@ async def _deduct_stock_from_cart(cart_text: str):
         if not line: continue
         
         bean_name = ""
-        # 1. Bot format: "ЗЕРНА: Name"
+        count = 1
+        
+        # 1. Bot format: "ЗЕРНА: Name" or "ЗЕРНА: Name x2"
         if line.startswith('ЗЕРНА: '):
-            bean_name = line.replace('ЗЕРНА: ', '').strip()
-        # 2. Site format: "- Name (price грн)"
+            raw = line.replace('ЗЕРНА: ', '').strip()
+            if ' x' in raw:
+                try:
+                    bean_name, count_str = raw.rsplit(' x', 1)
+                    count = int(re.sub(r'[^\d]', '', count_str))
+                except: bean_name = raw
+            else:
+                bean_name = raw
+        
+        # 2. Site format: "- Name (price грн)" or "- Name x2 (price грн)"
         elif line.startswith('- '):
-            match = re.match(r'[-•]\s*(.*?)\s*\((\d+)\s*(?:грн|₴|uah)?\)\s*$', line, re.IGNORECASE)
+            # Regex to match "- Name x2 (100 грн)"
+            match = re.match(r'[-•]\s*(.*?)(?:\s+x(\d+))?\s*\((\d+)\s*(?:грн|₴|uah)?\)\s*$', line, re.IGNORECASE)
             if match:
                 bean_name = match.group(1).strip()
+                if match.group(2):
+                    count = int(match.group(2))
             else:
                 bean_name = line[2:].strip()
         
@@ -779,8 +792,23 @@ async def _deduct_stock_from_cart(cart_text: str):
                     if _bean_category(b) == 'specialty':
                         current = b.get('stock_packs', 0)
                         if current > 0:
-                            await coffee_beans_db.update_bean(b['_id'], {'stock_packs': current - 1})
-                            logger.info(f"Deducted stock for specialty bean: {bean_name} ({current} -> {current-1})")
+                            new_stock = max(0, current - count)
+                            await coffee_beans_db.update_bean(b['_id'], {'stock_packs': new_stock})
+                            logger.info(f"Deducted {count} stock for {bean_name} ({current} -> {new_stock})")
+                            
+                            if new_stock == 0:
+                                # Notify owner
+                                from app.databases.admin_database import admin_db
+                                owner_ids = await admin_db.get_admins_by_role('owner')
+                                for oid in owner_ids:
+                                    try:
+                                        kb = InlineKeyboardMarkup(inline_keyboard=[
+                                            [InlineKeyboardButton(text='📦 ПОПОВНИТИ', callback_data=f'bean_restock_{b["_id"]}')],
+                                            [InlineKeyboardButton(text='🗑 ВИДАЛИТИ ЛОТ', callback_data=f'bean_del_confirm_{b["_id"]}')],
+                                            [InlineKeyboardButton(text='⬅️ В МЕНЮ', callback_data='beans_manage')]
+                                        ])
+                                        await bot.send_message(oid, f"⚠️ <b>ЗАПАС ВИЧЕРПАНО!</b>\n\nКава <b>{html.escape(bean_name)}</b> закінчилася і більше не відображається на сайті.\n\nБажаєте поповнити запас чи видалити лот?", reply_markup=kb, parse_mode='HTML')
+                                    except: pass
                     break
 
 @admin_router.callback_query(F.data.startswith('confirm_order_'))
@@ -794,7 +822,7 @@ async def confirm_order_handler(callback: CallbackQuery, bot: Bot):
     await orders_db.update_status(oid, 'confirmed')
     # Deduct specialty stock
     try:
-        await _deduct_stock_from_cart(order.get('cart', ''))
+        await _deduct_stock_from_cart(order.get('cart', ''), bot)
     except Exception as e:
         logger.error(f"Failed to deduct stock: {e}")
 
