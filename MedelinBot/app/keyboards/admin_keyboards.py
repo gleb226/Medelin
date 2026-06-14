@@ -68,15 +68,23 @@ def get_bean_card_kb(bean_id, category='commercial', is_specialty=False):
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_bean_edit_fields_kb(bean_id, category='commercial'):
-    return InlineKeyboardMarkup(inline_keyboard=[
+    rows = [
         [InlineKeyboardButton(text='🏷 Назва', callback_data=f'bean_fedit_{bean_id}_name'), InlineKeyboardButton(text='💰 Ціна', callback_data=f'bean_fedit_{bean_id}_price')],
-        [InlineKeyboardButton(text='📸 Фото', callback_data=f'bean_fedit_{bean_id}_photo'), InlineKeyboardButton(text='📈 Оцінка', callback_data=f'bean_fedit_{bean_id}_score')],
+        [InlineKeyboardButton(text='📸 Фото', callback_data=f'bean_fedit_{bean_id}_photo')]
+    ]
+    
+    # Hide quality score for commercial coffee
+    if category == 'specialty':
+        rows[1].append(InlineKeyboardButton(text='📈 Оцінка', callback_data=f'bean_fedit_{bean_id}_score'))
+    
+    rows.extend([
         [InlineKeyboardButton(text='🌿 Склад', callback_data=f'bean_fedit_{bean_id}_species'), InlineKeyboardButton(text='🔥 Обсмаж.', callback_data=f'bean_fedit_{bean_id}_roast')],
         [InlineKeyboardButton(text='📅 Врожай', callback_data=f'bean_fedit_{bean_id}_harvest'), InlineKeyboardButton(text='⛰ Висота', callback_data=f'bean_fedit_{bean_id}_altitude')],
         [InlineKeyboardButton(text='🧪 Обробка', callback_data=f'bean_fedit_{bean_id}_processing'), InlineKeyboardButton(text='🍓 Дескрип.', callback_data=f'bean_fedit_{bean_id}_descriptors')],
         [InlineKeyboardButton(text='📖 Опис', callback_data=f'bean_fedit_{bean_id}_description')],
         [InlineKeyboardButton(text='⬅️ НАЗАД ДО КАРТКИ', callback_data=f'bean_open_{bean_id}')]
     ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def get_locations_manage_kb():

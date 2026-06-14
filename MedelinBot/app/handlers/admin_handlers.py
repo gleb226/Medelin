@@ -1203,8 +1203,8 @@ async def _finish_bean_flow(message: Message, state: FSMContext):
 
     payload['category'] = 'specialty' if is_specialty else 'commercial'
     
-    # Check if we need to ask for stock (only for new specialty or if specialty and no stock yet)
-    if is_specialty and 'stock' not in data and 'stock_packs' not in payload:
+    # ALWAYS ask for stock if it's not in data yet (for both Specialty and Commercial)
+    if 'stock' not in data and 'stock_packs' not in payload:
         await state.update_data(bean_steps=BEAN_ADD_STEPS + [('stock', '📦 <b>Скільки кави є в наявності?</b>\n\nВведіть у КГ (напр. <code>10 кг</code>) або кількість пачок по 250г (напр. <code>40</code>).')])
         await state.update_data(bean_step_index=len(BEAN_ADD_STEPS))
         await _ask_bean_step(message, state)
