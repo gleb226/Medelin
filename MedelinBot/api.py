@@ -216,9 +216,13 @@ async def process_checkout(req: CheckoutRequest):
     except Exception as e:
         logger.error(f"User sync failed: {e}")
 
-    oid = await orders_db.add_order(user_id=user_id, username=tg_nick, fullname=user.get('name', '—'), phone=phone, location_id=loc_id, wishes=wishes_str, cart=items_text, order_type=order_type, payment_mode=payment_mode, total_amount=total, delivery_info=delivery_info)
+    oid, is_new = await orders_db.add_order(user_id=user_id, username=tg_nick, fullname=user.get('name', '—'), phone=phone, location_id=loc_id, wishes=wishes_str, cart=items_text, order_type=order_type, payment_mode=payment_mode, total_amount=total, delivery_info=delivery_info)
     order = await orders_db.get_order_by_id(oid)
     order_num = order.get('order_number', 0)
+
+    if not is_new:
+        if payment_mode == 'pay_at_checkout' or data.get('payment_method') == 'cash':
+            return {'status': 'ok', 'manual': True, 'order_id': oid, 'order_number': order_num, 'duplicate': True}
 
     if payment_mode == 'pay_at_checkout' or data.get('payment_method') == 'cash':
         pay_label = "Накладний платіж" if order_type == 'nova_poshta' else "ПІСЛЯПЛАТА"

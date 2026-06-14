@@ -173,7 +173,7 @@ async def send_beans_invoice(user, chat_id, state, bot):
     total = int(data.get('base_price') or 300)
     
     order_type = 'beans_delivery' if data.get('delivery_type') == 'nova_poshta' else 'beans_booking'
-    rid = await orders_db.add_order(
+    rid, is_new = await orders_db.add_order(
         user_id=user.id, username=user.username, fullname=user.full_name, phone=data.get('phone', '—'), 
         location_id=data.get('location_id') or "NP", wishes="НОВА ПОШТА", 
         cart=f"ЗЕРНА: {data['bean_name']}", order_type=order_type,
@@ -197,7 +197,7 @@ async def process_beans_final(user, chat_id, state, bot):
     delivery_info = f"{data.get('np_city_name', '')}, {data.get('np_warehouse', '')}" if order_type == 'beans_delivery' else "Самовивіз"
     pay_label = "ОПЛАЧЕНО" if data.get('payment_method') == 'card' else "Накладний платіж"
     
-    rid = await orders_db.add_order(
+    rid, is_new = await orders_db.add_order(
         user_id=user.id, username=user.username, fullname=user.full_name, phone=data.get('phone', '—'), 
         location_id=data.get('location_id') or "NP", wishes="НОВА ПОШТА", 
         cart=f"ЗЕРНА: {data['bean_name']}", order_type=order_type,
@@ -206,16 +206,17 @@ async def process_beans_final(user, chat_id, state, bot):
         total_amount=data.get('base_price', 0)
     )
 
-    msg = f"☕️ <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n👤 {user.full_name}\n📞 <code>{data.get('phone')}</code>\n🚚 Куди: <b>{delivery_info}</b>"
+    if is_new:
+        msg = f"☕️ <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n👤 {user.full_name}\n📞 <code>{data.get('phone')}</code>\n🚚 Куди: <b>{delivery_info}</b>"
 
-    msg += f"\n📦 Сорт: <b>{data['bean_name']}</b>\n💳 Оплата: <b>{pay_label}</b>"
-    msg += f"\n\n🛒 {data['bean_name']}"
+        msg += f"\n📦 Сорт: <b>{data['bean_name']}</b>\n💳 Оплата: <b>{pay_label}</b>"
+        msg += f"\n\n🛒 {data['bean_name']}"
 
-    targets = await admin_db.get_notification_targets(data.get('location_id'))
+        targets = await admin_db.get_notification_targets(data.get('location_id'))
 
-    for aid in targets:
-        try: await bot.send_message(aid, msg, reply_markup=akb.get_booking_manage_kb(rid), parse_mode='HTML')
-        except: pass
+        for aid in targets:
+            try: await bot.send_message(aid, msg, reply_markup=akb.get_booking_manage_kb(rid), parse_mode='HTML')
+            except: pass
 
     await bot.send_message(chat_id, '✅ <b>ДЯКУЄМО!</b> Ваше замовлення прийнято.', reply_markup=kb.get_main_menu(is_admin), parse_mode='HTML')
     await state.clear()
