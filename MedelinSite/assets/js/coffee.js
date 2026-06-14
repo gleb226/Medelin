@@ -92,13 +92,14 @@ function renderCoffeeData(coffeeData) {
 
         let stockLabel = '';
         if (!isCommercial && packs <= 5) {
-            stockLabel = `<div style="background: #e74c3c; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px; font-weight: 800;">🛑 ЗАВЕРШУЄТЬСЯ (лишилося ${packs})</div>`;
+            stockLabel = `<div class="stock-badge"><i class="fas fa-hourglass-half"></i> Завершується: ${packs}</div>`;
         }
 
         art.innerHTML = `
-            <div class="product-card__image" style="background-image: url('${window.fixImageUrl(item.image_url) || defImg}');"></div>
-            <div class="product-card__content">
+            <div class="product-card__image" style="background-image: url('${window.fixImageUrl(item.image_url) || defImg}');">
                 ${stockLabel}
+            </div>
+            <div class="product-card__content">
                 <h3 class="product-card__title">${displayName}</h3>
                 
                 <div class="product-card__info-brief" style="margin-bottom: 1.5rem; font-size: 0.9rem; color: #6b4f3a;">

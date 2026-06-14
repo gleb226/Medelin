@@ -1271,6 +1271,32 @@ h4 {
     background-repeat: no-repeat;
     background-position: center;
     background-color: #fcfaf5;
+    position: relative;
+}
+
+.stock-badge {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: rgba(231, 76, 60, 0.88);
+    color: white;
+    font-size: 0.65rem;
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-weight: 800;
+    text-transform: uppercase;
+    backdrop-filter: blur(6px);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    letter-spacing: 0.05em;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.stock-badge i {
+    font-size: 0.8rem;
 }
 
 .product-card__content {

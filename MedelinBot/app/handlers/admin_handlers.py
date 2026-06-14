@@ -747,6 +747,42 @@ async def view_order_details(message: Message, bot: Bot):
     
     await message.answer(msg, reply_markup=akb.get_booking_manage_kb(oid, order.get('user_id') or -1), parse_mode='HTML')
 
+async def _deduct_stock_from_cart(cart_text: str):
+    """Parses cart text and deducts stock for specialty beans."""
+    if not cart_text: return
+    
+    lines = cart_text.split('\n')
+    all_beans = None # Lazy load
+    
+    for line in lines:
+        line = line.strip()
+        if not line: continue
+        
+        bean_name = ""
+        # 1. Bot format: "ЗЕРНА: Name"
+        if line.startswith('ЗЕРНА: '):
+            bean_name = line.replace('ЗЕРНА: ', '').strip()
+        # 2. Site format: "- Name (price грн)"
+        elif line.startswith('- '):
+            match = re.match(r'[-•]\s*(.*?)\s*\((\d+)\s*(?:грн|₴|uah)?\)\s*$', line, re.IGNORECASE)
+            if match:
+                bean_name = match.group(1).strip()
+            else:
+                bean_name = line[2:].strip()
+        
+        if bean_name:
+            if all_beans is None:
+                all_beans = await coffee_beans_db.get_all_beans()
+            
+            for b in all_beans:
+                if b.get('name') == bean_name:
+                    if _bean_category(b) == 'specialty':
+                        current = b.get('stock_packs', 0)
+                        if current > 0:
+                            await coffee_beans_db.update_bean(b['_id'], {'stock_packs': current - 1})
+                            logger.info(f"Deducted stock for specialty bean: {bean_name} ({current} -> {current-1})")
+                    break
+
 @admin_router.callback_query(F.data.startswith('confirm_order_'))
 async def confirm_order_handler(callback: CallbackQuery, bot: Bot):
     oid = callback.data.replace('confirm_order_', '')
@@ -756,6 +792,12 @@ async def confirm_order_handler(callback: CallbackQuery, bot: Bot):
         return
     
     await orders_db.update_status(oid, 'confirmed')
+    # Deduct specialty stock
+    try:
+        await _deduct_stock_from_cart(order.get('cart', ''))
+    except Exception as e:
+        logger.error(f"Failed to deduct stock: {e}")
+
     # Add to active orders if not there
     await active_orders_db.add_active_order(
         oid, order.get('user_id'), order.get('fullname'), order.get('phone'), 
