@@ -202,6 +202,10 @@ class AdminDatabase:
         db = await get_db()
         return await db.admin_auth_requests.find_one({'user_id': int(user_id)})
 
+    async def delete_auth_request(self, user_id: int):
+        db = await get_db()
+        await db.admin_auth_requests.delete_one({'user_id': int(user_id)})
+
     async def create_session(self, user_id: int, token: str):
         db = await get_db()
         await db.admin_sessions.insert_one({

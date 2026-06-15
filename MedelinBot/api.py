@@ -13,34 +13,6 @@ from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Depends, Query
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
-
-@app.get('/admin-panel', response_class=HTMLResponse)
-async def get_admin_panel():
-    path = _site_dir / 'admin-panel.html'
-    logger.info(f"Serving admin-panel.html from: {path}")
-    if path.exists():
-        return FileResponse(path)
-    logger.error(f"admin-panel.html NOT FOUND at: {path}")
-    raise HTTPException(status_code=404)
-
-# --- Admin API Auth ---
-class LoginRequest(BaseModel):
-    identifier: str
-    password: str
-
-@app.get('/api/admin/verify')
-async def verify_admin_login(user_id: int):
-    req = await admin_db.get_auth_request(user_id)
-    if req and req.get('confirmed'):
-        # Create session token
-        token = base64.b64encode(os.urandom(32)).decode()
-        # Save token to admin in DB
-        await admin_db.update_admin_token(user_id, token)
-        admin = await admin_db.get_admin_by_id(user_id)
-        # Delete auth request
-        await admin_db.delete_auth_request(user_id)
-        return {'status': 'ok', 'token': token, 'admin': {'name': admin['display_name'], 'role': admin['role']}}
-    return {'status': 'pending'}
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -93,6 +65,29 @@ app.add_middleware(
 # Папка з сайтом
 from app.utils.paths import get_site_dir, get_uploads_dir
 _site_dir = get_site_dir()
+
+@app.get('/admin-panel', response_class=HTMLResponse)
+async def get_admin_panel():
+    path = _site_dir / 'admin-panel.html'
+    logger.info(f"Serving admin-panel.html from: {path}")
+    if path.exists():
+        return FileResponse(path)
+    logger.error(f"admin-panel.html NOT FOUND at: {path}")
+    raise HTTPException(status_code=404)
+
+@app.get('/api/admin/verify')
+async def verify_admin_login(user_id: int):
+    req = await admin_db.get_auth_request(user_id)
+    if req and req.get('confirmed'):
+        # Create session token
+        token = base64.b64encode(os.urandom(32)).decode()
+        # Save session to DB
+        await admin_db.create_session(user_id, token)
+        admin = await admin_db.get_admin_by_id(user_id)
+        # Delete auth request
+        await admin_db.delete_auth_request(user_id)
+        return {'status': 'ok', 'token': token, 'admin': {'name': admin['display_name'], 'role': admin['role']}}
+    return {'status': 'pending'}
 
 # --- Моделі ---
 class CheckoutRequest(BaseModel):
