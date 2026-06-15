@@ -634,7 +634,10 @@
     }
 
     .product-card__image {
-        height: 210px;
+        height: 210px !important;
+        margin: 12px 12px 0 12px !important;
+        width: calc(100% - 24px) !important;
+        border-radius: 20px !important;
     }
 
     .choice-grid {
