@@ -22,6 +22,9 @@
                 --radius: 20px;
                 --font-main: 'Manrope', sans-serif;
                 --font-accent: 'Marcellus', serif;
+                --color-success: #00b894;
+                --color-danger: #d63031;
+                --color-warning: #fdcb6e;
             }
 
             * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -40,32 +43,36 @@
 
             #login-screen {
                 position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-                background: var(--color-cream);
+                background: linear-gradient(135deg, var(--color-cream) 0%, #e8e2d5 100%);
                 display: flex; justify-content: center; align-items: center;
                 z-index: 5000; transition: all 0.5s ease;
             }
 
             .login-card {
-                background: white; padding: 3rem; border-radius: 30px;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.1);
-                width: 100%; max-width: 450px; text-align: center;
+                background: white; padding: clamp(2rem, 5vw, 4rem); border-radius: 40px;
+                box-shadow: 0 30px 80px rgba(60, 47, 47, 0.15);
+                width: 92%; max-width: 500px; text-align: center;
+                border: 1px solid rgba(139, 94, 60, 0.1);
             }
 
-            .login-logo { font-family: var(--font-accent); font-size: 3rem; color: var(--color-dark-brown); margin-bottom: 0.5rem; }
-            .login-subtitle { color: var(--color-coffee); font-weight: 800; font-size: 0.8rem; letter-spacing: 3px; margin-bottom: 2.5rem; text-transform: uppercase; }
+            .login-logo { font-family: var(--font-accent); font-size: 3.5rem; color: var(--color-dark-brown); margin-bottom: 0.5rem; letter-spacing: 2px; }
+            .login-subtitle { color: var(--color-coffee); font-weight: 800; font-size: 0.85rem; letter-spacing: 4px; margin-bottom: 3rem; text-transform: uppercase; }
 
-            .input-group { margin-bottom: 1.5rem; text-align: left; }
-            .input-label { display: block; margin-bottom: 0.6rem; font-weight: 700; font-size: 0.9rem; color: var(--color-dark-brown); }
+            .input-group { margin-bottom: 1.8rem; text-align: left; }
+            .input-label { display: block; margin-bottom: 0.8rem; font-weight: 800; font-size: 0.85rem; color: var(--color-dark-brown); text-transform: uppercase; letter-spacing: 1px; }
             .login-input {
-                width: 100%; padding: 1.2rem; border-radius: 15px; border: 2px solid var(--color-coffee-soft);
+                width: 100%; padding: 1.3rem; border-radius: 18px; border: 2px solid var(--color-coffee-soft);
                 font-family: var(--font-main); font-size: 1rem; outline: none; transition: all 0.3s;
+                background: #fdfcf9;
             }
-            .login-input:focus { border-color: var(--color-coffee); background: #fffdfa; }
+            .login-input:focus { border-color: var(--color-coffee); background: #fff; box-shadow: 0 0 0 5px var(--color-coffee-soft); }
+
+            .login-hint { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 1.5rem; line-height: 1.5; }
 
             #verify-state { display: none; }
             .verify-pulse {
-                width: 80px; height: 80px; background: var(--color-coffee-soft);
-                border-radius: 50%; margin: 2rem auto; display: flex; align-items: center; justify-content: center;
+                width: 100px; height: 100px; background: var(--color-coffee-soft);
+                border-radius: 50%; margin: 2.5rem auto; display: flex; align-items: center; justify-content: center;
                 position: relative;
             }
             .verify-pulse::after {
@@ -73,73 +80,76 @@
                 border: 4px solid var(--color-coffee); border-radius: 50%;
                 animation: pulse 2s infinite;
             }
-            @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+            @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
 
             .sidebar {
                 width: var(--sidebar-width); background: var(--color-dark-brown);
                 color: white; display: flex; flex-direction: column; position: fixed; height: 100vh;
                 transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                z-index: 2000; box-shadow: 10px 0 30px rgba(0,0,0,0.1);
+                z-index: 2000; box-shadow: 15px 0 40px rgba(0,0,0,0.15);
             }
 
             .main-content {
-                flex: 1; margin-left: var(--sidebar-width); padding: 3rem;
+                flex: 1; margin-left: var(--sidebar-width); padding: clamp(1.5rem, 4vw, 4rem);
                 width: calc(100% - var(--sidebar-width)); transition: all 0.4s ease;
             }
 
-            .sidebar__header { padding: 3rem 2rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-            .sidebar__logo { font-family: var(--font-accent); font-size: 2.2rem; letter-spacing: 3px; color: white; text-decoration: none; display: block; }
-            .sidebar__nav { flex: 1; padding: 2rem 0; overflow-y: auto; }
-            .nav-item { padding: 1.2rem 2.5rem; display: flex; align-items: center; gap: 1.2rem; cursor: pointer; transition: all 0.3s ease; color: rgba(255, 255, 255, 0.6); text-decoration: none; font-weight: 500; border-left: 4px solid transparent; }
+            .sidebar__header { padding: 4rem 2rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+            .sidebar__logo { font-family: var(--font-accent); font-size: 2.4rem; letter-spacing: 4px; color: white; text-decoration: none; display: block; }
+            .sidebar__nav { flex: 1; padding: 2.5rem 0; overflow-y: auto; }
+            .nav-item { padding: 1.3rem 2.5rem; display: flex; align-items: center; gap: 1.2rem; cursor: pointer; transition: all 0.3s ease; color: rgba(255, 255, 255, 0.5); text-decoration: none; font-weight: 600; border-left: 5px solid transparent; font-size: 0.95rem; }
             .nav-item:hover, .nav-item--active { background-color: rgba(255, 255, 255, 0.05); color: white; border-left-color: var(--color-coffee); }
-            .nav-item i { width: 24px; text-align: center; font-size: 1.2rem; }
+            .nav-item i { width: 24px; text-align: center; font-size: 1.3rem; opacity: 0.8; }
 
-            .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; gap: 1rem; }
-            .header__title { font-family: var(--font-accent); font-size: clamp(1.8rem, 5vw, 2.5rem); font-weight: 400; color: var(--color-dark-brown); }
+            .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4rem; gap: 2rem; flex-wrap: wrap; }
+            .header__title { font-family: var(--font-accent); font-size: clamp(2.2rem, 5vw, 3.2rem); font-weight: 400; color: var(--color-dark-brown); }
 
-            .card { background: white; border-radius: var(--radius); padding: clamp(1.5rem, 4vw, 2.5rem); box-shadow: var(--shadow); margin-bottom: 2rem; border: 1px solid rgba(139, 94, 60, 0.05); }
+            .card { background: white; border-radius: 30px; padding: clamp(1.5rem, 4vw, 3rem); box-shadow: var(--shadow); margin-bottom: 2.5rem; border: 1px solid rgba(139, 94, 60, 0.05); overflow: hidden; }
 
-            .btn { padding: 0.8rem 1.5rem; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; transition: all 0.3s ease; font-family: var(--font-main); display: inline-flex; align-items: center; gap: 8px; text-decoration: none; white-space: nowrap; }
-            .btn--primary { background-color: var(--color-coffee); color: white; box-shadow: 0 4px 15px rgba(139, 94, 60, 0.3); }
-            .btn--primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(139, 94, 60, 0.4); }
-            .btn--block { width: 100%; justify-content: center; padding: 1.2rem; font-size: 1.1rem; }
-            .btn--success { background-color: #55efc4; color: var(--color-dark-brown); }
-            .btn--danger { background-color: #ff7675; color: white; }
-            .btn--outline { background: transparent; border: 2px solid var(--color-coffee); color: var(--color-coffee); }
-            .btn--sm { padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 8px; }
+            .btn { padding: 1rem 2rem; border-radius: 16px; border: none; cursor: pointer; font-weight: 800; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: var(--font-main); display: inline-flex; align-items: center; gap: 10px; text-decoration: none; white-space: nowrap; font-size: 0.95rem; }
+            .btn--primary { background-color: var(--color-coffee); color: white; box-shadow: 0 8px 25px rgba(139, 94, 60, 0.25); }
+            .btn--primary:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(139, 94, 60, 0.35); }
+            .btn--block { width: 100%; justify-content: center; padding: 1.4rem; font-size: 1.1rem; }
+            .btn--success { background-color: var(--color-success); color: white; }
+            .btn--danger { background-color: var(--color-danger); color: white; }
+            .btn--outline { background: transparent; border: 2.5px solid var(--color-coffee); color: var(--color-coffee); }
+            .btn--sm { padding: 0.6rem 1.2rem; font-size: 0.85rem; border-radius: 12px; }
 
-            .order-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); padding: 1.5rem 0; gap: 1.5rem; }
+            .order-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.04); padding: 2rem 0; gap: 2rem; }
             .order-item:last-child { border-bottom: none; }
-            .order-info { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
-            .order-title { font-weight: 800; font-size: 1.2rem; color: var(--color-dark-brown); }
-            .order-meta { color: var(--color-text-muted); font-size: 0.95rem; }
-            .order-items { margin-top: 0.8rem; font-size: 1rem; color: #444; background: var(--color-coffee-soft); padding: 1rem; border-radius: 12px; }
-            .order-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: flex-end; }
+            .order-info { display: flex; flex-direction: column; gap: 0.6rem; flex: 1; }
+            .order-title { font-weight: 800; font-size: 1.3rem; color: var(--color-dark-brown); }
+            .order-meta { color: var(--color-text-muted); font-size: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+            .order-items { margin-top: 1rem; font-size: 1.05rem; color: #444; background: #fdfaf5; padding: 1.5rem; border-radius: 20px; border: 1px solid rgba(139, 94, 60, 0.03); line-height: 1.6; }
+            .order-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: flex-end; }
 
-            .admin-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-            .admin-toolbar h3 { font-family: var(--font-accent); color: var(--color-dark-brown); font-size: 1.7rem; font-weight: 400; }
-            .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-            .admin-field { display: flex; flex-direction: column; gap: 0.45rem; }
-            .admin-field label { font-size: 0.82rem; font-weight: 800; color: var(--color-dark-brown); }
+            .admin-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; padding-bottom: 1rem; border-bottom: 2px solid var(--color-coffee-soft); }
+            .admin-toolbar h3 { font-family: var(--font-accent); color: var(--color-dark-brown); font-size: 2rem; font-weight: 400; }
+            .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+            
+            .admin-field { display: flex; flex-direction: column; gap: 0.6rem; }
+            .admin-field label { font-size: 0.8rem; font-weight: 800; color: var(--color-dark-brown); text-transform: uppercase; letter-spacing: 1px; }
             .admin-field input, .admin-field select, .admin-field textarea {
-                width: 100%; padding: 0.9rem 1rem; border: 2px solid var(--color-coffee-soft);
-                border-radius: 12px; font-family: var(--font-main); font-size: 0.95rem; outline: none; background: #fffdfa;
+                width: 100%; padding: 1rem 1.2rem; border: 2px solid var(--color-coffee-soft);
+                border-radius: 15px; font-family: var(--font-main); font-size: 0.95rem; outline: none; background: white; transition: all 0.3s;
             }
-            .admin-modal { position: fixed; inset: 0; background: rgba(60, 47, 47, 0.38); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1rem; }
-            .admin-modal--active { display: flex; }
-            .admin-modal__panel { width: min(880px, 100%); max-height: min(88vh, 900px); overflow-y: auto; background: white; border-radius: var(--radius); padding: clamp(1.2rem, 3vw, 2rem); box-shadow: 0 25px 70px rgba(0,0,0,0.18); }
-            .admin-modal__header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
-            .admin-modal__title { font-family: var(--font-accent); color: var(--color-dark-brown); font-size: 1.9rem; font-weight: 400; }
-            .admin-modal__footer { display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 1.5rem; flex-wrap: wrap; }
+            .admin-field input:focus { border-color: var(--color-coffee); box-shadow: 0 0 0 4px var(--color-coffee-soft); }
 
-            .loader-wrap { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(247, 243, 233, 0.9); display: none; justify-content: center; align-items: center; z-index: 2000; }
-            .spinner { width: 60px; height: 60px; border: 6px solid rgba(139, 94, 60, 0.1); border-top-color: var(--color-coffee); border-radius: 50%; animation: spin 1s linear infinite; }
+            .admin-modal { position: fixed; inset: 0; background: rgba(60, 47, 47, 0.6); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(8px); }
+            .admin-modal--active { display: flex; }
+            .admin-modal__panel { width: min(800px, 100%); max-height: 90vh; overflow-y: auto; background: white; border-radius: 35px; padding: clamp(2rem, 5vw, 3.5rem); box-shadow: 0 40px 100px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.2); }
+            .admin-modal__header { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin-bottom: 2.5rem; }
+            .admin-modal__title { font-family: var(--font-accent); color: var(--color-dark-brown); font-size: 2.2rem; font-weight: 400; }
+            .admin-modal__footer { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2.5rem; flex-wrap: wrap; }
+
+            .loader-wrap { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(247, 243, 233, 0.95); display: none; justify-content: center; align-items: center; z-index: 6000; backdrop-filter: blur(5px); }
+            .spinner { width: 70px; height: 70px; border: 7px solid rgba(139, 94, 60, 0.1); border-top-color: var(--color-coffee); border-radius: 50%; animation: spin 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite; }
             @keyframes spin { to { transform: rotate(360deg); } }
 
             .sidebar-toggle {
-                display: none; width: 45px; height: 45px; background: var(--color-dark-brown); color: white;
-                border-radius: 10px; align-items: center; justify-content: center; cursor: pointer; border: none;
-                font-size: 1.2rem;
+                display: none; width: 55px; height: 55px; background: var(--color-dark-brown); color: white;
+                border-radius: 18px; align-items: center; justify-content: center; cursor: pointer; border: none;
+                font-size: 1.4rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             }
 
             @media (max-width: 1024px) {
@@ -159,22 +169,23 @@
             <div class="login-card">
                 <div id="login-form">
                     <h1 class="login-logo">MEDELIN</h1>
-                    <p class="login-subtitle">Admin Access</p>
+                    <p class="login-subtitle">Admin Dashboard</p>
                     <div class="input-group">
                         <label class="input-label">Ідентифікатор</label>
-                        <input type="text" id="login-id" class="login-input" placeholder="@uzh_boss">
+                        <input type="text" id="login-id" class="login-input" placeholder="TG ID, @username або телефон">
                     </div>
                     <div class="input-group">
-                        <label class="input-label">Код доступу</label>
-                        <input type="password" id="login-pass" class="login-input" placeholder="••••">
+                        <label class="input-label">Пароль панелі</label>
+                        <input type="password" id="login-pass" class="login-input" placeholder="••••••••">
                     </div>
-                    <button class="btn btn--primary btn--block" onclick="attemptLogin()">Увійти</button>
+                    <button class="btn btn--primary btn--block" onclick="attemptLogin()">Авторизуватися</button>
+                    <p class="login-hint">Для входу використовуйте свої дані, зареєстровані в Telegram боті. Після введення пароля підтвердіть вхід у самому боті.</p>
                 </div>
                 <div id="verify-state">
-                    <h2 style="font-family:var(--font-accent);">Підтвердження</h2>
-                    <p>Натисніть <b>"Підтвердити"</b> у Telegram для входу.</p>
-                    <div class="verify-pulse"><i class="fab fa-telegram-plane" style="font-size:2rem; color:var(--color-coffee);"></i></div>
-                    <button class="btn btn--outline" onclick="resetLogin()">Скасувати</button>
+                    <h2 style="font-family:var(--font-accent); font-size: 2rem; margin-bottom: 1rem;">Очікування...</h2>
+                    <p style="color: var(--color-text-muted); line-height: 1.6;">Ми надіслали вам повідомлення в Telegram.<br>Будь ласка, натисніть <b>"ПІДТВЕРДИТИ"</b>.</p>
+                    <div class="verify-pulse"><i class="fab fa-telegram-plane" style="font-size:2.5rem; color:var(--color-coffee);"></i></div>
+                    <button class="btn btn--outline" onclick="resetLogin()">Скасувати запит</button>
                 </div>
             </div>
         </div>

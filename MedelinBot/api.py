@@ -343,21 +343,46 @@ async def get_current_admin(request: Request):
         raise HTTPException(status_code=401, detail='Сесія недійсна')
     return admin
 
+# --- Admin API Rate Limiting ---
+login_attempts = {} # {identifier: {'count': 0, 'lockout_until': timestamp}}
+
 @app.post('/api/admin/login')
 async def admin_login(req: LoginRequest):
+    now = time.time()
+    ident = req.identifier.strip().lower()
+    
+    # Check lockout
+    attempt_data = login_attempts.get(ident, {'count': 0, 'lockout_until': 0})
+    if attempt_data['lockout_until'] > now:
+        remaining = int(attempt_data['lockout_until'] - now)
+        raise HTTPException(status_code=429, detail=f'Забагато спроб. Спробуйте через {remaining // 60 + 1} хв.')
+
     # If password is correct (for security, use ADMIN_PANEL_PASSWORD from config)
     from app.common.config import ADMIN_PANEL_PASSWORD
     if req.password != ADMIN_PANEL_PASSWORD:
-        raise HTTPException(status_code=401, detail='Невірний пароль')
+        attempt_data['count'] += 1
+        if attempt_data['count'] >= 5:
+            attempt_data['lockout_until'] = now + 600 # 10 minutes
+            login_attempts[ident] = attempt_data
+            raise HTTPException(status_code=429, detail='Забагато спроб. Вхід заблоковано на 10 хв.')
+        login_attempts[ident] = attempt_data
+        raise HTTPException(status_code=401, detail=f'Невірний пароль. Залишилось спроб: {5 - attempt_data["count"]}')
     
     admin = await admin_db.find_admin_by_identifier(req.identifier)
     if not admin:
-        raise HTTPException(status_code=404, detail='Адміністратора не знайдено')
+        raise HTTPException(status_code=404, detail='Адміністратора не знайдено. Впевніться, що ви зареєстровані в боті.')
+    
+    # Success: reset attempts
+    login_attempts[ident] = {'count': 0, 'lockout_until': 0}
     
     # Send confirmation to bot
     from app.common.bot_instance import bot
     msg = f"🔐 <b>ЗАПИТ НА ВХІД В АДМІН-ПАНЕЛЬ</b>\n\n👤 <b>{admin['display_name']}</b> (@{admin.get('username', '—')})\n\nПідтвердіть вхід:"
-    await bot.send_message(admin['user_id'], msg, reply_markup=akb.get_admin_auth_kb(admin['user_id']), parse_mode='HTML')
+    try:
+        await bot.send_message(admin['user_id'], msg, reply_markup=akb.get_admin_auth_kb(admin['user_id']), parse_mode='HTML')
+    except Exception as e:
+        logger.error(f"Failed to send auth msg: {e}")
+        raise HTTPException(status_code=500, detail='Не вдалося надіслати підтвердження в бот. Перевірте, чи бот не заблокований.')
     
     return {'status': 'ok', 'user_id': admin['user_id']}
 

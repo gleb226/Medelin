@@ -41,6 +41,13 @@ import re, time
 
 order_router = Router()
 
+@order_router.message(F.text.in_(['☕️ КАВА В ЗЕРНАХ', '📍 НАШІ ЗАКЛАДИ', '📞 КОНТАКТИ', '🔐 АДМІН-ПАНЕЛЬ', '🏠 НА ГОЛОВНУ', '❌ СКАСУВАТИ']))
+async def order_global_cancel(message: Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state:
+        await state.clear()
+        await message.answer("❌ Дію скасовано.")
+
 from app.utils.nova_poshta import np_client
 
 class OrderStates(StatesGroup):

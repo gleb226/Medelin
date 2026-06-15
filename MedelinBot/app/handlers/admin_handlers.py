@@ -49,6 +49,20 @@ logger = logging.getLogger(__name__)
 
 admin_router = Router()
 
+@admin_router.message(StateFilter('*'), F.text.in_(['☕️ КАВА В ЗЕРНАХ', '📍 НАШІ ЗАКЛАДИ', '📞 КОНТАКТИ', '🔐 АДМІН-ПАНЕЛЬ', '🏠 НА ГОЛОВНУ', '❌ СКАСУВАТИ']))
+async def admin_global_cancel(message: Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state:
+        await state.clear()
+        # Let it fall through to other routers or handle it here
+        # Since we want it to be handled by user_handlers or others, we can't easily fall through
+        # but we can re-trigger the command or just answer.
+        if message.text == '🔐 АДМІН-ПАНЕЛЬ':
+            from app.handlers.admin_handlers import show_admin_panel
+            return await show_admin_panel(message, state)
+        # For others, we just answer that it's cancelled and let user press again or handle here
+        await message.answer("❌ Дію скасовано.")
+
 class AdminStates(StatesGroup):
     # Staff management
     adding_staff_identifier = State()
@@ -1689,8 +1703,9 @@ async def confirm_admin_login(callback: CallbackQuery, bot: Bot):
     uid = int(callback.data.replace('admin_auth_confirm_', ''))
     code = f"LOGIN_{uid}_{int(time.time())}"
     await admin_db.create_auth_request(uid, code)
+    await admin_db.confirm_auth_request(uid)
     try:
-        await bot.send_message(uid, f"✅ <b>ВХІД ПІДТВЕРДЖЕНО!</b>\n\nВаш код для сайту: <code>{code}</code>", parse_mode='HTML')
+        await bot.send_message(uid, f"✅ <b>ВХІД ПІДТВЕРДЖЕНО!</b>\n\nТепер ви можете повернутися до браузера.", parse_mode='HTML')
         await callback.answer('Підтверджено!')
         await callback.message.delete()
     except:

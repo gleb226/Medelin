@@ -40,7 +40,7 @@ from aiogram.filters import StateFilter
 
 user_router = Router()
 
-@user_router.message(F.text == '/start', StateFilter(None))
+@user_router.message(F.text == '/start', StateFilter('*'))
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     
