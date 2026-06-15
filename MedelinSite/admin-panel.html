@@ -359,10 +359,10 @@
                 if (confirm('Підтвердити замовлення?')) { 
                     const res = await apiFetch(`orders/${oid}/confirm`, 'POST');
                     if (res && res.status === 'ok') {
-                        alert('Замовлення підтверджено');
+                        if (window.showToast) window.showToast('Замовлення підтверджено');
                         refreshData();
                     } else {
-                        alert('Помилка при підтвердженні');
+                        if (window.showToast) window.showToast('Помилка при підтвердженні', 'error');
                     }
                 } 
             }
@@ -370,10 +370,10 @@
                 if (confirm('Відхилити замовлення?')) { 
                     const res = await apiFetch(`orders/${oid}/reject`, 'POST');
                     if (res && res.status === 'ok') {
-                        alert('Замовлення відхилено');
+                        if (window.showToast) window.showToast('Замовлення відхилено');
                         refreshData();
                     } else {
-                        alert('Помилка при відхиленні');
+                        if (window.showToast) window.showToast('Помилка при відхиленні', 'error');
                     }
                 } 
             }

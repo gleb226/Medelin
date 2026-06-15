@@ -91,7 +91,15 @@ window.addEventListener('unhandledrejection', (event) => {
     window.reportClientError(message, 'unhandledrejection');
 });
 
+const lastToastTime = { message: '', time: 0 };
 window.showToast = function (message, type = 'success') {
+    const now = Date.now();
+    if (lastToastTime.message === message && now - lastToastTime.time < 500) {
+        return; // Prevent duplicate toasts within 500ms
+    }
+    lastToastTime.message = message;
+    lastToastTime.time = now;
+
     let container = document.querySelector('.toast-container');
     if (!container) {
         container = document.createElement('div');
@@ -733,6 +741,9 @@ window.repeatOrder = function (idx) {
     window.showToast('Замовлення додано до кошика', 'success');
 };
 
+// Removing redundant manual click listeners that cause double-firing
+// The delegated listener in setupMedelinActionDelegation already handles these actions
+/*
 document.addEventListener('click', (e) => {
     const target = e.target.closest('[data-action]');
     if (!target) return;
@@ -752,6 +763,7 @@ document.addEventListener('click', (e) => {
     }
     if (action === 'open-checkout-modal') window.openCheckoutModal();
 });
+*/
 
 window.closeCartModal = function () {
     const c = document.getElementById('cart-modal-container');
