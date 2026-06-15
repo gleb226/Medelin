@@ -1345,7 +1345,8 @@ def _bean_card_text(bean: dict) -> str:
     grade_info = ""
     stock_info = ""
     if is_specialty:
-        packs = bean.get('stock_packs', 0)
+        packs = bean.get('stock_packs')
+        if packs is None: packs = 0
         stock_info = f"\n📦 Запас: <b>{packs} пачок</b> (≈ {packs*0.25:.1f} кг)"
     elif _bean_category(bean) == 'commercial':
         low_score = score.lower()
