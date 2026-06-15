@@ -1,48 +1,50 @@
 window.setupMobileMenu = function () {
     const toggle = document.querySelector('[data-mobile-menu-toggle]');
-    const panel = document.querySelector('[data-mobile-menu-panel]');
+    const panel  = document.querySelector('[data-mobile-menu-panel]');
     if (!toggle || !panel) return;
 
-    const close = () => {
-        toggle.setAttribute('aria-expanded', 'false');
-        panel.classList.remove('mobile-menu__panel--open');
-        document.body.classList.remove('body--scroll-locked');
-    };
+    /* ── helpers ── */
+    const isOpen = () => toggle.getAttribute('aria-expanded') === 'true';
 
     const open = () => {
         toggle.setAttribute('aria-expanded', 'true');
         panel.classList.add('mobile-menu__panel--open');
         document.body.classList.add('body--scroll-locked');
+        // Make sure toggle stays on top of the overlay
+        toggle.style.zIndex = '9100';
     };
 
-    const isOpen = () => toggle.getAttribute('aria-expanded') === 'true';
+    const close = () => {
+        toggle.setAttribute('aria-expanded', 'false');
+        panel.classList.remove('mobile-menu__panel--open');
+        document.body.classList.remove('body--scroll-locked');
+        toggle.style.zIndex = '';
+    };
 
-    toggle.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (isOpen()) close();
-        else open();
+    /* ── Toggle on burger click ── */
+    toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        isOpen() ? close() : open();
     });
 
-    panel.addEventListener('click', (event) => {
-        const target = event.target;
-        const link = target && target.closest ? target.closest('a') : null;
-        if (link) {
-            close();
-        }
+    /* ── Close on nav-link click ── */
+    panel.addEventListener('click', (e) => {
+        const link = e.target && e.target.closest ? e.target.closest('a') : null;
+        if (link) close();
     });
 
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && isOpen()) close();
+    /* ── Close on Escape ── */
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isOpen()) close();
     });
 
-    // Close when clicking outside panel
-    document.addEventListener('click', (event) => {
-        if (isOpen() && !panel.contains(event.target) && !toggle.contains(event.target)) {
-            close();
-        }
+    /* ── Close on backdrop click (outside inner content) ── */
+    panel.addEventListener('click', (e) => {
+        if (e.target === panel) close();
     });
 
+    /* ── Auto-close on viewport resize to desktop ── */
     window.addEventListener('resize', () => {
         if (window.innerWidth > 992 && isOpen()) close();
     });

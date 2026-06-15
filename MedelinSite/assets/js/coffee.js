@@ -238,7 +238,30 @@ function openBeanDetail(item, pushState = true) {
         </div>
     `;
 
+    // ── Inject mobile sticky add-to-cart bar ──
+    const existingBar = document.getElementById('bean-sticky-bar');
+    if (existingBar) existingBar.remove();
 
+    const beanId   = item.id || item._id;
+    const beanName = String(item.name || '').replace(/[\"']/g, '');
+    const stickyBar = document.createElement('div');
+    stickyBar.id = 'bean-sticky-bar';
+    stickyBar.className = 'bean-detail-sticky-bar';
+    stickyBar.innerHTML = `
+        <div class="bean-detail-sticky-bar__price">
+            <span class="bean-detail-sticky-bar__label">Ціна</span>
+            <span class="bean-detail-sticky-bar__value">${item.price_250} ₴ <small style="font-size:0.65em;opacity:0.7;font-weight:600">/ 250г</small></span>
+        </div>
+        <button class="bean-detail-sticky-bar__btn" type="button"
+            onclick="event.stopPropagation(); if(typeof window.addBeanToCart === 'function') window.addBeanToCart('${beanId}', '${beanName}', 'bean_weight_sticky_${beanId}');">
+            <i class="fas fa-shopping-basket"></i>
+            У кошик
+        </button>
+        <div style="display:none;">
+            <input type="radio" name="bean_weight_sticky_${beanId}" value="250" data-price="${item.price_250}" checked>
+        </div>
+    `;
+    document.body.appendChild(stickyBar);
 
     gridSection.style.display = 'none';
     detailSection.style.display = 'block';
@@ -250,13 +273,14 @@ window.closeBeanDetail = function() {
     const detailSection = document.getElementById('bean-detail-section');
     const mainElement = document.querySelector('main');
     
-    if (mainElement) {
-        mainElement.style.backgroundColor = '';
-    }
+    if (mainElement) mainElement.style.backgroundColor = '';
     document.body.style.backgroundColor = '';
+
+    // Remove mobile sticky bar
+    const stickyBar = document.getElementById('bean-sticky-bar');
+    if (stickyBar) stickyBar.remove();
     
     if (!gridSection || !detailSection) return;
-
 
     const url = new URL(window.location);
     url.searchParams.delete('id');
