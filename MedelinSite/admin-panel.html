@@ -202,7 +202,6 @@
                 <a class="nav-item" data-section="socials"><i class="fas fa-share-nodes"></i> Соцмережі</a>
                 <a class="nav-item" data-section="team"><i class="fas fa-users-gear"></i> Команда</a>
             </nav>
-
         </aside>
 
         <main class="main-content" id="main-content">
@@ -240,9 +239,34 @@
                     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('nav-item--active'));
                     item.classList.add('nav-item--active');
                     document.getElementById('section-title').textContent = item.textContent.trim();
+                    if (window.innerWidth <= 1024) sidebar.classList.remove('sidebar--active');
                     refreshData();
                 });
             });
+
+            async function checkSession() {
+                if (!sessionToken) return;
+                const admin = await apiFetch('me');
+                if (admin) {
+                    currentAdmin = admin;
+                    localStorage.setItem('medelin_admin_user', JSON.stringify(admin));
+                    document.getElementById('login-screen').style.display = 'none';
+                    showPanel();
+                } else {
+                    logout();
+                }
+            }
+
+            window.onload = () => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlAuth = urlParams.get('auth');
+                if (urlAuth) {
+                    sessionToken = urlAuth;
+                    localStorage.setItem('medelin_admin_token', urlAuth);
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+                if (sessionToken) checkSession();
+            };
 
             async function attemptLogin() {
                 const id = document.getElementById('login-id').value;
@@ -255,7 +279,10 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ identifier: id, password: pass })
                     });
-                    if (!resp.ok) throw new Error('Помилка входу');
+                    if (!resp.ok) {
+                        const err = await resp.json();
+                        throw new Error(err.detail || 'Помилка входу');
+                    }
                     const data = await resp.json();
                     startVerification(data.user_id);
                 } catch (e) { alert(e.message); } finally { showLoader(false); }
@@ -268,7 +295,10 @@
                     try {
                         const resp = await fetch(`/api/admin/verify?user_id=${userId}`);
                         const data = await resp.json();
-                        if (data.status === 'ok') { clearInterval(verifyInterval); finishLogin(data.token, data.admin); }
+                        if (data.status === 'ok') { 
+                            clearInterval(verifyInterval); 
+                            finishLogin(data.token, data.admin); 
+                        }
                     } catch (e) {}
                 }, 2000);
             }
@@ -292,58 +322,57 @@
                 refreshData();
             }
 
-            function logout() { localStorage.removeItem('medelin_admin_token'); localStorage.removeItem('medelin_admin_user'); location.reload(); }
-            function resetLogin() { clearInterval(verifyInterval); document.getElementById('login-form').style.display = 'block'; document.getElementById('verify-state').style.display = 'none'; }
+            function logout() { 
+                localStorage.removeItem('medelin_admin_token'); 
+                localStorage.removeItem('medelin_admin_user'); 
+                location.reload(); 
+            }
+            function resetLogin() { 
+                clearInterval(verifyInterval); 
+                document.getElementById('login-form').style.display = 'block'; 
+                document.getElementById('verify-state').style.display = 'none'; 
+            }
             function showLoader(show) { document.getElementById('loader').style.display = show ? 'flex' : 'none'; }
             function roleName(role) { return ({ developer: 'Розробник', owner: 'Власник', boss: 'Власник', delivery_manager: 'Менеджер доставки' }[role] || role); }
 
             async function apiFetch(endpoint, method = 'GET', body = null) {
-                const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionToken}` } };
+                const options = { 
+                    method, 
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'Authorization': `Bearer ${sessionToken}` 
+                    } 
+                };
                 if (body) options.body = JSON.stringify(body);
-                const resp = await fetch(`/api/admin/${endpoint}`, options);
-                if (resp.status === 401) return logout();
-                return resp.ok ? await resp.json() : null;
+                try {
+                    const resp = await fetch(`/api/admin/${endpoint}`, options);
+                    if (resp.status === 401) return logout();
+                    return resp.ok ? await resp.json() : null;
+                } catch(e) { return null; }
             }
 
             async function loadNewOrders() {
                 showLoader(true);
-                console.log('[Admin] Fetching new orders...');
                 const orders = await apiFetch('new-orders');
-                console.log('[Admin] Received orders:', orders);
                 const list = document.getElementById('items-list');
-                
                 if (!orders || orders.length === 0) {
                     list.innerHTML = '<p style="text-align:center; padding:2rem;">Немає нових замовлень</p>';
-                    showLoader(false);
-                    return;
+                    showLoader(false); return;
                 }
-                
                 list.innerHTML = '';
                 orders.forEach(o => {
                     const div = document.createElement('div');
                     div.className = 'order-item';
                     const date = o.created_at ? new Date(o.created_at).toLocaleString('uk-UA') : '—';
-                    const typeMap = { 
-                        takeaway: 'З собою', 
-                        in_house: 'В закладі', 
-                        nova_poshta: 'Нова Пошта',
-                        beans_delivery: 'Кава (Доставка)',
-                        beans_booking: 'Кава (Бронювання)'
-                    };
-                    const deliveryType = typeMap[o.order_type] || o.order_type || '—';
-                    
                     div.innerHTML = `
                         <div class="order-info">
                             <div class="order-title">#${String(o.order_id).slice(-6)} — ${o.fullname}</div>
                             <div class="order-meta">${date} | <b>${o.phone}</b></div>
                             <div style="margin-top:0.5rem; font-size:0.9rem;">
-                                <b>Тип:</b> ${deliveryType} ${o.table_number ? `(Стіл #${o.table_number})` : ''}
+                                <b>Тип:</b> ${o.order_type}
                                 <span style="margin-left:10px; padding:2px 6px; border-radius:4px; background:#ffeaa7; font-weight:700;">${o.status === 'paid' ? 'ОПЛАЧЕНО' : 'НОВЕ'}</span>
                             </div>
-                            <div class="order-items">
-                                ${o.cart || ''}
-                                ${o.wishes ? `<br><br><div style="border-top:1px solid rgba(0,0,0,0.1); padding-top:0.5rem; color:#d63031;"><b>Побажання/Адреса:</b><br>${o.wishes.replace(/\n/g, '<br>')}</div>` : ''}
-                            </div>
+                            <div class="order-items">${o.cart || ''}${o.wishes ? `<br><br><div style="border-top:1px solid rgba(0,0,0,0.1); padding-top:0.5rem; color:#d63031;"><b>Побажання:</b> ${o.wishes}</div>` : ''}</div>
                         </div>
                         <div class="order-actions">
                             <button class="btn btn--success btn--sm" onclick="confirmOrder('${o.order_id}')">Підтвердити</button>
@@ -358,23 +387,13 @@
             async function confirmOrder(oid) { 
                 if (confirm('Підтвердити замовлення?')) { 
                     const res = await apiFetch(`orders/${oid}/confirm`, 'POST');
-                    if (res && res.status === 'ok') {
-                        if (window.showToast) window.showToast('Замовлення підтверджено');
-                        refreshData();
-                    } else {
-                        if (window.showToast) window.showToast('Помилка при підтвердженні', 'error');
-                    }
+                    if (res) refreshData();
                 } 
             }
             async function rejectOrder(oid) { 
                 if (confirm('Відхилити замовлення?')) { 
                     const res = await apiFetch(`orders/${oid}/reject`, 'POST');
-                    if (res && res.status === 'ok') {
-                        if (window.showToast) window.showToast('Замовлення відхилено');
-                        refreshData();
-                    } else {
-                        if (window.showToast) window.showToast('Помилка при відхиленні', 'error');
-                    }
+                    if (res) refreshData();
                 } 
             }
 
@@ -402,8 +421,7 @@
                 const grid = document.getElementById('beans-grid');
                 beans?.forEach(b => {
                     const div = document.createElement('div');
-                    div.className = 'card';
-                    div.style.padding = '1.5rem';
+                    div.className = 'card'; div.style.padding = '1.5rem';
                     div.innerHTML = `<strong>${b.name}</strong><br><small>${b.price_250} ₴</small><div class="order-actions" style="margin-top:1rem;"><button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')">Видалити</button></div>`;
                     grid.appendChild(div);
                 });
@@ -412,41 +430,15 @@
 
             function openBeanModal(b = null) {
                 const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `
-                <div class="admin-modal__panel">
-                    <div class="admin-modal__header"><h3 class="admin-modal__title">${b ? 'Редагувати' : 'Додати'} сорт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
-                    <form id="bean-form">
-                        <div class="admin-grid">
-                            <div class="admin-field"><label>Назва</label><input name="name" value="${b?.name || ''}" required></div>
-                            <div class="admin-field"><label>Ціна 250г</label><input type="number" name="price_250" value="${b?.price_250 || ''}" required></div>
-                            <div class="admin-field"><label>Склад (Арабіка/Робуста)</label><input name="species" value="${b?.species || ''}"></div>
-                            <div class="admin-field"><label>Обсмаження</label><input name="roast" value="${b?.roast || ''}"></div>
-                            <div class="admin-field"><label>Дескриптори</label><input name="descriptors" value="${b?.descriptors || b?.taste || ''}"></div>
-                            <div class="admin-field"><label>Оцінка якості</label><input name="quality_score" value="${b?.quality_score || b?.cup_score || ''}"></div>
-                            <div class="admin-field"><label>Різновид</label><input name="variety" value="${b?.variety || ''}"></div>
-                            <div class="admin-field"><label>Висота</label><input name="altitude" value="${b?.altitude || ''}"></div>
-                            <div class="admin-field"><label>Обробка</label><input name="processing" value="${b?.processing || ''}"></div>
-                            <div class="admin-field"><label>Врожай</label><input name="harvest" value="${b?.harvest || ''}"></div>
-                            <div class="admin-field"><label>URL Фото</label><input name="image_url" id="bean-image-url" value="${b?.image_url || ''}" oninput="document.getElementById('bean-img-preview').src = this.value"></div>
-                        </div>
-                        <div id="bean-img-preview-container" style="margin-top:1rem; text-align:center;">
-                            <img id="bean-img-preview" src="${b?.image_url || 'https://via.placeholder.com/150'}" style="max-width:200px; max-height:200px; border-radius:12px; border:2px solid var(--color-coffee-soft); object-fit:cover;">
-                        </div>
-                        <div class="admin-field" style="margin-top:1rem;"><label>Опис</label><textarea name="description" rows="3">${b?.description || ''}</textarea></div>
-                    </form>
-                    <div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveBean('${b?.id || ''}')">Зберегти</button></div>
-                </div>`;
+                modal.innerHTML = `<div class="admin-modal__panel"><div class="admin-modal__header"><h3 class="admin-modal__title">${b ? 'Редагувати' : 'Додати'} сорт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="bean-form"><div class="admin-grid"><div class="admin-field"><label>Назва</label><input name="name" value="${b?.name || ''}" required></div><div class="admin-field"><label>Ціна 250г</label><input type="number" name="price_250" value="${b?.price_250 || ''}" required></div><div class="admin-field"><label>URL Фото</label><input name="image_url" value="${b?.image_url || ''}"></div></div><div class="admin-field" style="margin-top:1rem;"><label>Опис</label><textarea name="description" rows="3">${b?.description || ''}</textarea></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveBean('${b?.id || ''}')">Зберегти</button></div></div>`;
                 modal.classList.add('admin-modal--active');
             }
 
             async function saveBean(id) {
                 const fd = new FormData(document.getElementById('bean-form'));
-                const data = Object.fromEntries(fd.entries());
-                const endpoint = id ? `beans/${id}` : 'beans';
-                await apiFetch(endpoint, 'POST', data);
+                await apiFetch(id ? `beans/${id}` : 'beans', 'POST', Object.fromEntries(fd.entries()));
                 closeAdminModal(); refreshData();
             }
-
             async function deleteBean(id) { if (confirm('Видалити?')) { await apiFetch(`beans/${id}`, 'DELETE'); refreshData(); } }
 
             async function loadLocations() {
@@ -457,8 +449,7 @@
                 const grid = document.getElementById('locs-grid');
                 locs?.forEach(l => {
                     const div = document.createElement('div');
-                    div.className = 'card';
-                    div.style.padding = '1.5rem';
+                    div.className = 'card'; div.style.padding = '1.5rem';
                     div.innerHTML = `<strong>${l.name}</strong><br><small>${l.address}</small><div class="order-actions" style="margin-top:1rem;"><button class="btn btn--outline btn--sm" onclick='openLocationModal(${JSON.stringify(l).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteLocation('${l.id}')">Видалити</button></div>`;
                     grid.appendChild(div);
                 });
@@ -467,33 +458,15 @@
 
             function openLocationModal(l = null) {
                 const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `
-                <div class="admin-modal__panel">
-                    <div class="admin-modal__header"><h3 class="admin-modal__title">${l ? 'Редагувати' : 'Додати'} локацію</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
-                    <form id="loc-form">
-                        <div class="admin-grid">
-                            <div class="admin-field"><label>Назва</label><input name="name" value="${l?.name || ''}" required></div>
-                            <div class="admin-field"><label>Адреса</label><input name="address" value="${l?.address || ''}" required></div>
-                            <div class="admin-field"><label>Графік</label><input name="schedule" value="${l?.schedule || ''}"></div>
-                            <div class="admin-field"><label>Телефон</label><input name="phone" value="${l?.phone || ''}"></div>
-                            <div class="admin-field"><label>URL Фото</label><input name="image_url" value="${l?.image_url || ''}"></div>
-                            <div class="admin-field"><label>Google Maps URL</label><input name="google_maps_url" value="${l?.google_maps_url || ''}"></div>
-                        </div>
-                        <div class="admin-field" style="margin-top:1rem;"><label>Атмосфера/Опис</label><textarea name="atmosphere" rows="3">${l?.atmosphere || ''}</textarea></div>
-                    </form>
-                    <div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveLocation('${l?.id || ''}')">Зберегти</button></div>
-                </div>`;
+                modal.innerHTML = `<div class="admin-modal__panel"><div class="admin-modal__header"><h3 class="admin-modal__title">${l ? 'Редагувати' : 'Додати'} локацію</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="loc-form"><div class="admin-grid"><div class="admin-field"><label>Назва</label><input name="name" value="${l?.name || ''}" required></div><div class="admin-field"><label>Адреса</label><input name="address" value="${l?.address || ''}" required></div></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveLocation('${l?.id || ''}')">Зберегти</button></div></div>`;
                 modal.classList.add('admin-modal--active');
             }
 
             async function saveLocation(id) {
                 const fd = new FormData(document.getElementById('loc-form'));
-                const data = Object.fromEntries(fd.entries());
-                const endpoint = id ? `locations/${id}` : 'locations';
-                await apiFetch(endpoint, 'POST', data);
+                await apiFetch(id ? `locations/${id}` : 'locations', 'POST', Object.fromEntries(fd.entries()));
                 closeAdminModal(); refreshData();
             }
-
             async function deleteLocation(id) { if (confirm('Видалити?')) { await apiFetch(`locations/${id}`, 'DELETE'); refreshData(); } }
 
             async function loadSocials() {
@@ -501,78 +474,45 @@
                 const socials = await apiFetch('socials');
                 const list = document.getElementById('items-list');
                 list.innerHTML = `<div class="admin-toolbar"><h3>Соцмережі</h3><button class="btn btn--primary btn--sm" onclick="openSocialModal()">+ Додати</button></div><div id="socials-list"></div>`;
-                const slist = document.getElementById('socials-list');
                 socials?.forEach(s => {
-                    const div = document.createElement('div');
-                    div.className = 'order-item';
+                    const div = document.createElement('div'); div.className = 'order-item';
                     div.innerHTML = `<div class="order-info"><strong>${s.name}</strong><br><small>${s.url}</small></div><div class="order-actions"><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button></div>`;
-                    slist.appendChild(div);
+                    document.getElementById('socials-list').appendChild(div);
                 });
                 showLoader(false);
             }
 
             function openSocialModal() {
                 const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `
-                <div class="admin-modal__panel" style="max-width:400px;">
-                    <div class="admin-modal__header"><h3 class="admin-modal__title">Додати контакт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
-                    <form id="social-form">
-                        <div class="admin-field"><label>Назва</label><input name="name" placeholder="Instagram" required></div>
-                        <div class="admin-field" style="margin-top:1rem;"><label>URL</label><input name="url" placeholder="https://..." required></div>
-                    </form>
-                    <div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveSocial()">Зберегти</button></div>
-                </div>`;
+                modal.innerHTML = `<div class="admin-modal__panel" style="max-width:400px;"><div class="admin-modal__header"><h3 class="admin-modal__title">Додати контакт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="social-form"><div class="admin-field"><label>Назва</label><input name="name" required></div><div class="admin-field" style="margin-top:1rem;"><label>URL</label><input name="url" required></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveSocial()">Зберегти</button></div></div>`;
                 modal.classList.add('admin-modal--active');
             }
-
-            async function saveSocial() {
-                const fd = new FormData(document.getElementById('social-form'));
-                await apiFetch('socials', 'POST', Object.fromEntries(fd.entries()));
-                closeAdminModal(); refreshData();
-            }
-
+            async function saveSocial() { await apiFetch('socials', 'POST', Object.fromEntries(new FormData(document.getElementById('social-form')).entries())); closeAdminModal(); refreshData(); }
             async function deleteSocial(id) { if (confirm('Видалити?')) { await apiFetch(`socials/${id}`, 'DELETE'); refreshData(); } }
 
             async function loadTeam() {
                 showLoader(true);
                 const team = await apiFetch('team');
                 const list = document.getElementById('items-list');
-                list.innerHTML = `<div class="admin-toolbar"><h3>Команда</h3><button class="btn btn--primary btn--sm" onclick="openTeamModal()">+ Додати учасника</button></div><div id="team-list"></div>`;
-                const tlist = document.getElementById('team-list');
+                list.innerHTML = `<div class="admin-toolbar"><h3>Команда</h3><button class="btn btn--primary btn--sm" onclick="openTeamModal()">+ Додати</button></div><div id="team-list"></div>`;
                 team?.forEach(t => {
-                    const [uid, uname, dname, role, shift, notify, locs] = t;
-                    const div = document.createElement('div');
-                    div.className = 'order-item';
-                    div.innerHTML = `<div class="order-info"><strong>${dname}</strong> (@${uname || '—'})<br><small>Роль: ${roleName(role)} | ID: ${uid}</small></div><div class="order-actions"><button class="btn btn--danger btn--sm" onclick="deleteTeam('${uid}')">Видалити</button></div>`;
-                    tlist.appendChild(div);
+                    const div = document.createElement('div'); div.className = 'order-item';
+                    div.innerHTML = `<div class="order-info"><strong>${t[2]}</strong> (@${t[1] || '—'})<br><small>Роль: ${roleName(t[3])}</small></div><div class="order-actions"><button class="btn btn--danger btn--sm" onclick="deleteTeam('${t[0]}')">Видалити</button></div>`;
+                    document.getElementById('team-list').appendChild(div);
                 });
                 showLoader(false);
             }
 
             function openTeamModal() {
                 const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `
-                <div class="admin-modal__panel" style="max-width:450px;">
-                    <div class="admin-modal__header"><h3 class="admin-modal__title">Додати в команду</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
-                    <form id="team-form">
-                        <div class="admin-field"><label>Telegram ID</label><input type="number" name="user_id" placeholder="123456789" required></div>
-                        <div class="admin-field" style="margin-top:1rem;"><label>Ім'я в системі</label><input name="display_name" placeholder="Іван Менеджер" required></div>
-                        <div class="admin-field" style="margin-top:1rem;"><label>Нікнейм (@)</label><input name="username" placeholder="ivan_medelin"></div>
-                        <div class="admin-field" style="margin-top:1rem;"><label>Роль</label><select name="role"><option value="admin">Адмін локації</option><option value="delivery_manager">Менеджер доставки</option><option value="boss">Власник/Бос</option></select></div>
-                    </form>
-                    <div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveTeam()">Зберегти</button></div>
-                </div>`;
+                modal.innerHTML = `<div class="admin-modal__panel" style="max-width:450px;"><div class="admin-modal__header"><h3 class="admin-modal__title">Додати в команду</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="team-form"><div class="admin-field"><label>TG ID</label><input type="number" name="user_id" required></div><div class="admin-field" style="margin-top:1rem;"><label>Ім'я</label><input name="display_name" required></div><div class="admin-field" style="margin-top:1rem;"><label>Роль</label><select name="role"><option value="admin">Адмін</option><option value="owner">Власник</option></select></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveTeam()">Зберегти</button></div></div>`;
                 modal.classList.add('admin-modal--active');
             }
-
-            async function saveTeam() {
-                const fd = new FormData(document.getElementById('team-form'));
-                const data = Object.fromEntries(fd.entries());
+            async function saveTeam() { 
+                const data = Object.fromEntries(new FormData(document.getElementById('team-form')).entries());
                 data.user_id = parseInt(data.user_id);
-                await apiFetch('team', 'POST', data);
-                closeAdminModal(); refreshData();
+                await apiFetch('team', 'POST', data); closeAdminModal(); refreshData(); 
             }
-
             async function deleteTeam(id) { if (confirm('Видалити?')) { await apiFetch(`team/${id}`, 'DELETE'); refreshData(); } }
 
             function closeAdminModal() { document.getElementById('admin-modal').classList.remove('admin-modal--active'); }

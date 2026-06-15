@@ -9,7 +9,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.filters import StateFilter
+from aiogram.filters import StateFilter, Command
 
 from app.databases.orders_database import orders_db
 
@@ -52,15 +52,34 @@ admin_router = Router()
 @admin_router.message(StateFilter('*'), F.text.in_(['☕️ КАВА В ЗЕРНАХ', '📍 НАШІ ЗАКЛАДИ', '📞 КОНТАКТИ', '🔐 АДМІН-ПАНЕЛЬ', '🏠 НА ГОЛОВНУ', '❌ СКАСУВАТИ']))
 async def admin_global_cancel(message: Message, state: FSMContext):
     current_state = await state.get_state()
-    if current_state:
+    if current_state is not None:
         await state.clear()
-        # Let it fall through to other routers or handle it here
-        # Since we want it to be handled by user_handlers or others, we can't easily fall through
-        # but we can re-trigger the command or just answer.
-        if message.text == '🔐 АДМІН-ПАНЕЛЬ':
-            from app.handlers.admin_handlers import show_admin_panel
-            return await show_admin_panel(message, state)
-        # For others, we just answer that it's cancelled and let user press again or handle here
+        
+    is_admin = await admin_db.is_admin(message.from_user.id)
+    
+    if message.text == '🔐 АДМІН-ПАНЕЛЬ':
+        if is_admin: return await show_admin_panel(message)
+        else: return await message.answer("🔒 У вас немає доступу до адмін-панелі.")
+        
+    if message.text == '📞 КОНТАКТИ':
+        if is_admin: return await manage_contacts_msg(message)
+        # Regular users should fall through to user_handlers, but we need to trigger it
+        from app.handlers.user_handlers import show_contacts
+        return await show_contacts(message)
+        
+    if message.text == '🏠 НА ГОЛОВНУ':
+        from app.handlers.user_handlers import cmd_start_msg
+        return await cmd_start_msg(message, is_admin)
+
+    if message.text == '📍 НАШІ ЗАКЛАДИ':
+        from app.handlers.user_handlers import show_locations
+        return await show_locations(message)
+
+    if message.text == '☕️ КАВА В ЗЕРНАХ':
+        from app.handlers.user_handlers import show_coffee_menu
+        return await show_coffee_menu(message)
+        
+    if current_state is not None:
         await message.answer("❌ Дію скасовано.")
 
 class AdminStates(StatesGroup):
@@ -87,10 +106,59 @@ class AdminStates(StatesGroup):
     adding_contact_name = State()
     editing_contact_field = State()
 
+    # Broadcasting
+    broadcasting = State()
+
 CONTACT_ADD_STEPS = [
     ('name', '🏷 <b>Введіть назву контакту:</b>'),
     ('url', '🔗 <b>Введіть URL або дані:</b>')
 ]
+
+@admin_router.message(Command('broadcast'))
+async def cmd_broadcast(message: Message, state: FSMContext):
+    is_admin = await admin_db.is_admin(message.from_user.id)
+    if not is_admin: return
+    await message.answer("📝 <b>РОЗСИЛКА</b>\n\nВведіть текст повідомлення, яке отримають УСІ користувачі бота (або ❌ СКАСУВАТИ):", parse_mode='HTML')
+    await state.set_state(AdminStates.broadcasting)
+
+@admin_router.message(AdminStates.broadcasting)
+async def process_broadcast(message: Message, state: FSMContext, bot: Bot):
+    if message.text == '❌ СКАСУВАТИ':
+        await state.clear()
+        return await message.answer("❌ Розсилку скасовано.")
+        
+    uids = await user_db.get_all_user_ids()
+    await message.answer(f"🚀 Починаю розсилку на {len(uids)} користувачів...")
+    
+    count = 0
+    for uid in uids:
+        try:
+            await bot.send_message(uid, message.text)
+            count += 1
+            await asyncio.sleep(0.05) # Rate limiting
+        except:
+            pass
+            
+    await message.answer(f"✅ Розсилка завершена! Отримали: {count}/{len(uids)}")
+    await state.clear()
+
+@admin_router.message(Command('stats'))
+async def cmd_stats(message: Message):
+    is_admin = await admin_db.is_admin(message.from_user.id)
+    if not is_admin: return
+    
+    from app.databases.sales_database import sales_db
+    sales = await sales_db.get_all_sales()
+    
+    total_sales = len(sales)
+    total_revenue = sum(s.get('price', 0) * s.get('quantity', 1) for s in sales if s.get('record_type') == 'sale')
+    
+    text = (
+        f"📊 <b>СТАТИСТИКА ПРОДАЖІВ</b>\n\n"
+        f"💰 Загальна виручка: <b>{total_revenue} грн</b>\n"
+        f"📦 Всього продажів: <b>{total_sales}</b>"
+    )
+    await message.answer(text, parse_mode='HTML')
 
 def _guess_contact_emoji(name: str, url: str) -> str:
     n = name.lower()

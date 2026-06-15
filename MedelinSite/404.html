@@ -157,33 +157,20 @@
         </style>
 
         <script>
-            let clicks = 0;
-            let timer = null;
             const logo = document.getElementById('secret-logo');
             const nfContent = document.getElementById('not-found-content');
             const loginForm = document.getElementById('login-form');
 
+            // Show login form immediately on 404 page as requested
+            document.addEventListener('DOMContentLoaded', () => {
+                nfContent.style.display = 'none';
+                loginForm.style.display = 'block';
+                document.body.style.backgroundColor = 'var(--color-cream)';
+            });
+
+            // Keep logo click just to return home if clicked
             logo.addEventListener('click', () => {
-                clicks++;
-                if (timer) clearTimeout(timer);
-
-                if (clicks >= 8) {
-                    window.location.href = '/';
-                    return;
-                }
-
-                timer = setTimeout(() => {
-                    if (clicks === 7) {
-                        // Success: Show login
-                        nfContent.style.display = 'none';
-                        loginForm.style.display = 'block';
-                        document.body.style.backgroundColor = 'var(--color-cream)';
-                    } else if (clicks > 0 && clicks < 7) {
-                        // Fail: Go home
-                        window.location.href = '/';
-                    }
-                    clicks = 0;
-                }, 1000);
+                window.location.href = '/';
             });
 
             // Login Logic

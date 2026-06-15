@@ -93,4 +93,10 @@ class UserDatabase:
 
         return (r['user_id'], r.get('first_name'), r.get('username'), r.get('phone'))
 
+    async def get_all_user_ids(self):
+        db = await get_db()
+        cursor = db.users.find({}, {'user_id': 1, '_id': 0})
+        users = await cursor.to_list(length=None)
+        return [u['user_id'] for u in users if 'user_id' in u]
+
 user_db = UserDatabase()

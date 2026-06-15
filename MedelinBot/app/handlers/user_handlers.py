@@ -98,9 +98,44 @@ async def handle_contact(message: Message):
     else:
         await message.answer("✅ Номер телефону оновлено.", reply_markup=ReplyKeyboardMarkup(keyboard=[], remove_keyboard=True))
 
+# --- Public Information Handlers ---
+
+async def show_contacts(message: Message):
+    text = (
+        "<b>📞 НАШІ КОНТАКТИ</b>\n\n"
+        "Слідкуйте за нами в соцмережах та зв'язуйтеся з нами зручним для вас способом:"
+    )
+    await message.answer(text, reply_markup=await kb.get_contact_kb(), parse_mode='HTML')
+
+async def show_locations(message: Message):
+    text = '📍 <b>НАШІ ЗАКЛАДИ</b>\n\nОберіть локацію, щоб дізнатися адресу та графік:'
+    await message.answer(text, reply_markup=await kb.get_locations_info_kb(), parse_mode='HTML')
+
+async def show_coffee_menu(message: Message):
+    beans = await coffee_beans_db.get_all_beans()
+    text = "☕️ <b>КАВА В ЗЕРНАХ</b>\n\nОберіть сорт для замовлення:"
+    await message.answer(text, reply_markup=kb.get_beans_kb(beans), parse_mode='HTML')
+
+async def show_beans(message: Message):
+    await show_coffee_menu(message)
+
+async def cmd_start_msg(message: Message, is_admin: bool=False):
+    await message.answer('☕️ <b>ГОЛОВНЕ МЕНЮ</b>', reply_markup=kb.get_main_menu(is_admin), parse_mode='HTML')
+
 @user_router.message()
 async def block_all_other_messages(message: Message):
     is_admin = await admin_db.is_admin(message.from_user.id)
+    
+    # Allow main menu buttons for everyone
+    if message.text == kb.BTN_CONTACTS:
+        return await show_contacts(message)
+    if message.text == kb.BTN_LOCATIONS:
+        return await show_locations(message)
+    if message.text == kb.BTN_BEANS:
+        return await show_coffee_menu(message)
+    if message.text == '🏠 НА ГОЛОВНУ':
+        return await cmd_start_msg(message, is_admin)
+
     if not is_admin:
         await message.answer('🔒 <b>Цей бот призначений тільки для адміністраторів Medelin.</b>', parse_mode='HTML')
 
