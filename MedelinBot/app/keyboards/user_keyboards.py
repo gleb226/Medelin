@@ -1,15 +1,12 @@
 
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-
 from app.common.config import WORK_START_HOUR, WORK_END_HOUR
-
 from app.databases.location_database import location_db
-
 from app.databases.contacts_database import contacts_db
-
 import datetime
-
 import hashlib
+import re
+
 
 def truncate(text, length):
     return text[:length] + '..' if len(text) > length else text
@@ -166,21 +163,35 @@ async def get_contact_kb():
         if 'tiktok' in u or 'тікток' in n: return '🎵'
         if 'youtube' in u or 'ютуб' in n: return '🎬'
         if 'viber' in u or 'вайбер' in n: return '💜'
+        if 'mailto' in u or 'email' in n: return '✉️'
+        if 'tel:' in u or 'телефон' in n: return '📞'
         return '🌐'
 
     for s in socials:
-        icon = get_social_icon(s['url'], s['name'])
-        row.append(InlineKeyboardButton(text=f"{icon} {s['name'].upper()}", url=s['url']))
+        name = s['name']
+        url = s['url']
+        
+        # Format phone/email links if they aren't already
+        if name.lower() == 'телефон' and not url.startswith('tel:'):
+            clean_phone = re.sub(r'[^\d+]', '', url)
+            url = f"tel:{clean_phone}"
+        elif name.lower() == 'email' and not url.startswith('mailto:'):
+            url = f"mailto:{url}"
+
+        icon = get_social_icon(url, name)
+        
+        # Basic URL validation for InlineKeyboardButton
+        if not (url.startswith('http') or url.startswith('tg://') or url.startswith('tel:') or url.startswith('mailto:')):
+            continue
+
+        row.append(InlineKeyboardButton(text=f"{icon} {name.upper()}", url=url))
         if len(row) == 2:
             keyboard.append(row)
             row = []
+    
     if row:
         keyboard.append(row)
 
-    keyboard.append([
-        InlineKeyboardButton(text='📞 +380503775906', callback_data='contact_phone'),
-        InlineKeyboardButton(text='✉️ EMAIL', callback_data='contact_email')
-    ])
     keyboard.append([
         InlineKeyboardButton(text='🏠 НА ГОЛОВНУ', callback_data='back_main_menu_only')
     ])

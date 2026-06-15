@@ -27,7 +27,7 @@ from app.databases.sales_database import sales_db
 from app.databases.mongo_client import get_db, close_client
 from app.utils.data_cache import public_data_cache
 from app.utils.phone_utils import format_phone
-from app.common.config import WEB_APP_URL, NP_API_KEY
+from app.common.config import WEB_APP_URL, NP_API_KEY, DEVELOPER_IDS
 from app.utils.admin_notifications import send_admin_notification, send_developer_error
 import app.keyboards.admin_keyboards as akb
 
@@ -84,6 +84,14 @@ async def verify_admin_login(user_id: int):
         # Save session to DB
         await admin_db.create_session(user_id, token)
         admin = await admin_db.get_admin_by_id(user_id)
+        
+        if not admin:
+            if str(user_id) in DEVELOPER_IDS:
+                admin = {'display_name': 'Developer', 'role': 'developer'}
+            else:
+                logger.error(f"Admin record not found for user_id: {user_id}")
+                return {'status': 'error', 'message': 'Запис адміністратора не знайдено'}
+
         # Delete auth request
         await admin_db.delete_auth_request(user_id)
         return {'status': 'ok', 'token': token, 'admin': {'name': admin['display_name'], 'role': admin['role']}}
@@ -559,7 +567,7 @@ async def admin_add_social(data: dict, admin: dict = Depends(get_current_admin))
 
 @app.delete('/api/admin/socials/{sid}')
 async def admin_delete_social(sid: str, admin: dict = Depends(get_current_admin)):
-    await contacts_db.remove_contact(sid)
+    await contacts_db.delete_contact(sid)
     return {'status': 'ok'}
 
 # CRUD for Team/Staff
