@@ -145,6 +145,11 @@ function renderSocials(socials) {
         const u = url.trim();
         if (u.startsWith('http') || u.startsWith('tel:') || u.startsWith('mailto:')) return u;
         
+        // Handle emails
+        if (u.includes('@') && !u.includes('/')) {
+            return 'mailto:' + u;
+        }
+
         // Check if it's a phone number (starts with + or digits)
         const clean = u.replace(/[\s\-()]/g, '');
         if (u.startsWith('+') || (clean.length >= 9 && /^\d+$/.test(clean))) {

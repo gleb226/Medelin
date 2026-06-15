@@ -112,131 +112,19 @@
             <div class="logo" id="secret-logo">MEDELIN</div>
             
             <div id="not-found-content">
-                <h1>404</h1>
-                <p>На жаль, таку сторінку не знайдено.</p>
+                <h1 style="opacity: 0.1; font-size: 8rem;">404</h1>
+                <h2 style="font-family: 'Marcellus', serif; margin-bottom: 1rem; color: var(--color-coffee);">Сторінку не знайдено</h2>
+                <p style="margin-bottom: 3rem;">На жаль, ми не змогли знайти сторінку, яку ви шукаєте.</p>
                 <a href="/" class="btn">Повернутися на головну</a>
-            </div>
-
-            <div id="login-form">
-                <h2 style="font-family: 'Marcellus', serif; margin-bottom: 1.5rem; color: var(--color-coffee);">Вхід</h2>
-                
-                <div id="auth-section">
-                    <div class="form-group">
-                        <label>Ідентифікатор (Username/Phone/ID)</label>
-                        <input type="text" id="identifier" placeholder="@username або 380...">
-                    </div>
-                    <div class="form-group">
-                        <label>Пароль</label>
-                        <input type="password" id="password" placeholder="••••">
-                    </div>
-                    <button class="btn" id="login-btn">Увійти</button>
-                </div>
-
-                <div id="two-fa-section">
-                    <h2 style="font-family:'Marcellus', serif; color:var(--color-coffee); font-size: 2rem; margin-bottom: 0.5rem; letter-spacing: 1px;">Підтвердження</h2>
-                    <p style="font-size: 0.95rem; margin-bottom: 2.5rem; color: var(--color-text); opacity: 0.7; line-height: 1.6;">Ми надіслали запит у ваш Telegram.<br>Натисніть <b>"Підтвердити"</b> для входу.</p>
-                    
-                    <div class="verify-pulse" style="width: 100px; height: 100px; background: rgba(111, 78, 55, 0.05); margin: 0 auto 2.5rem;">
-                        <i class="fab fa-telegram-plane" style="font-size:2.5rem; color:var(--color-coffee); filter: drop-shadow(0 4px 10px rgba(111, 78, 55, 0.2));"></i>
-                    </div>
-
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
-                        <div style="font-size: 0.85rem; font-weight: 700; color: var(--color-coffee); letter-spacing: 2px; text-transform: uppercase; animation: fade 2s infinite;">Очікування...</div>
-                        <p id="timer-text" style="font-size: 0.8rem; opacity: 0.4;">Перевірте сповіщення у вашому боті</p>
-                    </div>
-
-                    <button class="btn btn--outline" onclick="resetForm()" style="margin-top:3rem; padding: 0.7rem 1.5rem; font-size:0.85rem; background: transparent; border: 1.5px solid rgba(111, 78, 55, 0.2); color: var(--color-coffee); border-radius: 15px; font-weight: 700; transition: all 0.3s;">Скасувати вхід</button>
-                </div>
-
-                <div class="status-msg" id="status-msg"></div>
             </div>
         </div>
 
-        <style>
-            @keyframes spin { to { transform: rotate(360deg); } }
-        </style>
-
         <script>
             const logo = document.getElementById('secret-logo');
-            const nfContent = document.getElementById('not-found-content');
-            const loginForm = document.getElementById('login-form');
-
-            // Show login form immediately on 404 page as requested
-            document.addEventListener('DOMContentLoaded', () => {
-                nfContent.style.display = 'none';
-                loginForm.style.display = 'block';
-                document.body.style.backgroundColor = 'var(--color-cream)';
-            });
-
-            // Keep logo click just to return home if clicked
             logo.addEventListener('click', () => {
                 window.location.href = '/';
             });
-
-            // Login Logic
-            const loginBtn = document.getElementById('login-btn');
-            const statusMsg = document.getElementById('status-msg');
-            let checkInterval = null;
-
-            loginBtn.onclick = async () => {
-                const identifier = document.getElementById('identifier').value;
-                const password = document.getElementById('password').value;
-
-                if (!identifier || !password) {
-                    statusMsg.textContent = 'Заповніть усі поля';
-                    return;
-                }
-
-                statusMsg.textContent = '';
-                loginBtn.classList.add('loading');
-
-                try {
-                    const resp = await fetch('/api/admin/login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ identifier, password })
-                    });
-                    const data = await resp.json();
-
-                    if (resp.ok) {
-                        document.getElementById('auth-section').style.display = 'none';
-                        document.getElementById('two-fa-section').style.display = 'block';
-                        startPolling(data.user_id);
-                    } else {
-                        statusMsg.textContent = data.detail || 'Помилка входу';
-                        loginBtn.classList.remove('loading');
-                    }
-                } catch (e) {
-                    statusMsg.textContent = 'Помилка мережі';
-                    loginBtn.classList.remove('loading');
-                }
-            };
-
-            function startPolling(userId) {
-                checkInterval = setInterval(async () => {
-                    try {
-                        const resp = await fetch(`/api/admin/verify?user_id=${userId}`);
-                        const data = await resp.json();
-                        if (data.status === 'ok') {
-                            clearInterval(checkInterval);
-                            localStorage.setItem('medelin_admin_auth', data.token);
-                            window.location.href = `/admin-panel?auth=${data.token}`;
-                        } else if (data.status === 'error') {
-                            clearInterval(checkInterval);
-                            statusMsg.textContent = data.detail || 'Помилка верифікації';
-                            resetForm();
-                        }
-                    } catch (e) {
-                        console.error(e);
-                    }
-                }, 2000);
-            }
-
-            function resetForm() {
-                document.getElementById('auth-section').style.display = 'block';
-                document.getElementById('two-fa-section').style.display = 'none';
-                loginBtn.classList.remove('loading');
-            }
         </script>
+    </body>
     </body>
 </html>

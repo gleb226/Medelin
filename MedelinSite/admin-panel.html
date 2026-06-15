@@ -325,7 +325,7 @@
             function logout() { 
                 localStorage.removeItem('medelin_admin_token'); 
                 localStorage.removeItem('medelin_admin_user'); 
-                location.reload(); 
+                window.location.href = '/admin-panel'; 
             }
             function resetLogin() { 
                 clearInterval(verifyInterval); 
