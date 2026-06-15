@@ -627,7 +627,12 @@
 @media (max-width: 600px) {
 
     .products-grid,
-    #coffee-root .products-grid,
+    #coffee-root .products-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        padding: 0 1.25rem !important;
+    }
+
     #locations-grid {
         grid-template-columns: 1fr;
         gap: 1.5rem;
