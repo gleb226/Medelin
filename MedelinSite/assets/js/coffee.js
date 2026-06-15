@@ -194,36 +194,40 @@ function openBeanDetail(item, pushState = true) {
 
     detailContent.innerHTML = `
         <div class="bean-full-view">
-            <div class="bean-full-view__container" style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 4rem; align-items: stretch; margin-bottom: 3rem;">
-                <div class="bean-full-view__left-col" style="display: flex; flex-direction: column;">
-                    <img src="${window.fixImageUrl(item.image_url) || defImg}" alt="${displayName}" style="width: 100%; height: 600px; border-radius: 32px; box-shadow: 0 25px 50px rgba(0,0,0,0.15); object-fit: cover; margin-bottom: 1.2rem;">
+            <div class="bean-full-view__container">
+                <div class="bean-full-view__left-col">
+                    <img src="${window.fixImageUrl(item.image_url) || defImg}" alt="${displayName}" class="bean-full-view__image">
                     
-                    <div style="background: var(--color-dark-brown); color: white; padding: 1.8rem 2.2rem; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 15px 35px rgba(0,0,0,0.2); margin-top: auto;">
+                    <div class="bean-full-view__price-card">
                         <div>
-                            <span style="display: block; font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.2rem;">Ціна</span>
-                            <span style="font-size: 1.8rem; font-weight: 800; font-family: var(--font-accent); white-space: nowrap;">${item.price_250} ₴ / 250г</span>
+                            <span class="bean-full-view__price-label">Ціна</span>
+                            <span class="bean-full-view__price-value">${item.price_250} ₴ / 250г</span>
                         </div>
-                        <button class="btn btn--primary" style="background: white; color: var(--color-dark-brown); border: none; padding: 1rem 2rem; font-size: 1.1rem; border-radius: 16px; font-weight: 800; cursor: pointer; transition: all 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 10px;" type="button" data-action="add-bean-to-cart" data-bean-id="${item.id || item._id}" data-bean-name="${String(item.name || '').replace(/[\"']/g, '')}" data-weight-name="bean_weight_${item.id || item._id}" onclick="this.style.transform='scale(0.95)'; setTimeout(()=>this.style.transform='scale(1)', 100)">
+                        <button class="btn btn--primary" type="button" 
+                            data-action="add-bean-to-cart" 
+                            data-bean-id="${item.id || item._id}" 
+                            data-bean-name="${String(item.name || '').replace(/[\"']/g, '')}" 
+                            data-weight-name="bean_weight_${item.id || item._id}">
                             <i class="fas fa-shopping-basket"></i> У кошик
                         </button>
                     </div>
                 </div>
 
-                <div class="bean-full-view__right-col" style="display: flex; flex-direction: column;">
-                    <h1 style="font-family: var(--font-accent); font-size: 3.5rem; line-height: 1.1; margin-bottom: 1rem; color: var(--color-dark-brown);">${displayName}</h1>
-                    <p style="font-size: 1.1rem; line-height: 1.6; color: #4a3728; margin-bottom: 2rem; font-weight: 400; opacity: 0.9;">${item.description || 'Преміальна свіжообсмажена кава Medelin, створена для справжніх поціновувачів.'}</p>
+                <div class="bean-full-view__right-col">
+                    <h1 class="bean-full-view__title">${displayName}</h1>
+                    <p class="bean-full-view__description">${item.description || 'Преміальна свіжообсмажена кава Medelin, створена для справжніх поціновувачів.'}</p>
                     
-                    <div class="bean-full-view__primary-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; background: #fcf8f5; padding: 2.5rem; border-radius: 24px; border: 1px solid rgba(111, 78, 55, 0.2); flex-grow: 1; align-content: start; color: var(--color-dark-brown); box-shadow: var(--shadow-sm);">
-                        ${item.species ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Склад</label><p style="font-size: 1.1rem; font-weight: 700; color: var(--color-dark-brown);">${item.species}</p></div>` : ''}
-                        ${item.roast ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Обсмаження</label><p style="font-size: 1.1rem; font-weight: 700; color: var(--color-dark-brown);">${item.roast}</p></div>` : ''}
-                        ${!isCommercial && score ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Оцінка якості</label><p style="font-size: 1.1rem; font-weight: 700; color: var(--color-dark-brown);">${score}</p></div>` : ''}
-                        ${item.harvest ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Врожай</label><p style="font-size: 1.1rem; font-weight: 700; color: var(--color-dark-brown);">${item.harvest}</p></div>` : ''}
+                    <div class="bean-full-view__primary-stats">
+                        ${item.species ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Склад</label><p class="bean-full-view__stat-value">${item.species}</p></div>` : ''}
+                        ${item.roast ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Обсмаження</label><p class="bean-full-view__stat-value">${item.roast}</p></div>` : ''}
+                        ${!isCommercial && score ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Оцінка якості</label><p class="bean-full-view__stat-value">${score}</p></div>` : ''}
+                        ${item.harvest ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Врожай</label><p class="bean-full-view__stat-value">${item.harvest}</p></div>` : ''}
                         
-                        ${item.descriptors || item.taste ? `<div style="grid-column: span 2; border-top: 1px solid rgba(111, 78, 55, 0.1); padding-top: 1.5rem;"><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Дескриптори</label><p style="font-size: 1.2rem; font-weight: 700; color: var(--color-dark-brown);">${item.descriptors || item.taste}</p></div>` : ''}
+                        ${item.descriptors || item.taste ? `<div class="bean-full-view__stat-item bean-full-view__stat-item--span-2"><label class="bean-full-view__stat-label">Дескриптори</label><p class="bean-full-view__stat-value bean-full-view__stat-value--large">${item.descriptors || item.taste}</p></div>` : ''}
                         
-                        ${item.variety ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Різновид</label><p style="font-size: 1.1rem; font-weight: 700; color: var(--color-dark-brown);">${item.variety}</p></div>` : ''}
-                        ${item.altitude ? `<div><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Висота</label><p style="font-size: 1.1rem; font-weight: 700; color: var(--color-dark-brown);">${item.altitude}</p></div>` : ''}
-                        ${item.processing ? `<div style="grid-column: span 2;"><label style="display: block; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--color-coffee); margin-bottom: 0.5rem; opacity: 0.7;">Метод обробки</label><p style="font-size: 1.1rem; font-weight: 700; color: var(--color-dark-brown);">${item.processing}</p></div>` : ''}
+                        ${item.variety ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Різновид</label><p class="bean-full-view__stat-value">${item.variety}</p></div>` : ''}
+                        ${item.altitude ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Висота</label><p class="bean-full-view__stat-value">${item.altitude}</p></div>` : ''}
+                        ${item.processing ? `<div class="bean-full-view__stat-item bean-full-view__stat-item--span-2"><label class="bean-full-view__stat-label">Метод обробки</label><p class="bean-full-view__stat-value">${item.processing}</p></div>` : ''}
                     </div>
 
                     <div style="display:none;">
@@ -233,6 +237,7 @@ function openBeanDetail(item, pushState = true) {
             </div>
         </div>
     `;
+
 
 
     gridSection.style.display = 'none';

@@ -730,22 +730,39 @@
     }
 }
 
-@media (max-width: 360px) {
-    .header__logo {
-        font-size: 1.4rem;
+@media (max-width: 480px) {
+    html {
+        font-size: 15px; /* Slightly larger base for mobile */
     }
 
     .hero__title {
         font-size: 2.2rem;
     }
 
-    .btn {
-        padding: 0.9rem 1.8rem;
-        font-size: 0.95rem;
-    }
-
     .section-title {
         font-size: 1.8rem;
+    }
+
+    .btn {
+        padding: 1.1rem 2rem;
+        font-size: 1rem;
+        width: 100%;
+        min-height: 54px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .product-card__content {
+        padding: 1.5rem;
+    }
+
+    .product-card__title {
+        font-size: 1.4rem;
+    }
+
+    .footer__copyright {
+        font-size: 0.9rem;
     }
 }
 

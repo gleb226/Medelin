@@ -1,7 +1,6 @@
 window.setupMobileMenu = function () {
     const toggle = document.querySelector('[data-mobile-menu-toggle]');
     const panel = document.querySelector('[data-mobile-menu-panel]');
-    const closeBtn = document.querySelector('[data-mobile-menu-close]');
     if (!toggle || !panel) return;
 
     const close = () => {
@@ -25,35 +24,26 @@ window.setupMobileMenu = function () {
         else open();
     });
 
-    if (closeBtn) {
-        closeBtn.addEventListener('click', (event) => {
-            event.preventDefault();
-            close();
-        });
-    }
-
     panel.addEventListener('click', (event) => {
-        if (event.target === panel) {
-            close();
-            return;
-        }
-
         const target = event.target;
         const link = target && target.closest ? target.closest('a') : null;
-        if (link) close();
+        if (link) {
+            close();
+        }
     });
 
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') close();
+        if (event.key === 'Escape' && isOpen()) close();
     });
 
-    document.addEventListener('pointerdown', (event) => {
-        if (!isOpen()) return;
-        if (panel.contains(event.target) || toggle.contains(event.target)) return;
-        close();
+    // Close when clicking outside panel
+    document.addEventListener('click', (event) => {
+        if (isOpen() && !panel.contains(event.target) && !toggle.contains(event.target)) {
+            close();
+        }
     });
 
     window.addEventListener('resize', () => {
-        if (window.innerWidth > 992) close();
+        if (window.innerWidth > 992 && isOpen()) close();
     });
 };

@@ -1,3 +1,169 @@
+/* --- Coffee Bean Full View --- */
+.bean-full-view {
+    padding: var(--space-lg) 0;
+}
+
+.bean-full-view__container {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 4rem;
+    align-items: stretch;
+    margin-bottom: 3rem;
+}
+
+.bean-full-view__left-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.bean-full-view__image {
+    width: 100%;
+    height: 600px;
+    border-radius: 32px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+    object-fit: cover;
+    margin-bottom: 1.2rem;
+}
+
+.bean-full-view__price-card {
+    background: var(--color-dark-brown);
+    color: white;
+    padding: 1.8rem 2.2rem;
+    border-radius: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    margin-top: auto;
+}
+
+.bean-full-view__price-label {
+    display: block;
+    font-size: 0.85rem;
+    opacity: 0.8;
+    margin-bottom: 0.2rem;
+}
+
+.bean-full-view__price-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    font-family: var(--font-accent);
+    white-space: nowrap;
+}
+
+.bean-full-view__right-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.bean-full-view__title {
+    font-family: var(--font-accent);
+    font-size: 3.5rem;
+    line-height: 1.1;
+    margin-bottom: 1rem;
+    color: var(--color-dark-brown);
+}
+
+.bean-full-view__description {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: #4a3728;
+    margin-bottom: 2rem;
+    font-weight: 400;
+    opacity: 0.9;
+}
+
+.bean-full-view__primary-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    background: #fcf8f5;
+    padding: 2.5rem;
+    border-radius: 24px;
+    border: 1px solid rgba(111, 78, 55, 0.2);
+    flex-grow: 1;
+    align-content: start;
+    color: var(--color-dark-brown);
+    box-shadow: var(--shadow-sm);
+}
+
+.bean-full-view__stat-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.bean-full-view__stat-label {
+    display: block;
+    font-weight: 800;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--color-coffee);
+    margin-bottom: 0.5rem;
+    opacity: 0.7;
+}
+
+.bean-full-view__stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-dark-brown);
+}
+
+.bean-full-view__stat-item--span-2 {
+    grid-column: span 2;
+    border-top: 1px solid rgba(111, 78, 55, 0.1);
+    padding-top: 1.5rem;
+}
+
+.bean-full-view__stat-value--large {
+    font-size: 1.2rem;
+}
+
+@media (max-width: 992px) {
+    .bean-full-view__container {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+    }
+
+    .bean-full-view__image {
+        height: 400px;
+    }
+
+    .bean-full-view__title {
+        font-size: 2.5rem;
+    }
+}
+
+@media (max-width: 500px) {
+    .bean-full-view__image {
+        height: 300px;
+        border-radius: 20px;
+    }
+
+    .bean-full-view__title {
+        font-size: 2rem;
+    }
+
+    .bean-full-view__price-card {
+        padding: 1.5rem;
+        flex-direction: column;
+        gap: 1.5rem;
+        text-align: center;
+    }
+
+    .bean-full-view__price-value {
+        font-size: 1.5rem;
+    }
+
+    .bean-full-view__primary-stats {
+        padding: 1.5rem;
+        grid-template-columns: 1fr;
+    }
+
+    .bean-full-view__stat-item--span-2 {
+        grid-column: span 1;
+    }
+}
+
 /* --- Global Scrollbar Styling --- */
 html, body {
     scrollbar-width: none; /* Firefox */
