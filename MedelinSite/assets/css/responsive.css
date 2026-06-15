@@ -339,7 +339,15 @@
     }
 
     .product-card__image {
-        height: 200px;
+        height: 380px !important; /* More vertical/portrait */
+        margin: 12px 12px 0 12px !important; /* Side and top padding for image effect */
+        width: calc(100% - 24px) !important;
+        border-radius: 20px !important;
+    }
+
+    .bean-full-view__image {
+        height: 500px !important;
+        border-radius: 24px !important;
     }
 
     /* ── Booking hero ── */
