@@ -1492,3 +1492,103 @@ window.toggleTableInput = function (v) {
     setInterval(pollStatuses, 15000); // Poll every 15s
     setTimeout(pollStatuses, 2000); // Initial poll
 })();
+
+// Global Socials Logic
+const SOCIAL_ICONS = {
+    instagram: 'fab fa-instagram',
+    facebook: 'fab fa-facebook-f',
+    email: 'fas fa-envelope',
+    phone: 'fas fa-phone-alt',
+    github: 'fab fa-github',
+    tiktok: 'fab fa-tiktok',
+    telegram: 'fab fa-telegram',
+    viber: 'fab fa-viber',
+    youtube: 'fab fa-youtube',
+};
+
+function guessSocialKeyFromUrl(url) {
+    const u = String(url || '').toLowerCase().trim();
+    if (u.includes('instagram.')) return 'instagram';
+    if (u.includes('tiktok.')) return 'tiktok';
+    if (u.includes('facebook.') || u.includes('fb.')) return 'facebook';
+    if (u.includes('youtube.') || u.includes('youtu.be')) return 'youtube';
+    if (u.includes('telegram.') || u.includes('t.me/')) return 'telegram';
+    if (u.includes('viber.')) return 'viber';
+    if (u.includes('github.')) return 'github';
+    if (u.startsWith('tel:') || u.startsWith('+') || /^\d{7,}$/.test(u.replace(/[\s\-()]/g, ''))) return 'phone';
+    if (u.startsWith('mailto:')) return 'email';
+    return null;
+}
+
+async function initSocials() {
+    const socialsRoot = document.getElementById('socials-list');
+    const footerSocials = document.getElementById('footer-socials');
+    if (!socialsRoot && !footerSocials) return;
+
+    try {
+        const socials = await window.loadMedelinData('socials', (fresh) => {
+            renderSocials(fresh);
+        });
+        if (socials) {
+            renderSocials(socials);
+        }
+    } catch (err) {
+        console.error('initSocials error:', err);
+    }
+}
+
+function renderSocials(socials) {
+    const socialsRoot = document.getElementById('socials-list');
+    const footerSocials = document.getElementById('footer-socials');
+
+    const ensureAbsoluteUrl = (url) => {
+        if (!url) return '';
+        const u = url.trim();
+        if (u.startsWith('http') || u.startsWith('tel:') || u.startsWith('mailto:')) return u;
+        
+        if (u.includes('@') && !u.includes('/')) return 'mailto:' + u;
+        const clean = u.replace(/[\s\-()]/g, '');
+        if (u.startsWith('+') || (clean.length >= 9 && /^\d+$/.test(clean))) return 'tel:' + u;
+
+        if (u.startsWith('t.me') || u.startsWith('instagram.com') || u.startsWith('facebook.com') || u.startsWith('fb.com')) {
+            return 'https://' + u;
+        }
+        return u;
+    };
+
+    if (socialsRoot) {
+        socialsRoot.innerHTML = '<div class="contact-social-icons"></div>';
+        const container = socialsRoot.querySelector('.contact-social-icons');
+        socials.forEach((soc) => {
+            const nameKey = soc.name.toLowerCase().trim();
+            const byUrl = guessSocialKeyFromUrl(soc.url);
+            let iconClass = SOCIAL_ICONS[nameKey] || (byUrl ? SOCIAL_ICONS[byUrl] : null) || 'fas fa-link';
+            const a = document.createElement('a');
+            a.href = ensureAbsoluteUrl(soc.url);
+            a.className = 'social-icon';
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.title = soc.name;
+            a.innerHTML = `<i class="${iconClass}"></i><span style="font-size:0.7rem; font-weight:700; text-transform:uppercase;">${soc.name}</span>`;
+            container.appendChild(a);
+        });
+    }
+
+    if (footerSocials) {
+        footerSocials.innerHTML = '';
+        socials.forEach((soc) => {
+            const a = document.createElement('a');
+            a.href = ensureAbsoluteUrl(soc.url);
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.className = 'footer__link';
+            const nameKey = soc.name.toLowerCase().trim();
+            const byUrl = guessSocialKeyFromUrl(soc.url);
+            const iconClass = SOCIAL_ICONS[nameKey] || (byUrl ? SOCIAL_ICONS[byUrl] : null) || 'fas fa-link';
+            a.innerHTML = `<i class="${iconClass}" style="margin-right:5px;"></i>${soc.name}`;
+            footerSocials.appendChild(a);
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initSocials);

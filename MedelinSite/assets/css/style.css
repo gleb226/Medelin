@@ -2088,6 +2088,12 @@ h4 {
     opacity: 1;
 }
 
+#footer-socials {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem 1.5rem;
+}
+
 .footer__bottom {
     text-align: center;
     border-top: 1px solid rgba(247, 243, 233, 0.18);

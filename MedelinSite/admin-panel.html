@@ -138,6 +138,7 @@
             .admin-modal { position: fixed; inset: 0; background: rgba(60, 47, 47, 0.6); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(8px); }
             .admin-modal--active { display: flex; }
             .admin-modal__panel { width: min(800px, 100%); max-height: 90vh; overflow-y: auto; background: white; border-radius: 35px; padding: clamp(2rem, 5vw, 3.5rem); box-shadow: 0 40px 100px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.2); }
+            .admin-modal__panel--large { width: min(1000px, 100%); }
             .admin-modal__header { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin-bottom: 2.5rem; }
             .admin-modal__title { font-family: var(--font-accent); color: var(--color-dark-brown); font-size: 2.2rem; font-weight: 400; }
             .admin-modal__footer { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2.5rem; flex-wrap: wrap; }
@@ -417,27 +418,159 @@
                 showLoader(true);
                 const beans = await apiFetch('beans');
                 const list = document.getElementById('items-list');
-                list.innerHTML = `<div class="admin-toolbar"><h3>Список зерна</h3><button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати сорт</button></div><div id="beans-grid" class="admin-grid"></div>`;
+                list.innerHTML = `<div class="admin-toolbar"><h3>Сорти зерна</h3><button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати сорт</button></div><div id="beans-grid" class="admin-grid"></div>`;
                 const grid = document.getElementById('beans-grid');
                 beans?.forEach(b => {
+                    const score = b.quality_score || '—';
                     const div = document.createElement('div');
-                    div.className = 'card'; div.style.padding = '1.5rem';
-                    div.innerHTML = `<strong>${b.name}</strong><br><small>${b.price_250} ₴</small><div class="order-actions" style="margin-top:1rem;"><button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')">Видалити</button></div>`;
+                    div.className = 'card'; div.style.padding = '1rem';
+                    div.innerHTML = `
+                        <div style="display:flex; gap:1rem;">
+                            <div style="width:60px; height:60px; border-radius:10px; background:url('${window.fixImageUrl(b.image_url)}') center/cover; flex-shrink:0;"></div>
+                            <div style="flex:1;">
+                                <div style="font-weight:700; margin-bottom:0.2rem;">${b.name}</div>
+                                <div style="font-size:0.8rem; opacity:0.7;">${b.price_250} ₴ | Score: ${score}</div>
+                                <div style="font-size:0.8rem; opacity:0.7;">Залишок: ${b.stock_packs ?? '∞'} шт</div>
+                            </div>
+                        </div>
+                        <div class="order-actions" style="margin-top:1rem; border-top:1px solid rgba(0,0,0,0.05); padding-top:0.8rem;">
+                            <button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'>Редагувати</button>
+                            <button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')">Видалити</button>
+                        </div>
+                    `;
                     grid.appendChild(div);
                 });
                 showLoader(false);
             }
 
+            async function uploadImage(file) {
+                const formData = new FormData();
+                formData.append('file', file);
+                try {
+                    const resp = await fetch('/api/admin/upload', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${sessionToken}` },
+                        body: formData
+                    });
+                    const res = await resp.json();
+                    return res.url;
+                } catch (e) {
+                    alert('Помилка завантаження фото');
+                    return null;
+                }
+            }
+
             function openBeanModal(b = null) {
                 const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `<div class="admin-modal__panel"><div class="admin-modal__header"><h3 class="admin-modal__title">${b ? 'Редагувати' : 'Додати'} сорт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="bean-form"><div class="admin-grid"><div class="admin-field"><label>Назва</label><input name="name" value="${b?.name || ''}" required></div><div class="admin-field"><label>Ціна 250г</label><input type="number" name="price_250" value="${b?.price_250 || ''}" required></div><div class="admin-field"><label>URL Фото</label><input name="image_url" value="${b?.image_url || ''}"></div></div><div class="admin-field" style="margin-top:1rem;"><label>Опис</label><textarea name="description" rows="3">${b?.description || ''}</textarea></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveBean('${b?.id || ''}')">Зберегти</button></div></div>`;
+                modal.innerHTML = `
+                    <div class="admin-modal__panel admin-modal__panel--large">
+                        <div class="admin-modal__header">
+                            <h3 class="admin-modal__title">${b ? 'Редагувати' : 'Додати'} сорт</h3>
+                            <button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button>
+                        </div>
+                        <form id="bean-form" style="max-height: 70vh; overflow-y: auto; padding-right: 10px;">
+                            <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                                <div class="admin-field">
+                                    <label>Назва</label>
+                                    <input name="name" value="${b?.name || ''}" required>
+                                </div>
+                                <div class="admin-field">
+                                    <label>Ціна 250г (грн)</label>
+                                    <input type="number" name="price_250" value="${b?.price_250 || ''}" required>
+                                </div>
+                                <div class="admin-field">
+                                    <label>Quality Score</label>
+                                    <input name="quality_score" value="${b?.quality_score || ''}" placeholder="Напр: 86.5">
+                                </div>
+                                <div class="admin-field">
+                                    <label>Залишок (пачок)</label>
+                                    <input type="number" name="stock_packs" value="${b?.stock_packs ?? ''}" placeholder="Пусто = нескінченно">
+                                </div>
+                                <div class="admin-field">
+                                    <label>Вид (Arabica/Robusta)</label>
+                                    <input name="species" value="${b?.species || 'Arabica'}">
+                                </div>
+                                <div class="admin-field">
+                                    <label>Обсмажка</label>
+                                    <input name="roast" value="${b?.roast || ''}" placeholder="Напр: Light/Medium">
+                                </div>
+                                <div class="admin-field">
+                                    <label>Обробітка</label>
+                                    <input name="processing" value="${b?.processing || ''}">
+                                </div>
+                                <div class="admin-field">
+                                    <label>Варіація</label>
+                                    <input name="variety" value="${b?.variety || ''}">
+                                </div>
+                                <div class="admin-field">
+                                    <label>Висота</label>
+                                    <input name="altitude" value="${b?.altitude || ''}">
+                                </div>
+                                <div class="admin-field">
+                                    <label>Врожай</label>
+                                    <input name="harvest" value="${b?.harvest || ''}">
+                                </div>
+                            </div>
+                            
+                            <div class="admin-field" style="margin-top:1rem;">
+                                <label>Дескриптори (через кому)</label>
+                                <input name="descriptors" value="${b?.descriptors || ''}" placeholder="Напр: Шоколад, Горіх, Цитрус">
+                            </div>
+
+                            <div class="admin-field" style="margin-top:1rem;">
+                                <label>Смак (коротко)</label>
+                                <input name="taste" value="${b?.taste || ''}" placeholder="Напр: Солодкий з кислинкою">
+                            </div>
+
+                            <div class="admin-field" style="margin-top:1rem;">
+                                <label>Опис</label>
+                                <textarea name="description" rows="3">${b?.description || ''}</textarea>
+                            </div>
+
+                            <div class="admin-field" style="margin-top:1.5rem;">
+                                <label>Фото</label>
+                                <div style="display:flex; gap:1rem; align-items:center;">
+                                    <img id="bean-img-preview" src="${window.fixImageUrl(b?.image_url || '')}" style="width:80px; height:80px; border-radius:10px; object-fit:cover; background:#eee;">
+                                    <div style="flex:1;">
+                                        <input type="file" id="bean-file-input" accept="image/*" style="margin-bottom:0.5rem;">
+                                        <input type="hidden" name="image_url" id="bean-image-url" value="${b?.image_url || ''}">
+                                        <div style="font-size:0.75rem; opacity:0.6;">Виберіть файл або залиште URL</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="admin-modal__footer">
+                            <button class="btn btn--primary" id="btn-save-bean">Зберегти</button>
+                        </div>
+                    </div>
+                `;
                 modal.classList.add('admin-modal--active');
+
+                const fileInput = document.getElementById('bean-file-input');
+                fileInput.onchange = async () => {
+                    if (fileInput.files[0]) {
+                        const url = await uploadImage(fileInput.files[0]);
+                        if (url) {
+                            document.getElementById('bean-image-url').value = url;
+                            document.getElementById('bean-img-preview').src = window.fixImageUrl(url);
+                        }
+                    }
+                };
+
+                document.getElementById('btn-save-bean').onclick = () => saveBean(b?.id);
             }
 
             async function saveBean(id) {
                 const fd = new FormData(document.getElementById('bean-form'));
-                await apiFetch(id ? `beans/${id}` : 'beans', 'POST', Object.fromEntries(fd.entries()));
-                closeAdminModal(); refreshData();
+                const data = Object.fromEntries(fd.entries());
+                // Remove the file from data as we upload it separately
+                delete data['bean-file-input'];
+                
+                const res = await apiFetch(id ? `beans/${id}` : 'beans', 'POST', data);
+                if (res) {
+                    closeAdminModal(); refreshData();
+                    window.showToast('Сорт збережено', 'success');
+                }
             }
             async function deleteBean(id) { if (confirm('Видалити?')) { await apiFetch(`beans/${id}`, 'DELETE'); refreshData(); } }
 
@@ -449,8 +582,20 @@
                 const grid = document.getElementById('locs-grid');
                 locs?.forEach(l => {
                     const div = document.createElement('div');
-                    div.className = 'card'; div.style.padding = '1.5rem';
-                    div.innerHTML = `<strong>${l.name}</strong><br><small>${l.address}</small><div class="order-actions" style="margin-top:1rem;"><button class="btn btn--outline btn--sm" onclick='openLocationModal(${JSON.stringify(l).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteLocation('${l.id}')">Видалити</button></div>`;
+                    div.className = 'card'; div.style.padding = '1rem';
+                    div.innerHTML = `
+                        <div style="display:flex; gap:1rem;">
+                            <div style="width:60px; height:60px; border-radius:10px; background:url('${window.fixImageUrl(l.image_url)}') center/cover; flex-shrink:0;"></div>
+                            <div style="flex:1;">
+                                <div style="font-weight:700; margin-bottom:0.2rem;">${l.name}</div>
+                                <div style="font-size:0.8rem; opacity:0.7;">${l.address}</div>
+                            </div>
+                        </div>
+                        <div class="order-actions" style="margin-top:1rem; border-top:1px solid rgba(0,0,0,0.05); padding-top:0.8rem;">
+                            <button class="btn btn--outline btn--sm" onclick='openLocationModal(${JSON.stringify(l).replace(/'/g, "&apos;")})'>Редагувати</button>
+                            <button class="btn btn--danger btn--sm" onclick="deleteLocation('${l.id}')">Видалити</button>
+                        </div>
+                    `;
                     grid.appendChild(div);
                 });
                 showLoader(false);
@@ -458,14 +603,106 @@
 
             function openLocationModal(l = null) {
                 const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `<div class="admin-modal__panel"><div class="admin-modal__header"><h3 class="admin-modal__title">${l ? 'Редагувати' : 'Додати'} локацію</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="loc-form"><div class="admin-grid"><div class="admin-field"><label>Назва</label><input name="name" value="${l?.name || ''}" required></div><div class="admin-field"><label>Адреса</label><input name="address" value="${l?.address || ''}" required></div></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveLocation('${l?.id || ''}')">Зберегти</button></div></div>`;
+                modal.innerHTML = `
+                    <div class="admin-modal__panel admin-modal__panel--large">
+                        <div class="admin-modal__header">
+                            <h3 class="admin-modal__title">${l ? 'Редагувати' : 'Додати'} локацію</h3>
+                            <button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button>
+                        </div>
+                        <form id="loc-form" style="max-height: 70vh; overflow-y: auto; padding-right: 10px;">
+                            <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                                <div class="admin-field">
+                                    <label>Назва</label>
+                                    <input name="name" value="${l?.name || ''}" required>
+                                </div>
+                                <div class="admin-field">
+                                    <label>Адреса</label>
+                                    <input name="address" value="${l?.address || ''}" required>
+                                </div>
+                                <div class="admin-field">
+                                    <label>Графік роботи</label>
+                                    <input name="schedule" value="${l?.schedule || ''}" placeholder="Напр: Щодня 08:00–22:00">
+                                </div>
+                                <div class="admin-field">
+                                    <label>Google Maps URL</label>
+                                    <input name="google_maps_url" value="${l?.google_maps_url || ''}">
+                                </div>
+                                <div class="admin-field">
+                                    <label>Широта (lat)</label>
+                                    <input type="number" step="0.000001" name="lat" value="${l?.coordinates?.lat || ''}">
+                                </div>
+                                <div class="admin-field">
+                                    <label>Довгота (lon)</label>
+                                    <input type="number" step="0.000001" name="lon" value="${l?.coordinates?.lon || ''}">
+                                </div>
+                            </div>
+
+                            <div class="admin-field" style="margin-top:1rem;">
+                                <label>Зручності (через кому)</label>
+                                <input name="amenities_str" value="${(l?.amenities || []).join(', ')}" placeholder="Напр: Wi-Fi, Тераса, Кондиціонер">
+                            </div>
+
+                            <div class="admin-field" style="margin-top:1rem;">
+                                <label>Атмосфера</label>
+                                <textarea name="atmosphere" rows="2">${l?.atmosphere || ''}</textarea>
+                            </div>
+
+                            <div class="admin-field" style="margin-top:1.5rem;">
+                                <label>Фото локації</label>
+                                <div style="display:flex; gap:1rem; align-items:center;">
+                                    <img id="loc-img-preview" src="${window.fixImageUrl(l?.image_url || '')}" style="width:120px; height:80px; border-radius:10px; object-fit:cover; background:#eee;">
+                                    <div style="flex:1;">
+                                        <input type="file" id="loc-file-input" accept="image/*" style="margin-bottom:0.5rem;">
+                                        <input type="hidden" name="image_url" id="loc-image-url" value="${l?.image_url || ''}">
+                                        <div style="font-size:0.75rem; opacity:0.6;">Виберіть файл або залиште URL</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="admin-modal__footer">
+                            <button class="btn btn--primary" id="btn-save-loc">Зберегти</button>
+                        </div>
+                    </div>
+                `;
                 modal.classList.add('admin-modal--active');
+
+                const fileInput = document.getElementById('loc-file-input');
+                fileInput.onchange = async () => {
+                    if (fileInput.files[0]) {
+                        const url = await uploadImage(fileInput.files[0]);
+                        if (url) {
+                            document.getElementById('loc-image-url').value = url;
+                            document.getElementById('loc-img-preview').src = window.fixImageUrl(url);
+                        }
+                    }
+                };
+
+                document.getElementById('btn-save-loc').onclick = () => saveLocation(l?.id);
             }
 
             async function saveLocation(id) {
                 const fd = new FormData(document.getElementById('loc-form'));
-                await apiFetch(id ? `locations/${id}` : 'locations', 'POST', Object.fromEntries(fd.entries()));
-                closeAdminModal(); refreshData();
+                const raw = Object.fromEntries(fd.entries());
+                
+                const data = {
+                    name: raw.name,
+                    address: raw.address,
+                    schedule: raw.schedule,
+                    google_maps_url: raw.google_maps_url,
+                    image_url: raw.image_url,
+                    atmosphere: raw.atmosphere,
+                    coordinates: {
+                        lat: parseFloat(raw.lat || 0),
+                        lon: parseFloat(raw.lon || 0)
+                    },
+                    amenities: raw.amenities_str ? raw.amenities_str.split(',').map(s => s.trim()).filter(Boolean) : []
+                };
+
+                const res = await apiFetch(id ? `locations/${id}` : 'locations', 'POST', data);
+                if (res) {
+                    closeAdminModal(); refreshData();
+                    window.showToast('Локацію збережено', 'success');
+                }
             }
             async function deleteLocation(id) { if (confirm('Видалити?')) { await apiFetch(`locations/${id}`, 'DELETE'); refreshData(); } }
 
@@ -492,26 +729,103 @@
 
             async function loadTeam() {
                 showLoader(true);
-                const team = await apiFetch('team');
+                const [team, locs] = await Promise.all([apiFetch('team'), apiFetch('locations')]);
                 const list = document.getElementById('items-list');
-                list.innerHTML = `<div class="admin-toolbar"><h3>Команда</h3><button class="btn btn--primary btn--sm" onclick="openTeamModal()">+ Додати</button></div><div id="team-list"></div>`;
+                list.innerHTML = `<div class="admin-toolbar"><h3>Команда</h3><button class="btn btn--primary btn--sm" onclick='openTeamModal(null, ${JSON.stringify(locs)})'>+ Додати</button></div><div id="team-list"></div>`;
                 team?.forEach(t => {
+                    // t = [uid, username, display_name, role, locations]
                     const div = document.createElement('div'); div.className = 'order-item';
-                    div.innerHTML = `<div class="order-info"><strong>${t[2]}</strong> (@${t[1] || '—'})<br><small>Роль: ${roleName(t[3])}</small></div><div class="order-actions"><button class="btn btn--danger btn--sm" onclick="deleteTeam('${t[0]}')">Видалити</button></div>`;
+                    const adminLocs = t[4] || [];
+                    const locNames = adminLocs.length ? adminLocs.map(id => locs.find(l => l.id === id)?.name || id).join(', ') : 'Усі';
+                    div.innerHTML = `
+                        <div class="order-info">
+                            <strong>${t[2]}</strong> (@${t[1] || '—'})
+                            <br><small>Роль: ${roleName(t[3])} | Доступ: ${locNames}</small>
+                        </div>
+                        <div class="order-actions">
+                            <button class="btn btn--outline btn--sm" onclick='openTeamModal(${JSON.stringify(t).replace(/'/g, "&apos;")}, ${JSON.stringify(locs).replace(/'/g, "&apos;")})'>Редагувати</button>
+                            <button class="btn btn--danger btn--sm" onclick="deleteTeam('${t[0]}')">Видалити</button>
+                        </div>`;
                     document.getElementById('team-list').appendChild(div);
                 });
                 showLoader(false);
             }
 
-            function openTeamModal() {
+            function openTeamModal(t = null, allLocs = []) {
                 const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `<div class="admin-modal__panel" style="max-width:450px;"><div class="admin-modal__header"><h3 class="admin-modal__title">Додати в команду</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="team-form"><div class="admin-field"><label>TG ID</label><input type="number" name="user_id" required></div><div class="admin-field" style="margin-top:1rem;"><label>Ім'я</label><input name="display_name" required></div><div class="admin-field" style="margin-top:1rem;"><label>Роль</label><select name="role"><option value="admin">Адмін</option><option value="owner">Власник</option></select></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveTeam()">Зберегти</button></div></div>`;
+                // t = [uid, username, display_name, role, locations]
+                const isEdit = !!t;
+                const adminLocs = t ? t[4] || [] : [];
+                
+                let locsHtml = allLocs.map(l => `
+                    <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; cursor:pointer;">
+                        <input type="checkbox" name="locations" value="${l.id}" ${adminLocs.includes(l.id) ? 'checked' : ''} style="width:auto;">
+                        <span style="font-size:0.9rem;">${l.name}</span>
+                    </label>
+                `).join('');
+
+                modal.innerHTML = `
+                    <div class="admin-modal__panel" style="max-width:550px;">
+                        <div class="admin-modal__header">
+                            <h3 class="admin-modal__title">${isEdit ? 'Редагувати' : 'Додати'} адміна</h3>
+                            <button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button>
+                        </div>
+                        <form id="team-form">
+                            <div class="admin-field">
+                                <label>TG ID</label>
+                                <input type="number" name="user_id" value="${t ? t[0] : ''}" ${isEdit ? 'readonly' : ''} required>
+                            </div>
+                            <div class="admin-field" style="margin-top:1rem;">
+                                <label>Username (без @)</label>
+                                <input name="username" value="${t ? t[1] || '' : ''}">
+                            </div>
+                            <div class="admin-field" style="margin-top:1rem;">
+                                <label>Ім'я</label>
+                                <input name="display_name" value="${t ? t[2] : ''}" required>
+                            </div>
+                            <div class="admin-field" style="margin-top:1rem;">
+                                <label>Роль</label>
+                                <select name="role">
+                                    <option value="admin" ${t && t[3] === 'admin' ? 'selected' : ''}>Адмін</option>
+                                    <option value="delivery_manager" ${t && t[3] === 'delivery_manager' ? 'selected' : ''}>Менеджер доставки</option>
+                                    <option value="owner" ${t && t[3] === 'owner' ? 'selected' : ''}>Власник</option>
+                                </select>
+                            </div>
+                            <div class="admin-field" style="margin-top:1.5rem;">
+                                <label>Доступ до локацій (якщо пусто - до всіх)</label>
+                                <div style="margin-top:0.5rem; padding:1rem; border:2px solid var(--color-coffee-soft); border-radius:15px; max-height:200px; overflow-y:auto;">
+                                    ${locsHtml}
+                                </div>
+                            </div>
+                        </form>
+                        <div class="admin-modal__footer">
+                            <button class="btn btn--primary" id="btn-save-team">Зберегти</button>
+                        </div>
+                    </div>
+                `;
                 modal.classList.add('admin-modal--active');
+                document.getElementById('btn-save-team').onclick = saveTeam;
             }
-            async function saveTeam() { 
-                const data = Object.fromEntries(new FormData(document.getElementById('team-form')).entries());
-                data.user_id = parseInt(data.user_id);
-                await apiFetch('team', 'POST', data); closeAdminModal(); refreshData(); 
+
+            async function saveTeam() {
+                const form = document.getElementById('team-form');
+                const fd = new FormData(form);
+                const data = {
+                    user_id: parseInt(fd.get('user_id')),
+                    username: fd.get('username'),
+                    display_name: fd.get('display_name'),
+                    role: fd.get('role'),
+                    locations: []
+                };
+                form.querySelectorAll('input[name="locations"]:checked').forEach(cb => {
+                    data.locations.push(cb.value);
+                });
+
+                const res = await apiFetch('team', 'POST', data);
+                if (res) {
+                    closeAdminModal(); refreshData();
+                    window.showToast('Команду оновлено', 'success');
+                }
             }
             async function deleteTeam(id) { if (confirm('Видалити?')) { await apiFetch(`team/${id}`, 'DELETE'); refreshData(); } }
 

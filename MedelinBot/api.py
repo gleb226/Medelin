@@ -11,12 +11,14 @@ from typing import Any
 import asyncio
 from datetime import datetime
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Request, Depends, Query
+from fastapi import FastAPI, HTTPException, Request, Depends, Query, Form, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import time
+import shutil
+import uuid
 
 from app.databases.orders_database import orders_db
 from app.databases.admin_database import admin_db
@@ -503,6 +505,25 @@ async def complete_order(order_id: str, admin: dict = Depends(get_current_admin)
     return {'status': 'ok'}
 
 # CRUD for Beans
+@app.post('/api/admin/upload')
+async def admin_upload_image(file: UploadFile = File(...), admin: dict = Depends(get_current_admin)):
+    from app.utils.paths import get_uploads_dir
+    import uuid
+    
+    ext = file.filename.split('.')[-1].lower()
+    if ext not in ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif']:
+        raise HTTPException(status_code=400, detail="Непідтримуваний формат файлу")
+        
+    filename = f"{uuid.uuid4()}.{ext}"
+    uploads_dir = get_uploads_dir()
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    
+    file_path = uploads_dir / filename
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    return {"status": "ok", "url": f"/uploads/{filename}"}
+
 @app.get('/api/admin/beans')
 async def admin_get_beans(admin: dict = Depends(get_current_admin)):
     beans = await coffee_beans_db.get_all_beans()
@@ -511,15 +532,16 @@ async def admin_get_beans(admin: dict = Depends(get_current_admin)):
 
 @app.post('/api/admin/beans')
 async def admin_add_bean(data: dict, admin: dict = Depends(get_current_admin)):
+    if 'price_250' in data: data['price_250'] = int(data['price_250'])
+    if 'stock_packs' in data and data['stock_packs']: data['stock_packs'] = int(data['stock_packs'])
     await coffee_beans_db.add_bean(**data)
     return {'status': 'ok'}
 
 @app.post('/api/admin/beans/{bean_id}')
 async def admin_update_bean(bean_id: str, data: dict, admin: dict = Depends(get_current_admin)):
-    # Assuming update_bean exists or add it
-    db = await get_db()
-    from bson import ObjectId
-    await db.coffee_beans.update_one({'_id': ObjectId(bean_id)}, {'$set': data})
+    if 'price_250' in data: data['price_250'] = int(data['price_250'])
+    if 'stock_packs' in data and data['stock_packs']: data['stock_packs'] = int(data['stock_packs'])
+    await coffee_beans_db.update_bean(bean_id, data)
     return {'status': 'ok'}
 
 @app.delete('/api/admin/beans/{bean_id}')
@@ -541,16 +563,12 @@ async def admin_add_location(data: dict, admin: dict = Depends(get_current_admin
 
 @app.post('/api/admin/locations/{loc_id}')
 async def admin_update_location(loc_id: str, data: dict, admin: dict = Depends(get_current_admin)):
-    db = await get_db()
-    from bson import ObjectId
-    await db.locations.update_one({'_id': ObjectId(loc_id)}, {'$set': data})
+    await location_db.update_location(loc_id, data)
     return {'status': 'ok'}
 
 @app.delete('/api/admin/locations/{loc_id}')
 async def admin_delete_location(loc_id: str, admin: dict = Depends(get_current_admin)):
-    db = await get_db()
-    from bson import ObjectId
-    await db.locations.delete_one({'_id': ObjectId(loc_id)})
+    await location_db.delete_location(loc_id)
     return {'status': 'ok'}
 
 # CRUD for Contacts/Socials
