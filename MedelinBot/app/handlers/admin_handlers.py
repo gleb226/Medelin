@@ -1321,7 +1321,8 @@ def _bean_list_kb(beans: list[dict], category: str, role='owner') -> InlineKeybo
         name = b.get('name', '')[:25]
         # Show stock for specialty
         if category == 'specialty':
-            packs = b.get('stock_packs', 0)
+            packs = b.get('stock_packs')
+            if packs is None: packs = 0
             name = f"{name} ({packs}📦)"
         row.append(InlineKeyboardButton(text=name, callback_data=f'bean_open_{bid}'))
         if len(row) == 2:
@@ -1594,7 +1595,8 @@ async def bean_restock_input(message: Message, state: FSMContext):
         return
     
     bean = await coffee_beans_db.get_bean_by_id(bid)
-    current = bean.get('stock_packs', 0)
+    current = bean.get('stock_packs')
+    if current is None: current = 0
     new_total = current + packs_to_add
     await coffee_beans_db.update_bean(bid, {'stock_packs': new_total})
     
