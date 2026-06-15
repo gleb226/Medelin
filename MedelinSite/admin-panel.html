@@ -46,17 +46,18 @@
                 background: linear-gradient(135deg, var(--color-cream) 0%, #e8e2d5 100%);
                 display: flex; justify-content: center; align-items: center;
                 z-index: 5000; transition: all 0.5s ease;
+                padding: 1rem;
             }
 
             .login-card {
-                background: white; padding: clamp(2rem, 5vw, 4rem); border-radius: 40px;
+                background: white; padding: clamp(1.5rem, 5vw, 4rem); border-radius: 40px;
                 box-shadow: 0 30px 80px rgba(60, 47, 47, 0.15);
-                width: 92%; max-width: 500px; text-align: center;
+                width: 100%; max-width: 500px; text-align: center;
                 border: 1px solid rgba(139, 94, 60, 0.1);
             }
 
-            .login-logo { font-family: var(--font-accent); font-size: 3.5rem; color: var(--color-dark-brown); margin-bottom: 0.5rem; letter-spacing: 2px; }
-            .login-subtitle { color: var(--color-coffee); font-weight: 800; font-size: 0.85rem; letter-spacing: 4px; margin-bottom: 3rem; text-transform: uppercase; }
+            .login-logo { font-family: var(--font-accent); font-size: clamp(2.5rem, 10vw, 3.5rem); color: var(--color-dark-brown); margin-bottom: 0.5rem; letter-spacing: 2px; }
+            .login-subtitle { color: var(--color-coffee); font-weight: 800; font-size: clamp(0.7rem, 2vw, 0.85rem); letter-spacing: 4px; margin-bottom: clamp(1.5rem, 5vw, 3rem); text-transform: uppercase; }
 
             .input-group { margin-bottom: 1.8rem; text-align: left; }
             .input-label { display: block; margin-bottom: 0.8rem; font-weight: 800; font-size: 0.85rem; color: var(--color-dark-brown); text-transform: uppercase; letter-spacing: 1px; }
@@ -158,6 +159,32 @@
                 .sidebar--active { transform: translateX(0); }
                 .main-content { margin-left: 0; width: 100%; padding: 1.5rem; }
                 .sidebar-toggle { display: flex; }
+            }
+
+            @media (max-width: 768px) {
+                .header { margin-bottom: 2rem; flex-direction: column; align-items: flex-start; gap: 1rem; }
+                .header__actions { width: 100%; justify-content: space-between; }
+                .header__title { font-size: 1.8rem; }
+                .order-item { flex-direction: column; align-items: stretch; gap: 1rem; padding: 1.5rem 0; }
+                .order-actions { justify-content: flex-start; width: 100%; }
+                .order-actions .btn { flex: 1; }
+                .admin-toolbar { flex-direction: column; align-items: flex-start; gap: 1rem; }
+                .admin-toolbar .btn { width: 100%; }
+                .admin-toolbar h3 { font-size: 1.5rem; }
+                .admin-modal__panel { border-radius: 20px; padding: 1.5rem; }
+                .admin-modal__title { font-size: 1.6rem; }
+                .admin-modal__header { margin-bottom: 1.5rem; }
+                .admin-grid { grid-template-columns: 1fr; }
+            }
+
+            @media (max-width: 480px) {
+                .order-title { font-size: 1.1rem; }
+                .btn { padding: 0.8rem 1.2rem; font-size: 0.85rem; }
+                .login-card { border-radius: 30px; }
+                .main-content { padding: 1rem; }
+                .card { padding: 1.2rem; border-radius: 20px; }
+                .sidebar__logo { font-size: 1.8rem; }
+                .nav-item { padding: 1rem 2rem; }
             }
         </style>
     </head>
