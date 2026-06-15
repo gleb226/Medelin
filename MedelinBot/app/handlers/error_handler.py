@@ -1,6 +1,6 @@
 
 import traceback
-
+import html
 from datetime import datetime
 
 from aiogram import Router, Bot
@@ -85,8 +85,14 @@ async def global_error_handler(event: ErrorEvent, bot: Bot):
 
     from app.utils.admin_notifications import send_developer_error
 
-    uname = f"@{username}" if username else "N/A"
+    uname = html.escape(f"@{username}") if username else "N/A"
+    
+    # Escape variables for safe HTML formatting
+    e_command = html.escape(str(command))
+    e_type = html.escape(str(etype))
+    e_msg = html.escape(str(emsg))
+    e_tb = html.escape(tb[-500:])
 
-    alert_text = f"🚨 <b>ERROR REPORT</b>\nUser: <code>{user_id}</code> ({uname})\nCommand: <code>{command}</code>\nType: <code>{etype}</code>\nMsg: <code>{emsg}</code>\n\n<pre>{tb[-500:]}</pre>"
+    alert_text = f"🚨 <b>ERROR REPORT</b>\nUser: <code>{user_id}</code> ({uname})\nCommand: <code>{e_command}</code>\nType: <code>{e_type}</code>\nMsg: <code>{e_msg}</code>\n\n<pre>{e_tb}</pre>"
 
     await send_developer_error(alert_text)

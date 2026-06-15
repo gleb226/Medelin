@@ -4,7 +4,7 @@ const _proto = window.location.protocol;
 const isFileProto = _proto === 'file:';
 const isLocal = _host === 'localhost' || _host === '127.0.0.1' || _host === '';
 
-window.API_BASE_URL = '';
+window.API_BASE_URL = 'https://medelin.onrender.com';
 const reportedClientErrors = new Set();
 
 if (isLocal && _port === '8000') {

@@ -354,7 +354,14 @@ async def report_error(req: Request):
     try:
         data = await req.json()
         logger.error(f"CLIENT ERROR: {data}")
-        msg = f"🌐 <b>SITE CLIENT ERROR</b>\n\n<b>Source:</b> {data.get('source')}\n<b>Path:</b> {data.get('path')}\n\n<b>Message:</b>\n{data.get('message')}\n\n<b>Context:</b>\n{data.get('context')}"
+        
+        # Escape for safe HTML
+        src = html.escape(str(data.get('source') or 'Site'))
+        path = html.escape(str(data.get('path') or 'N/A'))
+        msg_text = html.escape(str(data.get('message') or 'Client error'))
+        ctx = html.escape(str(data.get('context') or ''))
+        
+        msg = f"🌐 <b>SITE CLIENT ERROR</b>\n\n<b>Source:</b> {src}\n<b>Path:</b> {path}\n\n<b>Message:</b>\n{msg_text}\n\n<b>Context:</b>\n{ctx}"
         await send_developer_error(msg)
         return {'status': 'ok'}
     except Exception as e:

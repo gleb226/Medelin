@@ -1302,8 +1302,8 @@ def _roast_rank(bean: dict) -> int:
 def _sorted_beans(beans: list[dict], category: str) -> list[dict]:
     filtered = [b for b in beans if _bean_category(b) == category]
     if category == 'specialty':
-        # Hide specialty if out of stock
-        filtered = [b for b in filtered if b.get('stock_packs', 1) > 0]
+        # Hide specialty if out of stock. Handle None values safely.
+        filtered = [b for b in filtered if (b.get('stock_packs') if b.get('stock_packs') is not None else 1) > 0]
     return sorted(
         filtered,
         key=lambda b: (_roast_rank(b), str(b.get('name') or '').casefold())
