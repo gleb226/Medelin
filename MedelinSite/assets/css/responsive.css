@@ -630,19 +630,20 @@
     #coffee-root .products-grid,
     #locations-grid {
         grid-template-columns: 1fr;
-        gap: 1.25rem;
+        gap: 1.5rem;
+        padding: 0 1.25rem !important;
     }
 
     .product-card__image {
-        height: 340px !important;
-        margin: 12px 16px 0 16px !important;
-        width: calc(100% - 32px) !important;
-        border-radius: 20px !important;
+        height: 420px !important;
+        margin: 16px 24px 0 24px !important;
+        width: calc(100% - 48px) !important;
+        border-radius: 24px !important;
     }
 
     .bean-full-view__image {
-        height: 450px !important;
-        border-radius: 24px !important;
+        height: 550px !important;
+        border-radius: 28px !important;
     }
 
     .choice-grid {
@@ -694,6 +695,12 @@
     }
 
     /* ── Product card ── */
+    .product-card__image {
+        height: 380px !important;
+        margin: 12px 20px 0 20px !important;
+        width: calc(100% - 40px) !important;
+    }
+
     .product-card__content {
         padding: 1.25rem;
     }
@@ -704,8 +711,8 @@
 
     /* ── Bean detail ── */
     .bean-full-view__image {
-        height: 380px !important;
-        border-radius: 20px !important;
+        height: 480px !important;
+        border-radius: 24px !important;
     }
 
     .bean-full-view__title {
