@@ -434,11 +434,11 @@ async def get_admin_me(admin: dict = Depends(get_current_admin)):
 async def get_new_orders(admin: dict = Depends(get_current_admin)):
     # Returns only orders with status 'new' or 'paid'
     locs = None
-    if admin.get('role') not in ('boss', 'owner', 'developer'):
+    if admin.get('role') not in ('owner', 'developer'):
         locs = list(admin.get('locations') or [])
-        # Admins should also see website/NP orders
-        if 'web' not in locs: locs.append('web')
-        if 'NP' not in locs: locs.append('NP')
+        # Admins should also see website/NP orders by default
+        if not locs or 'web' not in locs: locs.append('web')
+        if not locs or 'NP' not in locs: locs.append('NP')
     
     if locs:
         orders = await orders_db.get_new_orders_by_locations(locs)
@@ -454,6 +454,9 @@ async def get_new_orders(admin: dict = Depends(get_current_admin)):
 
 @app.post('/api/admin/orders/{order_id}/confirm')
 async def confirm_order(order_id: str, admin: dict = Depends(get_current_admin)):
+    if admin.get('role') == 'developer':
+        raise HTTPException(status_code=403, detail='У Розробника права тільки на перегляд')
+        
     order = await orders_db.get_order_by_id(order_id)
     if not order: return {'status': 'error', 'message': 'Order not found'}
     
@@ -479,6 +482,8 @@ async def confirm_order(order_id: str, admin: dict = Depends(get_current_admin))
 
 @app.post('/api/admin/orders/{order_id}/reject')
 async def reject_order(order_id: str, admin: dict = Depends(get_current_admin)):
+    if admin.get('role') == 'developer':
+        raise HTTPException(status_code=403, detail='У Розробника права тільки на перегляд')
     await orders_db.update_status(order_id, 'rejected')
     return {'status': 'ok'}
 
@@ -486,10 +491,10 @@ async def reject_order(order_id: str, admin: dict = Depends(get_current_admin)):
 async def get_active_orders(admin: dict = Depends(get_current_admin)):
     from app.databases.active_orders_database import active_orders_db
     locs = None
-    if admin.get('role') not in ('boss', 'owner', 'developer'):
+    if admin.get('role') not in ('owner', 'developer'):
         locs = list(admin.get('locations') or [])
-        if 'web' not in locs: locs.append('web')
-        if 'NP' not in locs: locs.append('NP')
+        if not locs or 'web' not in locs: locs.append('web')
+        if not locs or 'NP' not in locs: locs.append('NP')
     
     orders = await active_orders_db.get_active_orders(locs)
     for o in orders:
@@ -507,13 +512,29 @@ async def get_active_orders(admin: dict = Depends(get_current_admin)):
 
 @app.post('/api/admin/orders/{order_id}/complete')
 async def complete_order(order_id: str, admin: dict = Depends(get_current_admin)):
+    if admin.get('role') == 'developer':
+        raise HTTPException(status_code=403, detail='У Розробника права тільки на перегляд')
     from app.databases.active_orders_database import active_orders_db
+    
+    order = await active_orders_db.get_active_order_by_id(order_id)
+    if order:
+        await sales_db.add_sale(
+            order_id=order_id,
+            user_id=order.get('user_id'),
+            fullname=order.get('fullname'),
+            items=order.get('cart'),
+            total=order.get('total', 0),
+            location_id=order.get('location_id')
+        )
+    
     await active_orders_db.remove_order(order_id)
     return {'status': 'ok'}
 
 # CRUD for Beans
 @app.post('/api/admin/upload')
 async def admin_upload_image(file: UploadFile = File(...), admin: dict = Depends(get_current_admin)):
+    if admin.get('role') == 'developer':
+        raise HTTPException(status_code=403, detail='У Розробника права тільки на перегляд')
     from app.utils.paths import get_uploads_dir
     import uuid
     
@@ -539,6 +560,8 @@ async def admin_get_beans(admin: dict = Depends(get_current_admin)):
 
 @app.post('/api/admin/beans')
 async def admin_add_bean(data: dict, admin: dict = Depends(get_current_admin)):
+    if admin.get('role') == 'developer':
+        raise HTTPException(status_code=403, detail='У Розробника права тільки на перегляд')
     if 'price_250' in data: data['price_250'] = int(data['price_250'])
     if 'stock_packs' in data and data['stock_packs']: data['stock_packs'] = int(data['stock_packs'])
     await coffee_beans_db.add_bean(**data)
@@ -546,6 +569,8 @@ async def admin_add_bean(data: dict, admin: dict = Depends(get_current_admin)):
 
 @app.post('/api/admin/beans/{bean_id}')
 async def admin_update_bean(bean_id: str, data: dict, admin: dict = Depends(get_current_admin)):
+    if admin.get('role') == 'developer':
+        raise HTTPException(status_code=403, detail='У Розробника права тільки на перегляд')
     if 'price_250' in data: data['price_250'] = int(data['price_250'])
     if 'stock_packs' in data and data['stock_packs']: data['stock_packs'] = int(data['stock_packs'])
     await coffee_beans_db.update_bean(bean_id, data)
@@ -553,6 +578,8 @@ async def admin_update_bean(bean_id: str, data: dict, admin: dict = Depends(get_
 
 @app.delete('/api/admin/beans/{bean_id}')
 async def admin_delete_bean(bean_id: str, admin: dict = Depends(get_current_admin)):
+    if admin.get('role') == 'developer':
+        raise HTTPException(status_code=403, detail='У Розробника права тільки на перегляд')
     await coffee_beans_db.delete_bean(bean_id)
     return {'status': 'ok'}
 
@@ -565,16 +592,22 @@ async def admin_get_locations(admin: dict = Depends(get_current_admin)):
 
 @app.post('/api/admin/locations')
 async def admin_add_location(data: dict, admin: dict = Depends(get_current_admin)):
+    if admin.get('role') == 'developer':
+        raise HTTPException(status_code=403, detail='У Розробника права тільки на перегляд')
     await location_db.add_location(**data)
     return {'status': 'ok'}
 
 @app.post('/api/admin/locations/{loc_id}')
 async def admin_update_location(loc_id: str, data: dict, admin: dict = Depends(get_current_admin)):
+    if admin.get('role') == 'developer':
+        raise HTTPException(status_code=403, detail='У Розробника права тільки на перегляд')
     await location_db.update_location(loc_id, data)
     return {'status': 'ok'}
 
 @app.delete('/api/admin/locations/{loc_id}')
 async def admin_delete_location(loc_id: str, admin: dict = Depends(get_current_admin)):
+    if admin.get('role') == 'developer':
+        raise HTTPException(status_code=403, detail='У Розробника права тільки на перегляд')
     await location_db.delete_location(loc_id)
     return {'status': 'ok'}
 
@@ -587,28 +620,92 @@ async def admin_get_socials(admin: dict = Depends(get_current_admin)):
 
 @app.post('/api/admin/socials')
 async def admin_add_social(data: dict, admin: dict = Depends(get_current_admin)):
+    if admin.get('role') == 'developer':
+        raise HTTPException(status_code=403, detail='У Розробника права тільки на перегляд')
     await contacts_db.add_contact(data['name'], data['url'])
     return {'status': 'ok'}
 
 @app.delete('/api/admin/socials/{sid}')
 async def admin_delete_social(sid: str, admin: dict = Depends(get_current_admin)):
+    if admin.get('role') == 'developer':
+        raise HTTPException(status_code=403, detail='У Розробника права тільки на перегляд')
     await contacts_db.delete_contact(sid)
     return {'status': 'ok'}
 
 # CRUD for Team/Staff
 @app.get('/api/admin/team')
 async def admin_get_team(admin: dict = Depends(get_current_admin)):
+    if admin.get('role') not in ('owner', 'developer'):
+        raise HTTPException(status_code=403, detail='Тільки Власник може керувати персоналом')
     return await admin_db.get_admins_with_locations()
 
 @app.post('/api/admin/team')
 async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
-    await admin_db.add_admin(user_id=data['user_id'], username=data.get('username', ''), display_name=data['display_name'], added_by=admin['user_id'], role=data.get('role', 'admin'), locations=data.get('locations', []))
+    # Developer can add Owners, Owner can add Admins
+    me_role = admin.get('role')
+    target_role = data.get('role', 'admin')
+    
+    if me_role == 'developer':
+        pass # OK
+    elif me_role == 'owner':
+        if target_role == 'owner':
+            raise HTTPException(status_code=403, detail='Власник не може створювати інших власників')
+    else:
+        raise HTTPException(status_code=403, detail='Недостатньо прав')
+
+    await admin_db.add_admin(user_id=data['user_id'], username=data.get('username', ''), display_name=data['display_name'], added_by=admin['user_id'], role=target_role, locations=data.get('locations', []))
     return {'status': 'ok'}
 
 @app.delete('/api/admin/team/{uid}')
 async def admin_delete_team(uid: int, admin: dict = Depends(get_current_admin)):
+    me_role = admin.get('role')
+    if me_role == 'developer':
+        raise HTTPException(status_code=403, detail='Розробник не може видаляти персонал')
+    if me_role != 'owner':
+        raise HTTPException(status_code=403, detail='Тільки Власник може видаляти персонал')
+        
     await admin_db.remove_admin(uid)
     return {'status': 'ok'}
+
+# Stats and Broadcast
+@app.get('/api/admin/stats')
+async def get_admin_stats(admin: dict = Depends(get_current_admin)):
+    if admin.get('role') not in ('owner', 'developer'):
+        raise HTTPException(status_code=403, detail='Недостатньо прав')
+    
+    sales = await sales_db.get_all_sales()
+    total_revenue = sum(s.get('total', 0) for s in sales)
+    total_sales = len(sales)
+    
+    # Optional: weekly/monthly stats
+    return {
+        'total_revenue': total_revenue,
+        'total_sales': total_sales,
+        'recent_sales': sales[:10]
+    }
+
+@app.post('/api/admin/broadcast')
+async def admin_broadcast(data: dict, admin: dict = Depends(get_current_admin)):
+    if admin.get('role') not in ('owner', 'developer'):
+        raise HTTPException(status_code=403, detail='Недостатньо прав')
+    
+    message = data.get('message')
+    if not message:
+        raise HTTPException(status_code=400, detail='Повідомлення порожнє')
+        
+    from app.databases.user_database import user_db
+    from app.common.bot_instance import bot
+    
+    uids = await user_db.get_all_user_ids()
+    count = 0
+    for uid in uids:
+        try:
+            await bot.send_message(uid, message)
+            count += 1
+            await asyncio.sleep(0.05)
+        except: pass
+        
+    return {'status': 'ok', 'sent_to': count, 'total': len(uids)}
 
 if _site_dir:
     app.mount('/uploads', StaticFiles(directory=str(get_uploads_dir())), name='uploads')

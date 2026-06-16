@@ -227,8 +227,10 @@
                 <a class="nav-item" data-section="orders"><i class="fas fa-shopping-bag"></i> Активні</a>
                 <a class="nav-item" data-section="beans"><i class="fas fa-coffee"></i> Зерно</a>
                 <a class="nav-item" data-section="locations"><i class="fas fa-map-marker-alt"></i> Локації</a>
-                <a class="nav-item" data-section="socials"><i class="fas fa-share-nodes"></i> Соцмережі</a>
-                <a class="nav-item" data-section="team"><i class="fas fa-users-gear"></i> Команда</a>
+                <a class="nav-item" data-section="socials"><i class="fas fa-address-book"></i> Контакти</a>
+                <a class="nav-item" data-section="stats"><i class="fas fa-chart-line"></i> Статистика</a>
+                <a class="nav-item" data-section="broadcast"><i class="fas fa-paper-plane"></i> Розсилка</a>
+                <a class="nav-item" data-section="team"><i class="fas fa-users-gear"></i> Персонал</a>
             </nav>
         </aside>
 
@@ -254,6 +256,18 @@
             let currentAdmin = JSON.parse(localStorage.getItem('medelin_admin_user') || 'null');
             let currentSection = 'new_orders';
             let verifyInterval = null;
+            let lastActivity = Date.now();
+
+            // Auto-logout after 2 hours of inactivity
+            setInterval(() => {
+                if (sessionToken && (Date.now() - lastActivity > 2 * 60 * 60 * 1000)) {
+                    logout();
+                }
+            }, 60000);
+
+            function updateActivity() { lastActivity = Date.now(); }
+            window.onmousemove = updateActivity;
+            window.onkeydown = updateActivity;
 
             const menuToggle = document.getElementById('menu-toggle');
             const sidebar = document.getElementById('sidebar');
@@ -340,10 +354,10 @@
 
             function showPanel() {
                 document.getElementById('admin-info').textContent = `${currentAdmin.name} (${roleName(currentAdmin.role)})`;
-                const restricted = ['beans', 'locations', 'socials', 'team'];
+                const ownerSections = ['stats', 'broadcast', 'team'];
                 document.querySelectorAll('.nav-item[data-section]').forEach(item => {
                     const sec = item.getAttribute('data-section');
-                    if (restricted.includes(sec) && !['boss', 'owner', 'developer'].includes(currentAdmin.role)) {
+                    if (ownerSections.includes(sec) && !['owner', 'developer'].includes(currentAdmin.role)) {
                         item.style.display = 'none';
                     }
                 });
@@ -361,7 +375,7 @@
                 document.getElementById('verify-state').style.display = 'none'; 
             }
             function showLoader(show) { document.getElementById('loader').style.display = show ? 'flex' : 'none'; }
-            function roleName(role) { return ({ developer: 'Розробник', owner: 'Власник', boss: 'Власник', delivery_manager: 'Менеджер доставки' }[role] || role); }
+            function roleName(role) { return ({ developer: 'Розробник', owner: 'Власник', admin: 'Адмін' }[role] || role); }
 
             async function apiFetch(endpoint, method = 'GET', body = null) {
                 const options = { 
@@ -375,6 +389,11 @@
                 try {
                     const resp = await fetch(`/api/admin/${endpoint}`, options);
                     if (resp.status === 401) return logout();
+                    if (resp.status === 403) {
+                        const err = await resp.json();
+                        window.showToast(err.detail || 'Доступ заборонено', 'error');
+                        return null;
+                    }
                     return resp.ok ? await resp.json() : null;
                 } catch(e) { return null; }
             }
@@ -392,13 +411,26 @@
                     const div = document.createElement('div');
                     div.className = 'order-item';
                     const date = o.created_at ? new Date(o.created_at).toLocaleString('uk-UA') : '—';
+                    
+                    const typeMap = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Доставка', 'beans_delivery': 'Зерна', 'beans_booking': 'Зерна (Самовивіз)' };
+                    let typeLabel = typeMap[o.order_type] || o.order_type;
+                    if (o.order_type === 'nova_poshta' || o.order_type === 'beans_delivery') {
+                        if (o.delivery_info && o.delivery_info.includes('вул.')) typeLabel = "Кур'єр";
+                        else typeLabel = "Відділення";
+                    }
+
+                    const payMode = o.payment_mode || '—';
+                    let payLabel = payMode;
+                    if (payMode === 'pay_now') payLabel = o.status === 'paid' ? '<span style="color:var(--color-success);">ОПЛАЧЕНО</span>' : 'КАРТКА (Очікується)';
+                    else if (payMode === 'pay_at_checkout') payLabel = o.order_type === 'nova_poshta' ? "Накладний платіж" : "НА КАСІ";
+
                     div.innerHTML = `
                         <div class="order-info">
-                            <div class="order-title">#${String(o.order_id).slice(-6)} — ${o.fullname}</div>
+                            <div class="order-title">#${o.order_number || String(o.order_id).slice(-6)} — ${o.fullname}</div>
                             <div class="order-meta">${date} | <b>${o.phone}</b></div>
                             <div style="margin-top:0.5rem; font-size:0.9rem;">
-                                <b>Тип:</b> ${o.order_type}
-                                <span style="margin-left:10px; padding:2px 6px; border-radius:4px; background:#ffeaa7; font-weight:700;">${o.status === 'paid' ? 'ОПЛАЧЕНО' : 'НОВЕ'}</span>
+                                <b>Тип:</b> ${typeLabel} | <b>Куди:</b> ${o.delivery_info || '—'}
+                                <div style="margin-top:0.3rem;"><b>Оплата:</b> ${payLabel} | <b>Сума:</b> ${o.total_amount} ₴</div>
                             </div>
                             <div class="order-items">${o.cart || ''}${o.wishes ? `<br><br><div style="border-top:1px solid rgba(0,0,0,0.1); padding-top:0.5rem; color:#d63031;"><b>Побажання:</b> ${o.wishes}</div>` : ''}</div>
                         </div>
@@ -433,7 +465,15 @@
                 orders?.forEach(o => {
                     const div = document.createElement('div');
                     div.className = 'order-item';
-                    div.innerHTML = `<div class="order-info"><div class="order-title">#${String(o.order_id).slice(-6)} — ${o.fullname}</div><div class="order-meta">${o.phone} | ${o.location_name}</div><div class="order-items">${o.cart || ''}</div></div><div class="order-actions"><button class="btn btn--success btn--sm" onclick="completeOrder('${o.order_id}')">Готово</button></div>`;
+                    div.innerHTML = `
+                        <div class="order-info">
+                            <div class="order-title">#${o.order_number || String(o.order_id).slice(-6)} — ${o.fullname}</div>
+                            <div class="order-meta">${o.phone} | ${o.location_name} | <b>${o.total} ₴</b></div>
+                            <div class="order-items">${o.cart || ''}</div>
+                        </div>
+                        <div class="order-actions">
+                            <button class="btn btn--success btn--sm" onclick="completeOrder('${o.order_id}')">Готово</button>
+                        </div>`;
                     list.appendChild(div);
                 });
                 showLoader(false);
@@ -445,28 +485,55 @@
                 showLoader(true);
                 const beans = await apiFetch('beans');
                 const list = document.getElementById('items-list');
-                list.innerHTML = `<div class="admin-toolbar"><h3>Сорти зерна</h3><button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати сорт</button></div><div id="beans-grid" class="admin-grid"></div>`;
-                const grid = document.getElementById('beans-grid');
-                beans?.forEach(b => {
-                    const score = b.quality_score || '—';
-                    const div = document.createElement('div');
-                    div.className = 'card'; div.style.padding = '1rem';
-                    div.innerHTML = `
-                        <div style="display:flex; gap:1rem;">
-                            <div style="width:60px; height:60px; border-radius:10px; background:url('${window.fixImageUrl(b.image_url)}') center/cover; flex-shrink:0;"></div>
-                            <div style="flex:1;">
-                                <div style="font-weight:700; margin-bottom:0.2rem;">${b.name}</div>
-                                <div style="font-size:0.8rem; opacity:0.7;">${b.price_250} ₴ | Score: ${score}</div>
-                                <div style="font-size:0.8rem; opacity:0.7;">Залишок: ${b.stock_packs ?? '∞'} шт</div>
+                
+                const comm = (beans || []).filter(b => (b.category || 'commercial') === 'commercial');
+                const spec = (beans || []).filter(b => b.category === 'specialty');
+
+                let html = `<div class="admin-toolbar"><h3>Сорти зерна</h3><button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати сорт</button></div>`;
+                
+                html += `<h4 style="margin: 2rem 0 1rem; font-family:var(--font-accent); font-size:1.5rem;">Комерційна кава</h4><div id="beans-comm" class="admin-grid"></div>`;
+                html += `<h4 style="margin: 2rem 0 1rem; font-family:var(--font-accent); font-size:1.5rem;">Спешелті кава</h4><div id="beans-spec" class="admin-grid"></div>`;
+                
+                list.innerHTML = html;
+                
+                const renderGrid = (gridId, items) => {
+                    const grid = document.getElementById(gridId);
+                    if (!items.length) { grid.innerHTML = '<p style="grid-column: 1/-1; opacity:0.5;">Порожньо</p>'; return; }
+                    
+                    // Sort items: Espresso first, then Filter
+                    const sorted = [...items].sort((a, b) => {
+                        const rA = (a.roast || '').toLowerCase();
+                        const rB = (b.roast || '').toLowerCase();
+                        if (rA.includes('espresso') && !rB.includes('espresso')) return -1;
+                        if (!rA.includes('espresso') && rB.includes('espresso')) return 1;
+                        return (a.name || '').localeCompare(b.name || '');
+                    });
+
+                    sorted.forEach(b => {
+                        const score = b.quality_score || '—';
+                        const div = document.createElement('div');
+                        div.className = 'card'; div.style.padding = '1rem';
+                        div.innerHTML = `
+                            <div style="display:flex; gap:1rem;">
+                                <div style="width:60px; height:60px; border-radius:10px; background:url('${window.fixImageUrl(b.image_url)}') center/cover; flex-shrink:0; background-color:#eee;"></div>
+                                <div style="flex:1;">
+                                    <div style="font-weight:700; margin-bottom:0.2rem;">${b.name}</div>
+                                    <div style="font-size:0.8rem; opacity:0.7;">${b.price_250} ₴ | ${b.roast || '—'}</div>
+                                    <div style="font-size:0.8rem; opacity:0.7;">Score: ${score} | Склад: ${b.species || '—'}</div>
+                                    ${b.category === 'specialty' ? `<div style="font-size:0.8rem; font-weight:700; color:var(--color-coffee);">Запас: ${b.stock_packs ?? 0} шт</div>` : ''}
+                                </div>
                             </div>
-                        </div>
-                        <div class="order-actions" style="margin-top:1rem; border-top:1px solid rgba(0,0,0,0.05); padding-top:0.8rem;">
-                            <button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'>Редагувати</button>
-                            <button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')">Видалити</button>
-                        </div>
-                    `;
-                    grid.appendChild(div);
-                });
+                            <div class="order-actions" style="margin-top:1rem; border-top:1px solid rgba(0,0,0,0.05); padding-top:0.8rem;">
+                                <button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'>Редагувати</button>
+                                <button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')">Видалити</button>
+                            </div>
+                        `;
+                        grid.appendChild(div);
+                    });
+                };
+
+                renderGrid('beans-comm', comm);
+                renderGrid('beans-spec', spec);
                 showLoader(false);
             }
 
@@ -502,24 +569,31 @@
                                     <input name="name" value="${b?.name || ''}" required>
                                 </div>
                                 <div class="admin-field">
+                                    <label>Категорія</label>
+                                    <select name="category">
+                                        <option value="commercial" ${b?.category === 'commercial' ? 'selected' : ''}>Комерційна</option>
+                                        <option value="specialty" ${b?.category === 'specialty' ? 'selected' : ''}>Спешелті</option>
+                                    </select>
+                                </div>
+                                <div class="admin-field">
                                     <label>Ціна 250г (грн)</label>
                                     <input type="number" name="price_250" value="${b?.price_250 || ''}" required>
                                 </div>
                                 <div class="admin-field">
-                                    <label>Quality Score</label>
-                                    <input name="quality_score" value="${b?.quality_score || ''}" placeholder="Напр: 86.5">
+                                    <label>Quality Score / Grade</label>
+                                    <input name="quality_score" value="${b?.quality_score || ''}" placeholder="Напр: 86.5 або Зелена">
                                 </div>
                                 <div class="admin-field">
                                     <label>Залишок (пачок)</label>
-                                    <input type="number" name="stock_packs" value="${b?.stock_packs ?? ''}" placeholder="Пусто = нескінченно">
+                                    <input type="number" name="stock_packs" value="${b?.stock_packs ?? ''}" placeholder="Для спешелті">
                                 </div>
                                 <div class="admin-field">
                                     <label>Вид (Arabica/Robusta)</label>
-                                    <input name="species" value="${b?.species || 'Arabica'}">
+                                    <input name="species" value="${b?.species || 'Arabica 100%'}">
                                 </div>
                                 <div class="admin-field">
                                     <label>Обсмажка</label>
-                                    <input name="roast" value="${b?.roast || ''}" placeholder="Напр: Light/Medium">
+                                    <input name="roast" value="${b?.roast || ''}" placeholder="Espresso або Filter">
                                 </div>
                                 <div class="admin-field">
                                     <label>Обробітка</label>
@@ -542,11 +616,6 @@
                             <div class="admin-field" style="margin-top:1rem;">
                                 <label>Дескриптори (через кому)</label>
                                 <input name="descriptors" value="${b?.descriptors || ''}" placeholder="Напр: Шоколад, Горіх, Цитрус">
-                            </div>
-
-                            <div class="admin-field" style="margin-top:1rem;">
-                                <label>Смак (коротко)</label>
-                                <input name="taste" value="${b?.taste || ''}" placeholder="Напр: Солодкий з кислинкою">
                             </div>
 
                             <div class="admin-field" style="margin-top:1rem;">
@@ -590,7 +659,6 @@
             async function saveBean(id) {
                 const fd = new FormData(document.getElementById('bean-form'));
                 const data = Object.fromEntries(fd.entries());
-                // Remove the file from data as we upload it separately
                 delete data['bean-file-input'];
                 
                 const res = await apiFetch(id ? `beans/${id}` : 'beans', 'POST', data);
@@ -612,7 +680,7 @@
                     div.className = 'card'; div.style.padding = '1rem';
                     div.innerHTML = `
                         <div style="display:flex; gap:1rem;">
-                            <div style="width:60px; height:60px; border-radius:10px; background:url('${window.fixImageUrl(l.image_url)}') center/cover; flex-shrink:0;"></div>
+                            <div style="width:60px; height:60px; border-radius:10px; background:url('${window.fixImageUrl(l.image_url)}') center/cover; flex-shrink:0; background-color:#eee;"></div>
                             <div style="flex:1;">
                                 <div style="font-weight:700; margin-bottom:0.2rem;">${l.name}</div>
                                 <div style="font-size:0.8rem; opacity:0.7;">${l.address}</div>
@@ -653,14 +721,6 @@
                                 <div class="admin-field">
                                     <label>Google Maps URL</label>
                                     <input name="google_maps_url" value="${l?.google_maps_url || ''}">
-                                </div>
-                                <div class="admin-field">
-                                    <label>Широта (lat)</label>
-                                    <input type="number" step="0.000001" name="lat" value="${l?.coordinates?.lat || ''}">
-                                </div>
-                                <div class="admin-field">
-                                    <label>Довгота (lon)</label>
-                                    <input type="number" step="0.000001" name="lon" value="${l?.coordinates?.lon || ''}">
                                 </div>
                             </div>
 
@@ -718,10 +778,6 @@
                     google_maps_url: raw.google_maps_url,
                     image_url: raw.image_url,
                     atmosphere: raw.atmosphere,
-                    coordinates: {
-                        lat: parseFloat(raw.lat || 0),
-                        lon: parseFloat(raw.lon || 0)
-                    },
                     amenities: raw.amenities_str ? raw.amenities_str.split(',').map(s => s.trim()).filter(Boolean) : []
                 };
 
@@ -737,10 +793,27 @@
                 showLoader(true);
                 const socials = await apiFetch('socials');
                 const list = document.getElementById('items-list');
-                list.innerHTML = `<div class="admin-toolbar"><h3>Соцмережі</h3><button class="btn btn--primary btn--sm" onclick="openSocialModal()">+ Додати</button></div><div id="socials-list"></div>`;
+                list.innerHTML = `<div class="admin-toolbar"><h3>Контакти</h3><button class="btn btn--primary btn--sm" onclick="openSocialModal()">+ Додати</button></div><div id="socials-list"></div>`;
+                
+                const guessEmoji = (name, url) => {
+                    const n = name.toLowerCase(); const u = url.toLowerCase();
+                    if (n.includes('insta')) return '📸';
+                    if (n.includes('face') || u.includes('fb.')) return '👥';
+                    if (n.includes('tele') || u.includes('t.me')) return '✈️';
+                    if (n.includes('phone') || u.includes('tel:')) return '📞';
+                    return '🔗';
+                };
+
                 socials?.forEach(s => {
                     const div = document.createElement('div'); div.className = 'order-item';
-                    div.innerHTML = `<div class="order-info"><strong>${s.name}</strong><br><small>${s.url}</small></div><div class="order-actions"><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button></div>`;
+                    div.innerHTML = `
+                        <div class="order-info">
+                            <div style="font-weight:700; font-size:1.1rem;">${guessEmoji(s.name, s.url)} ${s.name}</div>
+                            <div style="font-size:0.9rem; opacity:0.7;">${s.url}</div>
+                        </div>
+                        <div class="order-actions">
+                            <button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button>
+                        </div>`;
                     document.getElementById('socials-list').appendChild(div);
                 });
                 showLoader(false);
@@ -748,21 +821,92 @@
 
             function openSocialModal() {
                 const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `<div class="admin-modal__panel" style="max-width:400px;"><div class="admin-modal__header"><h3 class="admin-modal__title">Додати контакт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="social-form"><div class="admin-field"><label>Назва</label><input name="name" required></div><div class="admin-field" style="margin-top:1rem;"><label>URL</label><input name="url" required></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveSocial()">Зберегти</button></div></div>`;
+                modal.innerHTML = `<div class="admin-modal__panel" style="max-width:400px;"><div class="admin-modal__header"><h3 class="admin-modal__title">Додати контакт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="social-form"><div class="admin-field"><label>Назва</label><input name="name" placeholder="Напр: Instagram" required></div><div class="admin-field" style="margin-top:1rem;"><label>Дані (URL/тел)</label><input name="url" placeholder="https://..." required></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveSocial()">Зберегти</button></div></div>`;
                 modal.classList.add('admin-modal--active');
             }
             async function saveSocial() { await apiFetch('socials', 'POST', Object.fromEntries(new FormData(document.getElementById('social-form')).entries())); closeAdminModal(); refreshData(); }
             async function deleteSocial(id) { if (confirm('Видалити?')) { await apiFetch(`socials/${id}`, 'DELETE'); refreshData(); } }
 
+            async function loadStats() {
+                showLoader(true);
+                const stats = await apiFetch('stats');
+                const list = document.getElementById('items-list');
+                if (!stats) { list.innerHTML = 'Помилка завантаження'; showLoader(false); return; }
+                
+                let html = `
+                    <div class="admin-toolbar"><h3>Статистика продажів</h3></div>
+                    <div class="admin-grid">
+                        <div class="card" style="text-align:center;">
+                            <div style="font-size:0.9rem; font-weight:800; opacity:0.6; margin-bottom:1rem; text-transform:uppercase;">Загальна виручка</div>
+                            <div style="font-size:2.5rem; font-weight:900; color:var(--color-success);">${stats.total_revenue} ₴</div>
+                        </div>
+                        <div class="card" style="text-align:center;">
+                            <div style="font-size:0.9rem; font-weight:800; opacity:0.6; margin-bottom:1rem; text-transform:uppercase;">Кількість продажів</div>
+                            <div style="font-size:2.5rem; font-weight:900; color:var(--color-coffee);">${stats.total_sales}</div>
+                        </div>
+                    </div>
+                    <h4 style="margin: 2rem 0 1rem; font-family:var(--font-accent); font-size:1.5rem;">Останні продажі</h4>
+                    <div id="stats-recent"></div>
+                `;
+                list.innerHTML = html;
+                
+                const recent = stats.recent_sales || [];
+                const grid = document.getElementById('stats-recent');
+                recent.forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = 'order-item';
+                    const date = s.timestamp ? new Date(s.timestamp).toLocaleString('uk-UA') : '—';
+                    div.innerHTML = `
+                        <div class="order-info">
+                            <strong>${s.fullname || '—'}</strong><br>
+                            <small>${date} | ${s.location_id || 'Web'}</small>
+                        </div>
+                        <div style="font-weight:900; font-size:1.2rem; color:var(--color-dark-brown);">${s.total} ₴</div>
+                    `;
+                    grid.appendChild(div);
+                });
+                showLoader(false);
+            }
+
+            async function loadBroadcast() {
+                const list = document.getElementById('items-list');
+                list.innerHTML = `
+                    <div class="admin-toolbar"><h3>Розсилка повідомлень</h3></div>
+                    <div class="card">
+                        <p style="margin-bottom:1.5rem; color:var(--color-text-muted);">Повідомлення отримають УСІ користувачі, які коли-небудь взаємодіяли з ботом.</p>
+                        <div class="admin-field">
+                            <label>Текст повідомлення</label>
+                            <textarea id="broadcast-msg" rows="6" placeholder="Введіть текст розсилки..."></textarea>
+                        </div>
+                        <div style="margin-top:2rem;">
+                            <button class="btn btn--primary btn--block" onclick="sendBroadcast()">🚀 Запустити розсилку</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            async function sendBroadcast() {
+                const msg = document.getElementById('broadcast-msg').value;
+                if (!msg) return alert('Введіть текст');
+                if (!confirm('Ви впевнені? Повідомлення буде надіслано ВСІМ користувачам.')) return;
+                
+                showLoader(true);
+                const res = await apiFetch('broadcast', 'POST', { message: msg });
+                showLoader(false);
+                if (res) {
+                    alert(`Розсилка завершена! Надіслано: ${res.sent_to}/${res.total}`);
+                    document.getElementById('broadcast-msg').value = '';
+                }
+            }
+
             async function loadTeam() {
                 showLoader(true);
                 const [team, locs] = await Promise.all([apiFetch('team'), apiFetch('locations')]);
                 const list = document.getElementById('items-list');
-                list.innerHTML = `<div class="admin-toolbar"><h3>Команда</h3><button class="btn btn--primary btn--sm" onclick='openTeamModal(null, ${JSON.stringify(locs)})'>+ Додати</button></div><div id="team-list"></div>`;
+                list.innerHTML = `<div class="admin-toolbar"><h3>Персонал</h3><button class="btn btn--primary btn--sm" onclick='openTeamModal(null, ${JSON.stringify(locs)})'>+ Додати співробітника</button></div><div id="team-list"></div>`;
                 team?.forEach(t => {
-                    // t = [uid, username, display_name, role, locations]
                     const div = document.createElement('div'); div.className = 'order-item';
-                    const adminLocs = t[4] || [];
+                    const adminLocs = t[6] || [];
                     const locNames = adminLocs.length ? adminLocs.map(id => locs.find(l => l.id === id)?.name || id).join(', ') : 'Усі';
                     div.innerHTML = `
                         <div class="order-info">
@@ -770,7 +914,6 @@
                             <br><small>Роль: ${roleName(t[3])} | Доступ: ${locNames}</small>
                         </div>
                         <div class="order-actions">
-                            <button class="btn btn--outline btn--sm" onclick='openTeamModal(${JSON.stringify(t).replace(/'/g, "&apos;")}, ${JSON.stringify(locs).replace(/'/g, "&apos;")})'>Редагувати</button>
                             <button class="btn btn--danger btn--sm" onclick="deleteTeam('${t[0]}')">Видалити</button>
                         </div>`;
                     document.getElementById('team-list').appendChild(div);
@@ -780,48 +923,33 @@
 
             function openTeamModal(t = null, allLocs = []) {
                 const modal = document.getElementById('admin-modal');
-                // t = [uid, username, display_name, role, locations]
-                const isEdit = !!t;
-                const adminLocs = t ? t[4] || [] : [];
-                
-                let locsHtml = allLocs.map(l => `
-                    <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; cursor:pointer;">
-                        <input type="checkbox" name="locations" value="${l.id}" ${adminLocs.includes(l.id) ? 'checked' : ''} style="width:auto;">
-                        <span style="font-size:0.9rem;">${l.name}</span>
-                    </label>
-                `).join('');
-
                 modal.innerHTML = `
                     <div class="admin-modal__panel" style="max-width:550px;">
                         <div class="admin-modal__header">
-                            <h3 class="admin-modal__title">${isEdit ? 'Редагувати' : 'Додати'} адміна</h3>
+                            <h3 class="admin-modal__title">Додати співробітника</h3>
                             <button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button>
                         </div>
+                        <p style="font-size:0.85rem; color:var(--color-text-muted); margin-bottom:1.5rem;">Співробітник повинен спочатку натиснути /start у боті.</p>
                         <form id="team-form">
                             <div class="admin-field">
-                                <label>TG ID</label>
-                                <input type="number" name="user_id" value="${t ? t[0] : ''}" ${isEdit ? 'readonly' : ''} required>
+                                <label>TG ID, @username або телефон</label>
+                                <input type="text" name="user_id" placeholder="Напр: 12345678" required>
                             </div>
                             <div class="admin-field" style="margin-top:1rem;">
-                                <label>Username (без @)</label>
-                                <input name="username" value="${t ? t[1] || '' : ''}">
-                            </div>
-                            <div class="admin-field" style="margin-top:1rem;">
-                                <label>Ім'я</label>
-                                <input name="display_name" value="${t ? t[2] : ''}" required>
+                                <label>Ім'я для команди</label>
+                                <input name="display_name" placeholder="Олександр" required>
                             </div>
                             <div class="admin-field" style="margin-top:1rem;">
                                 <label>Роль</label>
                                 <select name="role">
-                                    <option value="admin" ${t && t[3] === 'admin' ? 'selected' : ''}>Адмін</option>
-                                    <option value="delivery_manager" ${t && t[3] === 'delivery_manager' ? 'selected' : ''}>Менеджер доставки</option>
-                                    <option value="owner" ${t && t[3] === 'owner' ? 'selected' : ''}>Власник</option>
+                                    <option value="admin">Адмін</option>
+                                    <option value="owner">Власник</option>
                                 </select>
                             </div>
                             <div class="admin-field" style="margin-top:1.5rem;">
                                 <label>Доступ до локацій (якщо пусто - до всіх)</label>
                                 <div style="margin-top:0.5rem; padding:1rem; border:2px solid var(--color-coffee-soft); border-radius:15px; max-height:200px; overflow-y:auto;">
-                                    ${locsHtml}
+                                    ${allLocs.map(l => `<label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;"><input type="checkbox" name="locations" value="${l.id}" style="width:auto;"> ${l.name}</label>`).join('')}
                                 </div>
                             </div>
                         </form>
@@ -838,23 +966,20 @@
                 const form = document.getElementById('team-form');
                 const fd = new FormData(form);
                 const data = {
-                    user_id: parseInt(fd.get('user_id')),
-                    username: fd.get('username'),
+                    user_id: fd.get('user_id'), // identifier
                     display_name: fd.get('display_name'),
                     role: fd.get('role'),
                     locations: []
                 };
-                form.querySelectorAll('input[name="locations"]:checked').forEach(cb => {
-                    data.locations.push(cb.value);
-                });
+                form.querySelectorAll('input[name="locations"]:checked').forEach(cb => data.locations.push(cb.value));
 
                 const res = await apiFetch('team', 'POST', data);
                 if (res) {
                     closeAdminModal(); refreshData();
-                    window.showToast('Команду оновлено', 'success');
+                    window.showToast('Співробітника додано', 'success');
                 }
             }
-            async function deleteTeam(id) { if (confirm('Видалити?')) { await apiFetch(`team/${id}`, 'DELETE'); refreshData(); } }
+            async function deleteTeam(id) { if (confirm('Видалити співробітника з команди?')) { await apiFetch(`team/${id}`, 'DELETE'); refreshData(); } }
 
             function closeAdminModal() { document.getElementById('admin-modal').classList.remove('admin-modal--active'); }
 
@@ -864,6 +989,8 @@
                 if (currentSection === 'beans') loadBeans();
                 if (currentSection === 'locations') loadLocations();
                 if (currentSection === 'socials') loadSocials();
+                if (currentSection === 'stats') loadStats();
+                if (currentSection === 'broadcast') loadBroadcast();
                 if (currentSection === 'team') loadTeam();
             }
 

@@ -212,16 +212,23 @@ class AdminDatabase:
             'user_id': int(user_id),
             'token': token,
             'created_at': datetime.utcnow(),
-            'expires_at': datetime.utcnow() + timedelta(days=7)
+            'expires_at': datetime.utcnow() + timedelta(hours=2)
         })
 
     async def verify_session(self, token: str):
         db = await get_db()
+        now = datetime.utcnow()
         sess = await db.admin_sessions.find_one({
             'token': token,
-            'expires_at': {'$gt': datetime.utcnow()}
+            'expires_at': {'$gt': now}
         })
         if not sess: return None
+        
+        # Refresh session for another 2 hours on each request (inactivity timeout)
+        await db.admin_sessions.update_one(
+            {'_id': sess['_id']},
+            {'$set': {'expires_at': now + timedelta(hours=2)}}
+        )
         
         user_id = sess['user_id']
         admin = await self.get_admin_by_id(user_id)
