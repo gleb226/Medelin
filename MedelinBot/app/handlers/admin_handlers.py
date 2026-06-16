@@ -144,18 +144,18 @@ async def process_broadcast(message: Message, state: FSMContext, bot: Bot):
 
 @admin_router.message(Command('stats'))
 async def cmd_stats(message: Message):
-    is_admin = await admin_db.is_admin(message.from_user.id)
-    if not is_admin: return
-    
+    role = await get_user_role(message.from_user.id)
+    if role != 'developer': return
+
     from app.databases.sales_database import sales_db
     sales = await sales_db.get_all_sales()
-    
-    total_sales = len(sales)
-    total_revenue = sum(s.get('price', 0) * s.get('quantity', 1) for s in sales if s.get('record_type') == 'sale')
-    
+
+    total_sales = len([s for s in sales if s.get('record_type') == 'sale'])
+    total_revenue = sum(s.get('total', 0) or (s.get('price', 0) * s.get('quantity', 1)) for s in sales if s.get('record_type') == 'sale')
+
     text = (
         f"📊 <b>СТАТИСТИКА ПРОДАЖІВ</b>\n\n"
-        f"💰 Загальна виручка: <b>{total_revenue} грн</b>\n"
+        f"💰 Загальна виручка: <b>{int(total_revenue)} грн</b>\n"
         f"📦 Всього продажів: <b>{total_sales}</b>"
     )
     await message.answer(text, parse_mode='HTML')
@@ -1150,6 +1150,11 @@ async def confirm_order_handler(callback: CallbackQuery, bot: Bot):
         return
 
     await orders_db.update_status(oid, 'confirmed')
+    
+    # Bot Sync: Update messages for all admins
+    from app.utils.admin_notifications import update_order_notifications
+    await update_order_notifications(oid, 'confirmed')
+    
     # Deduct specialty stock
     try:
         await _deduct_stock_from_cart(order.get('cart', ''), bot)
@@ -1164,7 +1169,6 @@ async def confirm_order_handler(callback: CallbackQuery, bot: Bot):
         order.get('payment_mode'), order.get('wishes')
     )
     
-    await safe_edit_message(callback.message, callback.message.text + "\n\n✅ <b>ПІДТВЕРДЖЕНО</b>", parse_mode='HTML')
     await callback.answer('Підтверджено!')
 
 @admin_router.callback_query(F.data.startswith('reject_order_'))
@@ -1181,7 +1185,11 @@ async def reject_order_handler(callback: CallbackQuery, bot: Bot):
         return
     
     await orders_db.update_status(oid, 'rejected')
-    await safe_edit_message(callback.message, callback.message.text + "\n\n❌ <b>ВІДХИЛЕНО</b>", parse_mode='HTML')
+    
+    # Bot Sync
+    from app.utils.admin_notifications import update_order_notifications
+    await update_order_notifications(oid, 'rejected')
+    
     await callback.answer('Відхилено.')
 
 @admin_router.callback_query(F.data.startswith('finish_order_'))
@@ -1192,12 +1200,31 @@ async def finish_order_handler(callback: CallbackQuery, bot: Bot):
         return
 
     oid = callback.data.replace('finish_order_', '')
+    
+    # Add to sales
+    order = await active_orders_db.get_active_order_by_id(oid)
+    if order:
+        from app.databases.sales_database import sales_db
+        await sales_db.add_sale(
+            order_id=oid,
+            user_id=order.get('user_id'),
+            fullname=order.get('fullname'),
+            items=order.get('cart'),
+            total=order.get('total', 0),
+            location_id=order.get('location_id')
+        )
+    
     await active_orders_db.delete_active_order(oid)
+    
+    # Bot Sync
+    from app.utils.admin_notifications import update_order_notifications
+    await update_order_notifications(oid, 'completed')
+    
     await callback.answer('Замовлення завершено!')
     try:
         await callback.message.delete()
     except:
-        await safe_edit_message(callback.message, callback.message.text + "\n\n✅ <b>ЗАВЕРШЕНО</b>")
+        pass
 
 
 # --- CONTENT MANAGEMENT BLOCK ---

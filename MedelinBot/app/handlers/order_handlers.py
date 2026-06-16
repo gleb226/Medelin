@@ -215,15 +215,11 @@ async def process_beans_final(user, chat_id, state, bot):
 
     if is_new:
         msg = f"☕️ <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n👤 {user.full_name}\n📞 <code>{data.get('phone')}</code>\n🚚 Куди: <b>{delivery_info}</b>"
-
         msg += f"\n📦 Сорт: <b>{data['bean_name']}</b>\n💳 Оплата: <b>{pay_label}</b>"
         msg += f"\n\n🛒 {data['bean_name']}"
 
-        targets = await admin_db.get_notification_targets(data.get('location_id'))
-
-        for aid in targets:
-            try: await bot.send_message(aid, msg, reply_markup=akb.get_booking_manage_kb(rid), parse_mode='HTML')
-            except: pass
+        from app.utils.admin_notifications import send_admin_notification
+        await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(rid), location_id=data.get('location_id'), order_id=rid)
 
     await bot.send_message(chat_id, '✅ <b>ДЯКУЄМО!</b> Ваше замовлення прийнято.', reply_markup=kb.get_main_menu(is_admin), parse_mode='HTML')
     await state.clear()
