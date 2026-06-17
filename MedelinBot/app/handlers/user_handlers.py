@@ -158,9 +158,9 @@ async def show_location_details(callback: CallbackQuery):
     text += f"🕒 <b>Графік:</b> {loc['schedule']}\n"
 
 
-    if loc.get('atmosphere'):
+    if loc.get('description') or loc.get('atmosphere'):
+        text += f"\n✨ {loc.get('description') or loc['atmosphere']}\n"
 
-        text += f"\n✨ {loc['atmosphere']}\n"
 
     kb_loc = InlineKeyboardMarkup(inline_keyboard=[
 

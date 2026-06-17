@@ -85,9 +85,16 @@
             .sidebar {
                 width: var(--sidebar-width); background: var(--color-dark-brown);
                 color: white; display: flex; flex-direction: column; position: fixed; height: 100vh;
-                transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 z-index: 2000; box-shadow: 15px 0 40px rgba(0,0,0,0.15);
             }
+
+            .sidebar-overlay {
+                position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+                z-index: 1999; display: none; backdrop-filter: blur(4px);
+                transition: opacity 0.4s ease; opacity: 0;
+            }
+            .sidebar-overlay--active { display: block; opacity: 1; }
 
             .main-content {
                 flex: 1; margin-left: var(--sidebar-width); padding: clamp(1.5rem, 4vw, 4rem);
@@ -124,7 +131,7 @@
             .order-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: flex-end; }
 
             .admin-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; padding-bottom: 1rem; border-bottom: 2px solid var(--color-coffee-soft); }
-            .admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(24%, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+            .admin-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
             
             .bean-card, .location-card {
                 background: white; border-radius: 18px; overflow: hidden;
@@ -132,17 +139,17 @@
                 transition: all 0.3s ease; display: flex; flex-direction: column;
             }
             .bean-card:hover, .location-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(139, 94, 60, 0.1); }
-            .bean-card .card-img { width: 100%; aspect-ratio: 2/3; height: auto; object-fit: cover; cursor: zoom-in; }
+            .bean-card .card-img { width: 100%; aspect-ratio: 3/4; height: auto; object-fit: cover; cursor: zoom-in; }
             .location-card .card-img { width: 100%; aspect-ratio: 16/9; height: auto; object-fit: cover; cursor: zoom-in; }
             .card-body { padding: 1.2rem; flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
 
-            .info-block { background: #fdfcf9; padding: 0.8rem 1.2rem; border-radius: 12px; border: 1px solid var(--color-coffee-soft); font-size: 0.9rem; }
+            .info-block { background: #fdfcf9; padding: 0.8rem 1.2rem; border-radius: 12px; border: 1px solid var(--color-coffee-soft); font-size: 0.95rem; }
             .info-block b { color: var(--color-coffee); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.2rem; }
-            .card-title { font-family: var(--font-accent); font-size: 1.2rem; color: var(--color-dark-brown); margin-bottom: 0.1rem; }
-            .card-desc { font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.5rem; flex: 1; line-height: 1.5; }
-            .card-stats { display: flex; gap: 0.6rem; font-size: 0.8rem; font-weight: 700; color: var(--color-coffee); margin-bottom: 0.4rem; }
+            .card-title { font-family: var(--font-accent); font-size: 1.35rem; color: var(--color-dark-brown); margin-bottom: 0.1rem; }
+            .card-desc { font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: 0.5rem; flex: 1; line-height: 1.5; }
+            .card-stats { display: flex; gap: 0.6rem; font-size: 0.85rem; font-weight: 700; color: var(--color-coffee); margin-bottom: 0.4rem; }
 
-            .hint-text { font-size: 0.75rem; color: var(--color-coffee); margin-top: 0.3rem; font-weight: 600; opacity: 0.8; }
+            .hint-text { font-size: 0.8rem; color: var(--color-coffee); margin-top: 0.3rem; font-weight: 600; opacity: 0.8; }
 
             .confirm-modal {
                 position: fixed; inset: 0; background: rgba(60, 47, 47, 0.4); z-index: 4000;
@@ -313,7 +320,15 @@
 
             const menuToggle = document.getElementById('menu-toggle');
             const sidebar = document.getElementById('sidebar');
-            menuToggle.onclick = () => sidebar.classList.toggle('sidebar--active');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            function toggleMenu() {
+                sidebar.classList.toggle('sidebar--active');
+                overlay.classList.toggle('sidebar-overlay--active');
+            }
+
+            menuToggle.onclick = toggleMenu;
+            overlay.onclick = toggleMenu;
 
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.addEventListener('click', () => {
@@ -323,7 +338,10 @@
                     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('nav-item--active'));
                     item.classList.add('nav-item--active');
                     document.getElementById('section-title').textContent = item.textContent.trim();
-                    if (window.innerWidth <= 1024) sidebar.classList.remove('sidebar--active');
+                    if (window.innerWidth <= 1024) {
+                        sidebar.classList.remove('sidebar--active');
+                        overlay.classList.remove('sidebar-overlay--active');
+                    }
                     refreshData();
                 });
             });
@@ -639,11 +657,10 @@
                             <div style="flex:1;">
                                 <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown); font-size:2.2rem; margin-bottom:1.5rem;">${l.name}</h2>
                                 <div style="display:flex; flex-direction:column; gap:1rem;">
-                                    <p><b>📍 Адреса:</b> ${l.address}</p>
-                                    <p><b>⏰ Графік:</b> ${l.schedule || '—'}</p>
-                                    <p><b>💰 Середній чек:</b> ${l.avg_check || '—'} ₴</p>
-                                    <p><b>✨ Зручності:</b> ${l.amenities || '—'}</p>
-                                    <p><b>📝 Опис:</b> ${l.description || '—'}</p>
+                                    <p><i class="fas fa-map-marker-alt" style="color:var(--color-coffee); width:20px;"></i> <b>Адреса:</b> ${l.address}</p>
+                                    <p><i class="fas fa-clock" style="color:var(--color-coffee); width:20px;"></i> <b>Графік:</b> ${l.schedule || '—'}</p>
+                                    <p><i class="fas fa-star" style="color:var(--color-coffee); width:20px;"></i> <b>Зручності:</b> ${Array.isArray(l.amenities) ? l.amenities.join(', ') : (l.amenities || '—')}</p>
+                                    <p><i class="fas fa-align-left" style="color:var(--color-coffee); width:20px;"></i> <b>Опис:</b> ${l.description || '—'}</p>
                                     ${l.google_maps_url ? `<a href="${l.google_maps_url}" target="_blank" class="btn btn--outline btn--sm" style="margin-top:1rem;">ВІДКРИТИ НА КАРТАХ <i class="fas fa-external-link-alt"></i></a>` : ''}
                                 </div>
                             </div>
@@ -668,7 +685,6 @@
                                 <div class="admin-field"><label>Назва</label><input name="name" value="${l?.name || ''}" placeholder="Меделін Центр" required></div>
                                 <div class="admin-field"><label>Адреса</label><input name="address" value="${l?.address || ''}" placeholder="вул. Корятовича, 1" required></div>
                                 <div class="admin-field"><label>Графік</label><input name="schedule" value="${l?.schedule || ''}" placeholder="Пн-Пт: 08:00-20:00"></div>
-                                <div class="admin-field"><label>Середній чек</label><input name="avg_check" value="${l?.avg_check || ''}" placeholder="250"></div>
                                 <div class="admin-field"><label>Зручності</label><input name="amenities" value="${l?.amenities || ''}" placeholder="Wi-Fi, Тераса, Pets friendly"></div>
                                 <div class="admin-field"><label>Maps URL</label><input name="google_maps_url" value="${l?.google_maps_url || ''}" placeholder="https://maps.app.goo.gl/..."></div>
                             </div>
@@ -699,16 +715,40 @@
                 if (!socials) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
                 const isDev = currentAdmin.role === 'developer';
                 list.innerHTML = `<div class="admin-toolbar"><h3>Контакти</h3>${!isDev ? `<button class="btn btn--primary btn--sm" onclick="openSocialModal()">+ Додати</button>` : ''}</div><div id="socials-list"></div>`;
+                
+                const SOCIAL_ICONS = {
+                    instagram: 'fab fa-instagram',
+                    facebook: 'fab fa-facebook-f',
+                    email: 'fas fa-envelope',
+                    phone: 'fas fa-phone-alt',
+                    github: 'fab fa-github',
+                    tiktok: 'fab fa-tiktok',
+                    telegram: 'fab fa-telegram',
+                    viber: 'fab fa-viber',
+                    youtube: 'fab fa-youtube',
+                };
+
+                const guessSocialKeyFromUrl = (url) => {
+                    const u = String(url || '').toLowerCase().trim();
+                    if (u.includes('instagram.')) return 'instagram';
+                    if (u.includes('tiktok.')) return 'tiktok';
+                    if (u.includes('facebook.') || u.includes('fb.')) return 'facebook';
+                    if (u.includes('youtube.') || u.includes('youtu.be')) return 'youtube';
+                    if (u.includes('telegram.') || u.includes('t.me/')) return 'telegram';
+                    if (u.includes('viber.')) return 'viber';
+                    if (u.includes('github.')) return 'github';
+                    if (u.startsWith('tel:') || u.startsWith('+') || /^\d{7,}$/.test(u.replace(/[\s\-()]/g, ''))) return 'phone';
+                    if (u.startsWith('mailto:')) return 'email';
+                    return null;
+                };
+
                 socials.forEach(s => {
-                    let icon = 'fas fa-link';
-                    const name = s.name.toLowerCase();
-                    if (name.includes('insta')) icon = 'fab fa-instagram';
-                    else if (name.includes('face')) icon = 'fab fa-facebook';
-                    else if (name.includes('tele')) icon = 'fab fa-telegram';
-                    else if (name.includes('phone') || name.includes('тел')) icon = 'fas fa-phone';
+                    const nameKey = s.name.toLowerCase().trim();
+                    const byUrl = guessSocialKeyFromUrl(s.url);
+                    const icon = SOCIAL_ICONS[nameKey] || (byUrl ? SOCIAL_ICONS[byUrl] : null) || 'fas fa-link';
                     
                     const div = document.createElement('div'); div.className = 'order-item';
-                    div.innerHTML = `<div class="order-info"><div style="font-weight:700;"><i class="${icon}"></i> ${s.name}</div><div style="font-size:0.9rem; opacity:0.7;">${s.url}</div></div>
+                    div.innerHTML = `<div class="order-info"><div style="font-weight:700;"><i class="${icon}" style="width:24px; color:var(--color-coffee);"></i> ${s.name}</div><div style="font-size:0.9rem; opacity:0.7;">${s.url}</div></div>
                         ${!isDev ? `<div class="order-actions"><button class="btn btn--outline btn--sm" onclick='openSocialModal(${JSON.stringify(s).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button></div>` : ''}`;
                     document.getElementById('socials-list').appendChild(div);
                 });
@@ -717,7 +757,7 @@
 
             function openSocialModal(s = null) {
                 const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `<div class="admin-modal__panel" style="max-width:400px;"><div class="admin-modal__header"><h3>${s ? 'Редагувати' : 'Додати'} контакт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="social-form"><div class="admin-field"><label>Назва</label><input name="name" value="${s?.name || ''}" placeholder="Наприклад: Instagram" required></div><div class="admin-field" style="margin-top:1rem;"><label>Дані (URL / Тел)</label><input name="url" value="${s?.url || ''}" placeholder="https://instagram.com/medelin..." required></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveSocial('${s?.id || ''}')">Зберегти</button></div></div>`;
+                modal.innerHTML = `<div class="admin-modal__panel" style="max-width:400px;"><div class="admin-modal__header"><h3>${s ? 'Редагувати' : 'Додати'} контакт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="social-form"><div class="admin-field"><label>Назва</label><input name="name" value="${s?.name || ''}" placeholder="Наприклад: Instagram" required></div><div class="admin-field" style="margin-top:1rem;"><label>Дані (URL / Тел / Email)</label><input name="url" value="${s?.url || ''}" placeholder="https://instagram.com/medelin..." required></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveSocial('${s?.id || ''}')">Зберегти</button></div></div>`;
                 modal.classList.add('admin-modal--active');
             }
             async function saveSocial(id) { await apiFetch(id ? `socials/${id}` : 'socials', 'POST', Object.fromEntries(new FormData(document.getElementById('social-form')).entries())); closeAdminModal(); refreshData(); }
@@ -778,32 +818,50 @@
             }
 
             async function loadTeam() {
-                showLoader(true); const [team, locs] = await Promise.all([apiFetch('team'), apiFetch('locations')]);
-                const list = document.getElementById('items-list'); if (!team) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                const canManage = currentAdmin.role === 'developer' || currentAdmin.role === 'owner';
-                list.innerHTML = `<div class="admin-toolbar"><h3>Персонал</h3>${canManage ? `<button class="btn btn--primary btn--sm" onclick='openTeamModal(null, ${JSON.stringify(locs).replace(/'/g, "&apos;")})'>+ Додати</button>` : ''}</div><div id="team-list"></div>`;
+                showLoader(true);
+                const team = await apiFetch('team');
+                const list = document.getElementById('items-list');
+                if (!team) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
+                const isDev = currentAdmin.role === 'developer';
+                const isOwner = currentAdmin.role === 'owner';
+                
+                list.innerHTML = `<div class="admin-toolbar"><h3>Персонал</h3>${(isDev || isOwner) ? `<button class="btn btn--primary btn--sm" onclick='openTeamModal()'>+ Додати</button>` : ''}</div><div id="team-list"></div>`;
+                
                 team.forEach(t => { 
                     const div = document.createElement('div'); div.className = 'order-item'; 
+                    // Developer can only delete non-owners, or manage owners if user said "окрім додавання співробіитника власник"
+                    // Fix: Developer can delete everyone except themselves if needed, but let's stick to normal logic.
+                    // User hint: "В розробника має бути рідонлі він нічого не може приймати робити окрім додавання співробіитника власник"
+                    const canDelete = isOwner || (isDev && t.role === 'owner');
+
                     div.innerHTML = `<div class="order-info">
-                            <div style="font-weight:800; color:var(--color-dark-brown);">${t[2]}</div>
-                            <div style="font-size:0.9rem; color:var(--color-text-muted);">@${t[1] || '—'} | TG: ${t[0]} | ${roleName(t[3])}</div>
+                            <div style="font-weight:800; color:var(--color-dark-brown);">${t.display_name}</div>
+                            <div style="font-size:0.9rem; color:var(--color-text-muted);">
+                                <i class="fab fa-telegram" style="color:#0088cc;"></i> @${t.username || '—'} | 
+                                <i class="fas fa-fingerprint"></i> ID: ${t.user_id} | 
+                                <i class="fas fa-phone-alt"></i> ${t.phone || '—'} | 
+                                <b>${roleName(t.role)}</b>
+                            </div>
                         </div>
-                        ${canManage ? `<button class="btn btn--danger btn--sm" onclick="deleteTeam('${t[0]}')"><i class="fas fa-trash"></i></button>` : ''}`; 
+                        ${canDelete ? `<button class="btn btn--danger btn--sm" onclick="deleteTeam('${t.user_id}')"><i class="fas fa-trash"></i></button>` : ''}`; 
                     document.getElementById('team-list').appendChild(div); 
                 });
                 showLoader(false);
             }
 
-            function openTeamModal(t = null, allLocs = []) {
+            function openTeamModal() {
                 const modal = document.getElementById('admin-modal');
+                const isDev = currentAdmin.role === 'developer';
+                
                 modal.innerHTML = `<div class="admin-modal__panel" style="max-width:500px;"><div class="admin-modal__header"><h3>Додати персонал</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
+                    <p style="font-size:0.85rem; color:var(--color-text-muted); margin-bottom:1.5rem;">Введіть ID або @username. Дані (ім'я, телефон) підтягнуться автоматично з бази бота.</p>
                     <form id="team-form">
                         <div class="admin-field"><label>TG ID / @username</label><input name="user_id" placeholder="Наприклад: 12345678 або @nickname" required></div>
-                        <div class="admin-field" style="margin-top:1rem;"><label>Ім'я (для відображення)</label><input name="display_name" placeholder="Наприклад: Олександр" required></div>
-                        <div class="admin-field" style="margin-top:1rem;"><label>Роль</label><select name="role"><option value="admin">Адмін</option><option value="owner">Власник</option></select></div>
-                        <div style="margin-top:1rem;"><label style="font-size: 0.8rem; font-weight: 800; color: var(--color-dark-brown); text-transform: uppercase;">Доступ до локацій:</label></div>
-                        <div style="max-height:150px; overflow-y:auto; margin-top:0.5rem; padding:1rem; background:#fdfcf9; border: 1px solid var(--color-coffee-soft); border-radius:15px;">
-                            ${(allLocs||[]).map(l=>`<label style="display:block; margin-bottom:0.5rem; cursor:pointer; font-size:0.9rem;"><input type="checkbox" name="locations" value="${l.id}"> ${l.name}</label>`).join('')}
+                        <div class="admin-field" style="margin-top:1rem;"><label>Роль</label>
+                            <select name="role">
+                                <option value="admin">Адмін</option>
+                                <option value="owner">Власник</option>
+                            </select>
                         </div>
                     </form><div class="admin-modal__footer"><button onclick="saveTeam()" class="btn btn--primary btn--block">Зберегти</button></div></div>`;
                 modal.classList.add('admin-modal--active');
@@ -813,20 +871,11 @@
                 const form = document.getElementById('team-form'); 
                 const fd = new FormData(form); 
                 const userIdVal = fd.get('user_id').trim();
-                let user_id = userIdVal;
-                let username = '';
-                
-                if (userIdVal.startsWith('@')) { username = userIdVal.substring(1); user_id = '0'; }
-                else if (!isNaN(userIdVal)) { user_id = userIdVal; }
                 
                 const data = { 
-                    user_id: user_id, 
-                    username: username,
-                    display_name: fd.get('display_name'), 
-                    role: fd.get('role'), 
-                    locations: [] 
+                    user_id: userIdVal,
+                    role: fd.get('role')
                 }; 
-                form.querySelectorAll('input[name="locations"]:checked').forEach(cb => data.locations.push(cb.value)); 
                 
                 showLoader(true);
                 const res = await apiFetch('team', 'POST', data); 

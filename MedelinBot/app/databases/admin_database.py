@@ -3,6 +3,7 @@ from app.common.config import DEVELOPER_IDS
 
 from datetime import datetime, timedelta
 import re
+from typing import Any
 
 from app.databases.mongo_client import get_db, projection_without_mongo_id
 
@@ -88,11 +89,16 @@ class AdminDatabase:
             upsert=True,
         )
 
-    async def remove_admin(self, user_id: int):
+    async def remove_admin(self, user_id: Any):
         if str(user_id) in DEVELOPER_IDS:
             return
         db = await get_db()
-        await db.admins.delete_one({'user_id': int(user_id)})
+        # Handle both int and string user_id
+        try:
+            uid = int(user_id)
+            await db.admins.delete_one({'user_id': {'$in': [uid, str(uid)]}})
+        except:
+            await db.admins.delete_one({'user_id': str(user_id)})
 
     async def get_notification_targets(self, location_id: str | None, notification_type: str = 'new_order') -> list:
         db = await get_db()

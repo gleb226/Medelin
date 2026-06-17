@@ -685,7 +685,26 @@ async def admin_get_team(admin: dict = Depends(get_current_admin)):
     try:
         if admin.get('role') not in ('owner', 'developer'):
             raise HTTPException(status_code=403, detail='Недостатньо прав')
-        return await admin_db.get_admins_with_locations()
+        
+        # Get admins from DB
+        admins_data = await admin_db.get_admins_with_locations()
+        # result.append((str(r['user_id']), r.get('username'), r.get('display_name'), r.get('role') or 'admin', ...))
+        
+        # We need to enrich this with phone numbers from user_db
+        from app.databases.user_database import user_db
+        enriched = []
+        for a in admins_data:
+            uid = int(a[0])
+            u_info = await user_db.get_user_by_id(uid)
+            phone = u_info[3] if u_info else '—'
+            enriched.append({
+                'user_id': a[0],
+                'username': a[1],
+                'display_name': a[2],
+                'role': a[3],
+                'phone': phone
+            })
+        return enriched
     except Exception as e:
         logger.error(f"Error in get_team: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -697,31 +716,29 @@ async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
         if admin.get('role') not in ('owner', 'developer'):
             raise HTTPException(status_code=403, detail='Недостатньо прав')
         
-        user_id_val = data.get('user_id')
+        user_id_val = data.get('user_id', '').strip()
         username = data.get('username', '').strip().replace('@', '')
         
         # Try to find user via the same logic as the bot
-        identifier = user_id_val if user_id_val and user_id_val != '0' else f"@{username}"
-        target = await admin_db.find_admin_by_identifier(identifier)
+        from app.databases.user_database import user_db
+        target = None
         
-        if not target and username:
-             # Double check user_db if not found in admin_db discovery
-             from app.databases.user_database import user_db
-             u_info = await user_db.get_user_by_username(username)
-             if u_info:
-                 target = {'user_id': int(u_info[0]), 'username': username, 'display_name': u_info[1] or username}
-
-        if not target and str(user_id_val).isdigit():
-             from app.databases.user_database import user_db
-             u_info = await user_db.get_user_by_id(int(user_id_val))
-             if u_info:
-                 target = {'user_id': int(u_info[0]), 'username': u_info[2], 'display_name': u_info[1] or str(user_id_val)}
+        if user_id_val.isdigit():
+            u_info = await user_db.get_user_by_id(int(user_id_val))
+            if u_info:
+                target = {'user_id': int(u_info[0]), 'display_name': u_info[1], 'username': u_info[2]}
+        elif user_id_val.startswith('@') or username:
+            un = username or user_id_val.replace('@', '')
+            u_info = await user_db.get_user_by_username(un)
+            if u_info:
+                target = {'user_id': int(u_info[0]), 'display_name': u_info[1], 'username': u_info[2]}
 
         if not target:
-            raise HTTPException(status_code=404, detail='Користувача не знайдено. Він має натиснути /start у боті.')
+            raise HTTPException(status_code=404, detail='Користувача не знайдено в базі бота. Він має натиснути /start.')
 
         user_id = int(target['user_id'])
         final_username = target.get('username') or username
+        final_display_name = target.get('display_name') or data.get('display_name') or target.get('username') or str(user_id)
         
         me_role = admin.get('role')
         target_role = data.get('role', 'admin')
@@ -729,7 +746,8 @@ async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
         if me_role == 'owner' and target_role == 'owner':
             raise HTTPException(status_code=403, detail='Власник не може створювати інших власників')
 
-        await admin_db.add_admin(user_id=user_id, username=final_username, display_name=data['display_name'], added_by=admin['user_id'], role=target_role, locations=data.get('locations', []))
+        # Location access is removed as per user request
+        await admin_db.add_admin(user_id=user_id, username=final_username, display_name=final_display_name, added_by=admin['user_id'], role=target_role, locations=[])
         return {'status': 'ok'}
     except HTTPException: raise
     except Exception as e:

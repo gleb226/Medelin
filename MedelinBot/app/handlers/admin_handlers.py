@@ -397,7 +397,7 @@ LOCATION_ADD_STEPS = [
     ('google_maps_url', '🗺 <b>Введіть посилання на Google Maps:</b>'),
     ('photo', '📸 <b>Надішліть фото локації</b> (або - якщо немає):'),
     ('amenities', '✨ <b>Зручності</b> (через кому):'),
-    ('atmosphere', '☁️ <b>Опис атмосфери:</b>')
+    ('atmosphere', '📝 <b>Опис:</b>')
 ]
 
 LOCATION_EDIT_FIELDS = [field for field, _ in LOCATION_ADD_STEPS]
