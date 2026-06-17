@@ -124,9 +124,35 @@
             .order-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: flex-end; }
 
             .admin-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; padding-bottom: 1rem; border-bottom: 2px solid var(--color-coffee-soft); }
-            .admin-toolbar h3 { font-family: var(--font-accent); color: var(--color-dark-brown); font-size: 2rem; font-weight: 400; }
-            .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+            .admin-toolbar h3 { font-family: var(--font-accent); color: var(--color-dark-brown); font-size: 1.8rem; font-weight: 400; }
+            .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
             
+            .bean-card, .location-card {
+                background: white; border-radius: 18px; overflow: hidden;
+                box-shadow: var(--shadow); border: 1px solid rgba(139, 94, 60, 0.05);
+                transition: all 0.3s ease; display: flex; flex-direction: column;
+            }
+            .bean-card:hover, .location-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(139, 94, 60, 0.1); }
+            .card-img { width: 100%; height: 140px; object-fit: cover; cursor: zoom-in; }
+            .card-body { padding: 1rem; flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
+            .card-title { font-family: var(--font-accent); font-size: 1.1rem; color: var(--color-dark-brown); margin-bottom: 0.1rem; }
+            .card-desc { font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 0.5rem; flex: 1; line-height: 1.4; }
+            .card-stats { display: flex; gap: 0.6rem; font-size: 0.75rem; font-weight: 700; color: var(--color-coffee); margin-bottom: 0.4rem; }
+
+            .hint-text { font-size: 0.75rem; color: var(--color-coffee); margin-top: 0.3rem; font-weight: 600; opacity: 0.8; }
+
+            .confirm-modal {
+                position: fixed; inset: 0; background: rgba(60, 47, 47, 0.4); z-index: 4000;
+                display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px);
+            }
+            .confirm-panel {
+                background: white; padding: 2.5rem; border-radius: 25px; width: 90%; max-width: 400px;
+                text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.2); border: 1px solid var(--color-coffee-soft);
+            }
+            .confirm-panel h4 { font-family: var(--font-accent); font-size: 1.8rem; margin-bottom: 1rem; color: var(--color-dark-brown); }
+            .confirm-panel p { margin-bottom: 2rem; color: var(--color-text-muted); }
+            .confirm-actions { display: flex; gap: 1rem; justify-content: center; }
+
             .admin-field { display: flex; flex-direction: column; gap: 0.6rem; }
             .admin-field label { font-size: 0.8rem; font-weight: 800; color: var(--color-dark-brown); text-transform: uppercase; letter-spacing: 1px; }
             .admin-field input, .admin-field select, .admin-field textarea {
@@ -235,6 +261,18 @@
             </header>
             <div id="content-area"><div class="card"><div id="items-list">Завантаження...</div></div></div>
         </main>
+
+        <div class="confirm-modal" id="nice-confirm">
+            <div class="confirm-panel">
+                <i class="fas fa-exclamation-triangle" style="font-size:3rem; color:var(--color-danger); margin-bottom:1.5rem; display:block;"></i>
+                <h4 id="nice-confirm-title">Ви впевнені?</h4>
+                <p id="nice-confirm-msg">Цю дію неможливо буде скасувати.</p>
+                <div class="confirm-actions">
+                    <button class="btn btn--outline btn--sm" id="nice-confirm-cancel">Скасувати</button>
+                    <button class="btn btn--danger btn--sm" id="nice-confirm-ok">Так, видалити</button>
+                </div>
+            </div>
+        </div>
 
         <div class="full-image-modal" id="image-modal" onclick="this.style.display='none'"><img src="" id="full-img"></div>
         <div class="loader-wrap" id="loader"><div class="spinner"></div></div>
@@ -377,41 +415,70 @@
                 } catch(e) { return null; }
             }
 
+            async function niceConfirm(title, msg, onOk) {
+                const modal = document.getElementById('nice-confirm');
+                document.getElementById('nice-confirm-title').textContent = title;
+                document.getElementById('nice-confirm-msg').textContent = msg;
+                modal.style.display = 'flex';
+                
+                const okBtn = document.getElementById('nice-confirm-ok');
+                const cancelBtn = document.getElementById('nice-confirm-cancel');
+                
+                const cleanup = () => { modal.style.display = 'none'; };
+                
+                okBtn.onclick = () => { cleanup(); onOk(); };
+                cancelBtn.onclick = cleanup;
+            }
+
             async function loadNewOrders() {
                 showLoader(true);
                 const orders = await apiFetch('new-orders');
                 const list = document.getElementById('items-list');
                 if (!orders || orders.length === 0) { list.innerHTML = '<p style="text-align:center; padding:2rem;">Немає нових замовлень</p>'; showLoader(false); return; }
                 list.innerHTML = '';
+                const isDev = currentAdmin.role === 'developer';
                 orders.forEach(o => {
                     const div = document.createElement('div'); div.className = 'order-item';
                     const date = o.created_at ? new Date(o.created_at).toLocaleString('uk-UA') : '—';
+                    const num = o.order_number && o.order_number !== '—' ? o.order_number : String(o.order_id).slice(-6);
                     div.innerHTML = `
                         <div class="order-info">
-                            <div class="order-title">#${o.order_number || String(o.order_id).slice(-6)} — ${o.fullname}</div>
+                            <div class="order-title">#${num} — ${o.fullname}</div>
                             <div class="order-meta">${date} | <b>${o.phone}</b> | ${o.total_amount} ₴</div>
                             <div class="order-items">${o.cart || ''}${o.wishes ? `<br><br><b>Побажання:</b> ${o.wishes}` : ''}</div>
                         </div>
+                        ${!isDev ? `
                         <div class="order-actions">
                             <button class="btn btn--success btn--sm" onclick="confirmOrder('${o.order_id}')">Підтвердити</button>
                             <button class="btn btn--danger btn--sm" onclick="rejectOrder('${o.order_id}')">Відхилити</button>
-                        </div>`;
+                        </div>` : ''}`;
                     list.appendChild(div);
                 });
                 showLoader(false);
             }
 
-            async function confirmOrder(oid) { if (confirm('Підтвердити замовлення?')) { const res = await apiFetch(`orders/${oid}/confirm`, 'POST'); if (res) refreshData(); } }
-            async function rejectOrder(oid) { if (confirm('Відхилити замовлення?')) { const res = await apiFetch(`orders/${oid}/reject`, 'POST'); if (res) refreshData(); } }
+            async function confirmOrder(oid) { if (confirm('Підтвердити це замовлення?')) { const res = await apiFetch(`orders/${oid}/confirm`, 'POST'); if (res) refreshData(); } }
+            async function rejectOrder(oid) { if (confirm('Видалити та відхилити замовлення?')) { const res = await apiFetch(`orders/${oid}/reject`, 'POST'); if (res) refreshData(); } }
 
             async function loadOrders() {
                 showLoader(true);
                 const orders = await apiFetch('active-orders');
                 const list = document.getElementById('items-list');
                 list.innerHTML = orders?.length ? '' : '<p style="text-align:center; padding:2rem;">Немає активних замовлень</p>';
+                const isDev = currentAdmin.role === 'developer';
                 orders?.forEach(o => {
                     const div = document.createElement('div'); div.className = 'order-item';
-                    div.innerHTML = `<div class="order-info"><div class="order-title">#${o.order_number || String(o.order_id).slice(-6)} — ${o.fullname}</div><div class="order-meta">${o.phone} | ${o.location_name} | ${o.total} ₴</div><div class="order-items">${o.cart || ''}</div></div><div class="order-actions"><button class="btn btn--success btn--sm" onclick="completeOrder('${o.order_id}')">Готово</button></div>`;
+                    const num = o.order_number && o.order_number !== '—' ? o.order_number : String(o.order_id).slice(-6);
+                    div.innerHTML = `
+                        <div class="order-info">
+                            <div class="order-title">#${num} — ${o.fullname}</div>
+                            <div class="order-meta">${o.phone} | ${o.location_name} | ${o.total} ₴</div>
+                            <div class="order-items">${o.cart || ''}</div>
+                        </div>
+                        ${!isDev ? `
+                        <div class="order-actions">
+                            <button class="btn btn--success btn--sm" onclick="completeOrder('${o.order_id}')">Готово</button>
+                        </div>` : ''}`;
                     list.appendChild(div);
                 });
                 showLoader(false);
@@ -424,7 +491,8 @@
                 const beans = await apiFetch('beans');
                 const list = document.getElementById('items-list');
                 if (!beans) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                list.innerHTML = `<div class="admin-toolbar"><h3>Зерно</h3><button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати</button></div><div id="beans-grid" class="admin-grid"></div>`;
+                const isDev = currentAdmin.role === 'developer';
+                list.innerHTML = `<div class="admin-toolbar"><h3>Зерно</h3>${!isDev ? `<button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати</button>` : ''}</div><div id="beans-grid" class="admin-grid"></div>`;
                 beans.forEach(b => {
                     const div = document.createElement('div'); div.className = 'bean-card';
                     div.innerHTML = `
@@ -433,10 +501,11 @@
                             <div class="card-title">${b.name}</div>
                             <div class="card-stats"><span>${b.price_250} ₴</span> | <span>${b.roast || '—'}</span></div>
                             <div class="card-desc">${b.description || 'Немає опису'}</div>
+                            ${!isDev ? `
                             <div class="order-actions">
                                 <button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'>Редагувати</button>
                                 <button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')">Видалити</button>
-                            </div>
+                            </div>` : ''}
                         </div>`;
                     document.getElementById('beans-grid').appendChild(div);
                 });
@@ -459,13 +528,13 @@
                     <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>${b ? 'Редагувати' : 'Додати'} сорт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
                         <form id="bean-form"><div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                            <div class="admin-field"><label>Назва</label><input name="name" value="${b?.name || ''}" required></div>
+                            <div class="admin-field"><label>Назва</label><input name="name" value="${b?.name || ''}" placeholder="Наприклад: Ethiopia Yirgacheffe" required></div>
                             <div class="admin-field"><label>Категорія</label><select name="category"><option value="commercial" ${b?.category==='commercial'?'selected':''}>Комерційна</option><option value="specialty" ${b?.category==='specialty'?'selected':''}>Спешелті</option></select></div>
-                            <div class="admin-field"><label>Ціна 250г</label><input type="number" name="price_250" value="${b?.price_250 || ''}" required></div>
-                            <div class="admin-field"><label>Score / Grade</label><input name="quality_score" value="${b?.quality_score || ''}"></div>
-                            <div class="admin-field"><label>Залишок</label><input type="number" name="stock_packs" value="${b?.stock_packs ?? ''}"></div>
-                            <div class="admin-field"><label>Обсмажка</label><input name="roast" value="${b?.roast || ''}"></div>
-                        </div><div class="admin-field" style="margin-top:1rem;"><label>Опис</label><textarea name="description" rows="3">${b?.description || ''}</textarea></div>
+                            <div class="admin-field"><label>Ціна 250г</label><input type="number" name="price_250" value="${b?.price_250 || ''}" placeholder="350" required></div>
+                            <div class="admin-field"><label>Score / Grade</label><input name="quality_score" value="${b?.quality_score || ''}" placeholder="86.5 або AA"></div>
+                            <div class="admin-field"><label>Залишок (пачок)</label><input type="number" name="stock_packs" value="${b?.stock_packs ?? ''}" placeholder="25"></div>
+                            <div class="admin-field"><label>Обсмажка</label><input name="roast" value="${b?.roast || ''}" placeholder="Середня"></div>
+                        </div><div class="admin-field" style="margin-top:1rem;"><label>Опис</label><textarea name="description" rows="3" placeholder="Опишіть смакові дескриптори, походження...">${b?.description || ''}</textarea></div>
                         <div class="admin-field" style="margin-top:1.5rem;"><label>Фото</label>
                             <div style="display:flex; align-items:center; gap:1.5rem;">
                                 <img id="bean-img-preview" src="${window.fixImageUrl(b?.image_url)}" style="width:100px; height:100px; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
@@ -482,14 +551,15 @@
             }
 
             async function saveBean(id) { const res = await apiFetch(id ? `beans/${id}` : 'beans', 'POST', Object.fromEntries(new FormData(document.getElementById('bean-form')).entries())); if (res) { closeAdminModal(); refreshData(); } }
-            async function deleteBean(id) { if (confirm('Видалити цей сорт?')) { await apiFetch(`beans/${id}`, 'DELETE'); refreshData(); } }
+            async function deleteBean(id) { niceConfirm('Видалення', 'Видалити цей сорт кави?', async () => { await apiFetch(`beans/${id}`, 'DELETE'); refreshData(); }); }
 
             async function loadLocations() {
                 showLoader(true);
                 const locs = await apiFetch('locations');
                 const list = document.getElementById('items-list');
                 if (!locs) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                list.innerHTML = `<div class="admin-toolbar"><h3>Локації</h3><button class="btn btn--primary btn--sm" onclick="openLocationModal()">+ Додати</button></div><div id="locs-grid" class="admin-grid"></div>`;
+                const isDev = currentAdmin.role === 'developer';
+                list.innerHTML = `<div class="admin-toolbar"><h3>Локації</h3>${!isDev ? `<button class="btn btn--primary btn--sm" onclick="openLocationModal()">+ Додати</button>` : ''}</div><div id="locs-grid" class="admin-grid"></div>`;
                 locs.forEach(l => {
                     const div = document.createElement('div'); div.className = 'location-card';
                     div.innerHTML = `
@@ -497,10 +567,11 @@
                         <div class="card-body">
                             <div class="card-title">${l.name}</div>
                             <div class="card-desc"><i class="fas fa-map-marker-alt"></i> ${l.address}<br><i class="fas fa-clock"></i> ${l.schedule || '—'}</div>
+                            ${!isDev ? `
                             <div class="order-actions">
                                 <button class="btn btn--outline btn--sm" onclick='openLocationModal(${JSON.stringify(l).replace(/'/g, "&apos;")})'>Редагувати</button>
                                 <button class="btn btn--danger btn--sm" onclick="deleteLocation('${l.id}')">Видалити</button>
-                            </div>
+                            </div>` : ''}
                         </div>`;
                     document.getElementById('locs-grid').appendChild(div);
                 });
@@ -513,10 +584,10 @@
                     <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>${l ? 'Редагувати' : 'Додати'} локацію</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
                         <form id="loc-form"><div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                            <div class="admin-field"><label>Назва</label><input name="name" value="${l?.name || ''}" required></div>
-                            <div class="admin-field"><label>Адреса</label><input name="address" value="${l?.address || ''}" required></div>
-                            <div class="admin-field"><label>Графік</label><input name="schedule" value="${l?.schedule || ''}"></div>
-                            <div class="admin-field"><label>Maps URL</label><input name="google_maps_url" value="${l?.google_maps_url || ''}"></div>
+                            <div class="admin-field"><label>Назва</label><input name="name" value="${l?.name || ''}" placeholder="Наприклад: Меделін Центр" required></div>
+                            <div class="admin-field"><label>Адреса</label><input name="address" value="${l?.address || ''}" placeholder="вул. Корятовича, 1" required></div>
+                            <div class="admin-field"><label>Графік</label><input name="schedule" value="${l?.schedule || ''}" placeholder="Пн-Пт: 08:00-20:00"></div>
+                            <div class="admin-field"><label>Maps URL</label><input name="google_maps_url" value="${l?.google_maps_url || ''}" placeholder="https://maps.app.goo.gl/..."></div>
                         </div><div class="admin-field" style="margin-top:1.5rem;"><label>Фото</label>
                             <div style="display:flex; align-items:center; gap:1.5rem;">
                                 <img id="loc-img-preview" src="${window.fixImageUrl(l?.image_url)}" style="width:150px; height:100px; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
@@ -533,14 +604,15 @@
             }
 
             async function saveLocation(id) { const res = await apiFetch(id ? `locations/${id}` : 'locations', 'POST', Object.fromEntries(new FormData(document.getElementById('loc-form')).entries())); if (res) { closeAdminModal(); refreshData(); } }
-            async function deleteLocation(id) { if (confirm('Видалити цю локацію?')) { await apiFetch(`locations/${id}`, 'DELETE'); refreshData(); } }
+            async function deleteLocation(id) { niceConfirm('Видалення', 'Видалити цю локацію?', async () => { await apiFetch(`locations/${id}`, 'DELETE'); refreshData(); }); }
 
             async function loadSocials() {
                 showLoader(true);
                 const socials = await apiFetch('socials');
                 const list = document.getElementById('items-list');
                 if (!socials) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                list.innerHTML = `<div class="admin-toolbar"><h3>Контакти</h3><button class="btn btn--primary btn--sm" onclick="openSocialModal()">+ Додати</button></div><div id="socials-list"></div>`;
+                const isDev = currentAdmin.role === 'developer';
+                list.innerHTML = `<div class="admin-toolbar"><h3>Контакти</h3>${!isDev ? `<button class="btn btn--primary btn--sm" onclick="openSocialModal()">+ Додати</button>` : ''}</div><div id="socials-list"></div>`;
                 socials.forEach(s => {
                     let icon = 'fas fa-link';
                     const name = s.name.toLowerCase();
@@ -550,7 +622,8 @@
                     else if (name.includes('phone') || name.includes('тел')) icon = 'fas fa-phone';
                     
                     const div = document.createElement('div'); div.className = 'order-item';
-                    div.innerHTML = `<div class="order-info"><div style="font-weight:700;"><i class="${icon}"></i> ${s.name}</div><div style="font-size:0.9rem; opacity:0.7;">${s.url}</div></div><div class="order-actions"><button class="btn btn--outline btn--sm" onclick='openSocialModal(${JSON.stringify(s).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button></div>`;
+                    div.innerHTML = `<div class="order-info"><div style="font-weight:700;"><i class="${icon}"></i> ${s.name}</div><div style="font-size:0.9rem; opacity:0.7;">${s.url}</div></div>
+                        ${!isDev ? `<div class="order-actions"><button class="btn btn--outline btn--sm" onclick='openSocialModal(${JSON.stringify(s).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button></div>` : ''}`;
                     document.getElementById('socials-list').appendChild(div);
                 });
                 showLoader(false);
@@ -558,11 +631,11 @@
 
             function openSocialModal(s = null) {
                 const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `<div class="admin-modal__panel" style="max-width:400px;"><div class="admin-modal__header"><h3>${s ? 'Редагувати' : 'Додати'} контакт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="social-form"><div class="admin-field"><label>Назва</label><input name="name" value="${s?.name || ''}" required></div><div class="admin-field" style="margin-top:1rem;"><label>Дані</label><input name="url" value="${s?.url || ''}" required></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveSocial('${s?.id || ''}')">Зберегти</button></div></div>`;
+                modal.innerHTML = `<div class="admin-modal__panel" style="max-width:400px;"><div class="admin-modal__header"><h3>${s ? 'Редагувати' : 'Додати'} контакт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="social-form"><div class="admin-field"><label>Назва</label><input name="name" value="${s?.name || ''}" placeholder="Наприклад: Instagram" required></div><div class="admin-field" style="margin-top:1rem;"><label>Дані (URL / Тел)</label><input name="url" value="${s?.url || ''}" placeholder="https://instagram.com/medelin..." required></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveSocial('${s?.id || ''}')">Зберегти</button></div></div>`;
                 modal.classList.add('admin-modal--active');
             }
             async function saveSocial(id) { await apiFetch(id ? `socials/${id}` : 'socials', 'POST', Object.fromEntries(new FormData(document.getElementById('social-form')).entries())); closeAdminModal(); refreshData(); }
-            async function deleteSocial(id) { if (confirm('Видалити цей контакт?')) { await apiFetch(`socials/${id}`, 'DELETE'); refreshData(); } }
+            async function deleteSocial(id) { niceConfirm('Видалення', 'Видалити цей контакт?', async () => { await apiFetch(`socials/${id}`, 'DELETE'); refreshData(); }); }
 
             async function loadStats() {
                 showLoader(true);
@@ -577,11 +650,11 @@
                     <div class="admin-grid">
                         <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none;">
                             <div style="font-size:0.8rem; font-weight:800; color:var(--color-coffee); margin-bottom:0.5rem;">ЗАГАЛЬНА ВИРУЧКА</div>
-                            <div style="font-size:2.5rem; font-weight:400; font-family:var(--font-accent); color:var(--color-dark-brown);">${stats.total_revenue} ₴</div>
+                            <div style="font-size:2.5rem; font-weight:400; font-family:var(--font-accent); color:var(--color-dark-brown);">${stats.total_revenue || 0} ₴</div>
                         </div>
                         <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none;">
                             <div style="font-size:0.8rem; font-weight:800; color:var(--color-coffee); margin-bottom:0.5rem;">КІЛЬКІСТЬ ПРОДАЖІВ</div>
-                            <div style="font-size:2.5rem; font-weight:400; font-family:var(--font-accent); color:var(--color-dark-brown);">${stats.total_sales}</div>
+                            <div style="font-size:2.5rem; font-weight:400; font-family:var(--font-accent); color:var(--color-dark-brown);">${stats.total_sales || 0}</div>
                         </div>
                     </div>
                     <div class="admin-toolbar" style="border:none; margin-top:2rem;"><h3>Останні продажі</h3></div>
@@ -594,9 +667,9 @@
                         div.innerHTML = `
                             <div class="order-info">
                                 <div style="font-weight:700;">${s.fullname || 'Гість'}</div>
-                                <div style="font-size:0.85rem; opacity:0.7;">${date}</div>
+                                <div style="font-size:0.85rem; opacity:0.7;">${date} | ${s.cart || ''}</div>
                             </div>
-                            <div style="font-weight:800; color:var(--color-coffee); font-size:1.2rem;">${s.total} ₴</div>`; 
+                            <div style="font-weight:800; color:var(--color-coffee); font-size:1.2rem;">${s.total || (s.price * (s.quantity||1))} ₴</div>`; 
                         document.getElementById('stats-recent').appendChild(div); 
                     });
                 } else {
@@ -606,30 +679,68 @@
             }
 
             async function resetStats() {
-                if (confirm('Ви впевнені, що хочете скинути всю статистику? Ця дія незворотна.')) {
+                niceConfirm('Скидання статистики', 'Ви впевнені, що хочете видалити всі дані про продажі? Це неможливо скасувати.', async () => {
                     showLoader(true);
                     const res = await apiFetch('stats/reset', 'POST');
                     if (res) refreshData();
                     showLoader(false);
-                }
+                });
             }
 
             async function loadTeam() {
                 showLoader(true); const [team, locs] = await Promise.all([apiFetch('team'), apiFetch('locations')]);
                 const list = document.getElementById('items-list'); if (!team) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                list.innerHTML = `<div class="admin-toolbar"><h3>Персонал</h3><button class="btn btn--primary btn--sm" onclick='openTeamModal(null, ${JSON.stringify(locs)})'>+ Додати</button></div><div id="team-list"></div>`;
-                team.forEach(t => { const div = document.createElement('div'); div.className = 'order-item'; div.innerHTML = `<div>${t[2]} (@${t[1]}) - ${roleName(t[3])}</div><button class="btn btn--danger btn--sm" onclick="deleteTeam('${t[0]}')">Видалити</button>`; document.getElementById('team-list').appendChild(div); });
+                const isDev = currentAdmin.role === 'developer';
+                list.innerHTML = `<div class="admin-toolbar"><h3>Персонал</h3>${!isDev ? `<button class="btn btn--primary btn--sm" onclick='openTeamModal(null, ${JSON.stringify(locs)})'>+ Додати</button>` : ''}</div><div id="team-list"></div>`;
+                team.forEach(t => { 
+                    const div = document.createElement('div'); div.className = 'order-item'; 
+                    div.innerHTML = `<div>${t[2]} (@${t[1] || '—'}) - ${roleName(t[3])}</div>
+                        ${!isDev ? `<button class="btn btn--danger btn--sm" onclick="deleteTeam('${t[0]}')">Видалити</button>` : ''}`; 
+                    document.getElementById('team-list').appendChild(div); 
+                });
                 showLoader(false);
             }
 
             function openTeamModal(t = null, allLocs = []) {
                 const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `<div class="admin-modal__panel"><div class="admin-modal__header"><h3>Додати</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="team-form"><div class="admin-field"><label>TG ID / @username</label><input name="user_id" required></div><div class="admin-field"><label>Ім'я</label><input name="display_name" required></div><div class="admin-field"><label>Роль</label><select name="role"><option value="admin">Адмін</option><option value="owner">Власник</option></select></div><div style="max-height:150px; overflow-y:auto; margin-top:1rem; padding:1rem; background:#f9f9f9; border-radius:15px;">${(allLocs||[]).map(l=>`<label style="display:block; margin-bottom:0.5rem; cursor:pointer;"><input type="checkbox" name="locations" value="${l.id}"> ${l.name}</label>`).join('')}</div></form><div class="admin-modal__footer"><button onclick="saveTeam()" class="btn btn--primary">Зберегти</button></div></div>`;
+                modal.innerHTML = `<div class="admin-modal__panel" style="max-width:500px;"><div class="admin-modal__header"><h3>Додати персонал</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
+                    <form id="team-form">
+                        <div class="admin-field"><label>TG ID / @username</label><input name="user_id" placeholder="Наприклад: 12345678 або @nickname" required></div>
+                        <div class="admin-field" style="margin-top:1rem;"><label>Ім'я (для відображення)</label><input name="display_name" placeholder="Наприклад: Олександр" required></div>
+                        <div class="admin-field" style="margin-top:1rem;"><label>Роль</label><select name="role"><option value="admin">Адмін</option><option value="owner">Власник</option></select></div>
+                        <div style="margin-top:1rem;"><label style="font-size: 0.8rem; font-weight: 800; color: var(--color-dark-brown); text-transform: uppercase;">Доступ до локацій:</label></div>
+                        <div style="max-height:150px; overflow-y:auto; margin-top:0.5rem; padding:1rem; background:#fdfcf9; border: 1px solid var(--color-coffee-soft); border-radius:15px;">
+                            ${(allLocs||[]).map(l=>`<label style="display:block; margin-bottom:0.5rem; cursor:pointer; font-size:0.9rem;"><input type="checkbox" name="locations" value="${l.id}"> ${l.name}</label>`).join('')}
+                        </div>
+                    </form><div class="admin-modal__footer"><button onclick="saveTeam()" class="btn btn--primary btn--block">Зберегти</button></div></div>`;
                 modal.classList.add('admin-modal--active');
             }
 
-            async function saveTeam() { const form = document.getElementById('team-form'); const fd = new FormData(form); const data = { user_id: fd.get('user_id'), display_name: fd.get('display_name'), role: fd.get('role'), locations: [] }; form.querySelectorAll('input[name="locations"]:checked').forEach(cb => data.locations.push(cb.value)); const res = await apiFetch('team', 'POST', data); if (res) { closeAdminModal(); refreshData(); } }
-            async function deleteTeam(id) { if (confirm('Видалити цього співробітника?')) { await apiFetch(`team/${id}`, 'DELETE'); refreshData(); } }
+            async function saveTeam() { 
+                const form = document.getElementById('team-form'); 
+                const fd = new FormData(form); 
+                const userIdVal = fd.get('user_id');
+                let user_id = userIdVal;
+                let username = '';
+                
+                if (userIdVal.startsWith('@')) { username = userIdVal.substring(1); user_id = 0; }
+                else if (!isNaN(userIdVal)) { user_id = parseInt(userIdVal); }
+                
+                const data = { 
+                    user_id: user_id, 
+                    username: username,
+                    display_name: fd.get('display_name'), 
+                    role: fd.get('role'), 
+                    locations: [] 
+                }; 
+                form.querySelectorAll('input[name="locations"]:checked').forEach(cb => data.locations.push(cb.value)); 
+                
+                showLoader(true);
+                const res = await apiFetch('team', 'POST', data); 
+                showLoader(false);
+                if (res) { closeAdminModal(); refreshData(); } 
+            }
+            async function deleteTeam(id) { niceConfirm('Видалення', 'Видалити цього співробітника?', async () => { await apiFetch(`team/${id}`, 'DELETE'); refreshData(); }); }
 
             function closeAdminModal() { document.getElementById('admin-modal').classList.remove('admin-modal--active'); }
 

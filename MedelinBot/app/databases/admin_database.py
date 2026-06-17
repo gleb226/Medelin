@@ -62,7 +62,7 @@ class AdminDatabase:
                 except: pass
         return list(ids)
 
-    async def add_admin(self, user_id: int, username: str, display_name: str, added_by: int, role: str='admin'):
+    async def add_admin(self, user_id: int, username: str, display_name: str, added_by: int, role: str='admin', locations: list=None):
         db = await get_db()
         
         # Mapping old role names if any
@@ -81,7 +81,7 @@ class AdminDatabase:
                     'role': role,
                     'added_by': int(added_by),
                     'receive_notifications': True,
-                    'locations': [], # Reset locations for now as per new staff model
+                    'locations': locations or [],
                 },
                 '$setOnInsert': {'created_at': datetime.utcnow()},
             },

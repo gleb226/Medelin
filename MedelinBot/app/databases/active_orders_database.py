@@ -83,6 +83,13 @@ class ActiveOrdersDatabase:
         cur = db.active_orders.find({}).sort('created_at', 1)
         return await cur.to_list(length=None)
 
+    async def get_active_order_by_mongo_id(self, mongo_id):
+        db = await get_db()
+        try:
+            return await db.active_orders.find_one({'_id': ObjectId(str(mongo_id))})
+        except:
+            return None
+
     async def get_active_order_by_id(self, order_id):
         db = await get_db()
         return await db.active_orders.find_one({'order_id': str(order_id)})

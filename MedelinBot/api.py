@@ -511,6 +511,13 @@ async def get_active_orders(admin: dict = Depends(get_current_admin)):
         o['order_id'] = str(o['_id'])
         if 'created_at' in o and o['created_at']:
             o['created_at'] = o['created_at'].isoformat()
+        
+        # Get order_number from orders_db if missing in active_orders
+        if 'order_number' not in o:
+            orig_order = await orders_db.get_order_by_id(o.get('order_id'))
+            if orig_order:
+                o['order_number'] = orig_order.get('order_number')
+        
         del o['_id']
         # Add location name
         if o['location_id'] == 'NP': o['location_name'] = 'Нова Пошта'
@@ -525,11 +532,16 @@ async def complete_order(order_id: str, admin: dict = Depends(get_current_admin)
     if admin.get('role') not in ('owner', 'developer'):
         raise HTTPException(status_code=403, detail='Недостатньо прав')
     from app.databases.active_orders_database import active_orders_db
-    
-    order = await active_orders_db.get_active_order_by_id(order_id)
+
+    # On the web panel, order_id passed is actually the MongoDB _id string
+    order = await active_orders_db.get_active_order_by_mongo_id(order_id)
+    if not order:
+        # Fallback to order_id field just in case
+        order = await active_orders_db.get_active_order_by_id(order_id)
+
     if order:
         await sales_db.add_sale(
-            order_id=order_id,
+            order_id=order.get('order_id', order_id),
             user_id=order.get('user_id'),
             fullname=order.get('fullname'),
             items=order.get('cart'),
@@ -672,13 +684,27 @@ async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
     if admin.get('role') not in ('owner', 'developer'):
         raise HTTPException(status_code=403, detail='Недостатньо прав')
     
+    user_id = data.get('user_id')
+    username = data.get('username', '').strip().replace('@', '')
+    
+    if (not user_id or user_id == 0) and username:
+        from app.databases.user_database import user_db
+        u_info = await user_db.get_user_by_username(username)
+        if u_info:
+            user_id = u_info[0]
+        else:
+            raise HTTPException(status_code=404, detail=f'Користувача @{username} не знайдено в базі. Він має хоча б раз написати боту.')
+    
+    if not user_id:
+        raise HTTPException(status_code=400, detail='Вкажіть вірний TG ID або @username')
+
     me_role = admin.get('role')
     target_role = data.get('role', 'admin')
     
     if me_role == 'owner' and target_role == 'owner':
         raise HTTPException(status_code=403, detail='Власник не може створювати інших власників')
 
-    await admin_db.add_admin(user_id=data['user_id'], username=data.get('username', ''), display_name=data['display_name'], added_by=admin['user_id'], role=target_role, locations=data.get('locations', []))
+    await admin_db.add_admin(user_id=user_id, username=username, display_name=data['display_name'], added_by=admin['user_id'], role=target_role, locations=data.get('locations', []))
     return {'status': 'ok'}
 
 @app.delete('/api/admin/team/{uid}')
