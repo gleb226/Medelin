@@ -54,27 +54,42 @@ async def update_order_notifications(order_id: str, status: str) -> None:
     
     for n in notifications:
         try:
-            # We don't have the original text easily, but we can reconstruct a summary or just append status
-            # For simplicity, we edit the keyboard to remove action buttons and add status text
-            # Better: use bot.edit_message_reply_markup and maybe bot.edit_message_text if we had text.
-            # Since we don't have text, we'll try to get it if possible, but safe_edit_message needs text.
+            # Reconstruct basic info for the message
+            type_map = {
+                'takeaway': 'З собою', 'in_house': 'В закладі', 
+                'nova_poshta': 'Доставка', 'beans_delivery': 'Доставка', 
+                'beans_booking': 'Самовивіз'
+            }
+            order_type = order.get('order_type')
+            type_label = type_map.get(order_type, order_type)
             
-            # Reconstruct basic info
-            new_text = f"📦 <b>ЗАМОВЛЕННЯ #{order_num}</b>\nСтатус: <b>{status_label}</b>"
+            delivery_info = order.get('delivery_info') or ""
+            if not delivery_info and order_type == 'in_house':
+                delivery_info = f"Стіл #{order.get('table_number', '—')}"
+            
+            pay_mode = order.get('payment_mode')
+            if pay_mode == 'pay_now' or order.get('status') == 'paid': pay_label = "ОПЛАЧЕНО"
+            elif pay_mode == 'pay_at_checkout': pay_label = "Накладний платіж" if order_type in ('nova_poshta', 'beans_delivery') else "НА КАСІ"
+            else: pay_label = pay_mode
+
+            new_text = f"📦 <b>ЗАМОВЛЕННЯ #{order_num}</b> ({status_label})\n\n"
+            new_text += f"👤 {order.get('fullname')}\n"
+            new_text += f"📞 <code>{order.get('phone')}</code>\n"
+            new_text += f"🚚 {type_label}: <b>{delivery_info}</b>\n"
+            new_text += f"💰 <b>{order.get('total_amount', order.get('total', 0))} грн</b> ({pay_label})\n\n"
+            new_text += f"🛒 {order.get('cart')}"
             
             kb = None
             if status == 'confirmed':
                 kb = akb.get_active_finish_kb(order_id)
             
-            await bot.edit_message_reply_markup(
+            await bot.edit_message_text(
+                text=new_text,
                 chat_id=n['admin_id'],
                 message_id=n['message_id'],
-                reply_markup=kb
+                reply_markup=kb,
+                parse_mode='HTML'
             )
-            
-            # Optional: edit text to show who did it?
-            # await bot.edit_message_text(...)
-            
         except Exception as e:
             logger.error(f"Failed to update notification for admin {n['admin_id']}: {e}")
 

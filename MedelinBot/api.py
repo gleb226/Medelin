@@ -436,7 +436,6 @@ async def get_new_orders(admin: dict = Depends(get_current_admin)):
     locs = None
     if admin.get('role') not in ('owner', 'developer'):
         locs = list(admin.get('locations') or [])
-        # Admins should also see website/NP orders by default
         if not locs or 'web' not in locs: locs.append('web')
         if not locs or 'NP' not in locs: locs.append('NP')
     
@@ -447,6 +446,9 @@ async def get_new_orders(admin: dict = Depends(get_current_admin)):
 
     for o in orders:
         o['order_id'] = str(o['_id'])
+        # Ensure order_number is strictly a number or fallback string for safety
+        if 'order_number' not in o or not o['order_number']:
+            o['order_number'] = '—'
         if 'created_at' in o and o['created_at']:
             o['created_at'] = o['created_at'].isoformat()
         del o['_id']
@@ -513,11 +515,14 @@ async def get_active_orders(admin: dict = Depends(get_current_admin)):
             o['created_at'] = o['created_at'].isoformat()
         
         # Get order_number from orders_db if missing in active_orders
-        if 'order_number' not in o:
+        if 'order_number' not in o or not o['order_number'] or o['order_number'] == '—':
             orig_order = await orders_db.get_order_by_id(o.get('order_id'))
             if orig_order:
                 o['order_number'] = orig_order.get('order_number')
         
+        if 'order_number' not in o or not o['order_number']:
+            o['order_number'] = '—'
+
         del o['_id']
         # Add location name
         if o['location_id'] == 'NP': o['location_name'] = 'Нова Пошта'
@@ -551,7 +556,7 @@ async def complete_order(order_id: str, admin: dict = Depends(get_current_admin)
         
         # Bot Sync: update message if mapping exists
         from app.utils.admin_notifications import update_order_notifications
-        await update_order_notifications(order_id, 'completed')
+        await update_order_notifications(order.get('order_id', order_id), 'completed')
     
     await active_orders_db.remove_order(order_id)
     return {'status': 'ok'}
@@ -684,10 +689,17 @@ async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
     if admin.get('role') not in ('owner', 'developer'):
         raise HTTPException(status_code=403, detail='Недостатньо прав')
     
-    user_id = data.get('user_id')
+    user_id_val = data.get('user_id')
     username = data.get('username', '').strip().replace('@', '')
     
-    if (not user_id or user_id == 0) and username:
+    # Enforce integer user_id
+    user_id = 0
+    try:
+        if user_id_val: user_id = int(user_id_val)
+    except:
+        user_id = 0
+    
+    if user_id == 0 and username:
         from app.databases.user_database import user_db
         u_info = await user_db.get_user_by_username(username)
         if u_info:

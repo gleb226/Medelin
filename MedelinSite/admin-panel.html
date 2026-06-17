@@ -391,6 +391,9 @@
                     if (role === 'admin') {
                         if (sec !== 'new_orders' && sec !== 'orders') item.style.display = 'none';
                     }
+                    if (role === 'owner') {
+                        if (sec === 'stats') item.style.display = 'none';
+                    }
                 });
                 refreshData();
             }
@@ -440,7 +443,7 @@
                 orders.forEach(o => {
                     const div = document.createElement('div'); div.className = 'order-item';
                     const date = o.created_at ? new Date(o.created_at).toLocaleString('uk-UA') : '—';
-                    const num = o.order_number && o.order_number !== '—' ? o.order_number : String(o.order_id).slice(-6);
+                    const num = o.order_number && o.order_number !== '—' ? o.order_number : '—';
                     div.innerHTML = `
                         <div class="order-info">
                             <div class="order-title">#${num} — ${o.fullname}</div>
@@ -468,7 +471,7 @@
                 const isDev = currentAdmin.role === 'developer';
                 orders?.forEach(o => {
                     const div = document.createElement('div'); div.className = 'order-item';
-                    const num = o.order_number && o.order_number !== '—' ? o.order_number : String(o.order_id).slice(-6);
+                    const num = o.order_number && o.order_number !== '—' ? o.order_number : '—';
                     div.innerHTML = `
                         <div class="order-info">
                             <div class="order-title">#${num} — ${o.fullname}</div>
@@ -495,21 +498,46 @@
                 list.innerHTML = `<div class="admin-toolbar"><h3>Зерно</h3>${!isDev ? `<button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати</button>` : ''}</div><div id="beans-grid" class="admin-grid"></div>`;
                 beans.forEach(b => {
                     const div = document.createElement('div'); div.className = 'bean-card';
+                    div.style.cursor = 'pointer';
+                    div.onclick = () => openBeanDetail(b);
                     div.innerHTML = `
-                        <img src="${window.fixImageUrl(b.image_url)}" class="card-img" onclick="showFullImage('${b.image_url}')">
-                        <div class="card-body">
+                        <img src="${window.fixImageUrl(b.image_url)}" class="card-img">
+                        <div class="card-body" style="text-align:center;">
                             <div class="card-title">${b.name}</div>
-                            <div class="card-stats"><span>${b.price_250} ₴</span> | <span>${b.roast || '—'}</span></div>
-                            <div class="card-desc">${b.description || 'Немає опису'}</div>
-                            ${!isDev ? `
-                            <div class="order-actions">
-                                <button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'>Редагувати</button>
-                                <button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')">Видалити</button>
-                            </div>` : ''}
                         </div>`;
                     document.getElementById('beans-grid').appendChild(div);
                 });
                 showLoader(false);
+            }
+
+            function openBeanDetail(b) {
+                const modal = document.getElementById('admin-modal');
+                const isDev = currentAdmin.role === 'developer';
+                modal.innerHTML = `
+                    <div class="admin-modal__panel">
+                        <div class="admin-modal__header"><h3>Деталі сорту</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
+                        <div style="display:flex; gap:2rem; flex-wrap:wrap;">
+                            <img src="${window.fixImageUrl(b.image_url)}" style="width:200px; height:200px; object-fit:cover; border-radius:20px;">
+                            <div style="flex:1; min-width:250px;">
+                                <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown); margin-bottom:1rem;">${b.name}</h2>
+                                <p style="margin-bottom:0.5rem;"><b>Ціна:</b> ${b.price_250} ₴ / 250г</p>
+                                <p style="margin-bottom:0.5rem;"><b>Score:</b> ${b.quality_score || '—'}</p>
+                                <p style="margin-bottom:0.5rem;"><b>Обсмажка:</b> ${b.roast || '—'}</p>
+                                <p style="margin-bottom:0.5rem;"><b>Категорія:</b> ${b.category === 'specialty' ? 'Спешелті' : 'Комерційна'}</p>
+                                <p style="margin-bottom:0.5rem;"><b>Залишок:</b> ${b.stock_packs ?? '—'} пачок</p>
+                                <div style="margin-top:1rem; padding:1rem; background:#fdfcf9; border-radius:15px; border:1px solid var(--color-coffee-soft);">
+                                    ${b.description || 'Опис відсутній'}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="admin-modal__footer" style="justify-content: space-between;">
+                            ${!isDev ? `
+                                <button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')"><i class="fas fa-trash"></i> Видалити</button>
+                                <button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i> Редагувати</button>
+                            ` : ''}
+                        </div>
+                    </div>`;
+                modal.classList.add('admin-modal--active');
             }
 
             async function uploadImage(file) {
@@ -551,7 +579,7 @@
             }
 
             async function saveBean(id) { const res = await apiFetch(id ? `beans/${id}` : 'beans', 'POST', Object.fromEntries(new FormData(document.getElementById('bean-form')).entries())); if (res) { closeAdminModal(); refreshData(); } }
-            async function deleteBean(id) { niceConfirm('Видалення', 'Видалити цей сорт кави?', async () => { await apiFetch(`beans/${id}`, 'DELETE'); refreshData(); }); }
+            async function deleteBean(id) { niceConfirm('Видалення', 'Видалити цей сорт кави?', async () => { await apiFetch(`beans/${id}`, 'DELETE'); closeAdminModal(); refreshData(); }); }
 
             async function loadLocations() {
                 showLoader(true);
@@ -562,20 +590,41 @@
                 list.innerHTML = `<div class="admin-toolbar"><h3>Локації</h3>${!isDev ? `<button class="btn btn--primary btn--sm" onclick="openLocationModal()">+ Додати</button>` : ''}</div><div id="locs-grid" class="admin-grid"></div>`;
                 locs.forEach(l => {
                     const div = document.createElement('div'); div.className = 'location-card';
+                    div.style.cursor = 'pointer';
+                    div.onclick = () => openLocationDetail(l);
                     div.innerHTML = `
-                        <img src="${window.fixImageUrl(l.image_url)}" class="card-img" onclick="showFullImage('${l.image_url}')">
-                        <div class="card-body">
+                        <img src="${window.fixImageUrl(l.image_url)}" class="card-img">
+                        <div class="card-body" style="text-align:center;">
                             <div class="card-title">${l.name}</div>
-                            <div class="card-desc"><i class="fas fa-map-marker-alt"></i> ${l.address}<br><i class="fas fa-clock"></i> ${l.schedule || '—'}</div>
-                            ${!isDev ? `
-                            <div class="order-actions">
-                                <button class="btn btn--outline btn--sm" onclick='openLocationModal(${JSON.stringify(l).replace(/'/g, "&apos;")})'>Редагувати</button>
-                                <button class="btn btn--danger btn--sm" onclick="deleteLocation('${l.id}')">Видалити</button>
-                            </div>` : ''}
                         </div>`;
                     document.getElementById('locs-grid').appendChild(div);
                 });
                 showLoader(false);
+            }
+
+            function openLocationDetail(l) {
+                const modal = document.getElementById('admin-modal');
+                const isDev = currentAdmin.role === 'developer';
+                modal.innerHTML = `
+                    <div class="admin-modal__panel">
+                        <div class="admin-modal__header"><h3>Деталі локації</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
+                        <div style="display:flex; gap:2rem; flex-wrap:wrap;">
+                            <img src="${window.fixImageUrl(l.image_url)}" style="width:200px; height:150px; object-fit:cover; border-radius:20px;">
+                            <div style="flex:1; min-width:250px;">
+                                <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown); margin-bottom:1rem;">${l.name}</h2>
+                                <p style="margin-bottom:0.5rem;"><i class="fas fa-map-marker-alt"></i> ${l.address}</p>
+                                <p style="margin-bottom:0.5rem;"><i class="fas fa-clock"></i> ${l.schedule || '—'}</p>
+                                ${l.google_maps_url ? `<a href="${l.google_maps_url}" target="_blank" style="color:var(--color-coffee); font-weight:800; font-size:0.85rem;">ВІДКРИТИ НА КАРТАХ <i class="fas fa-external-link-alt"></i></a>` : ''}
+                            </div>
+                        </div>
+                        <div class="admin-modal__footer" style="justify-content: space-between;">
+                            ${!isDev ? `
+                                <button class="btn btn--danger btn--sm" onclick="deleteLocation('${l.id}')"><i class="fas fa-trash"></i> Видалити</button>
+                                <button class="btn btn--outline btn--sm" onclick='openLocationModal(${JSON.stringify(l).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i> Редагувати</button>
+                            ` : ''}
+                        </div>
+                    </div>`;
+                modal.classList.add('admin-modal--active');
             }
 
             function openLocationModal(l = null) {
@@ -604,7 +653,7 @@
             }
 
             async function saveLocation(id) { const res = await apiFetch(id ? `locations/${id}` : 'locations', 'POST', Object.fromEntries(new FormData(document.getElementById('loc-form')).entries())); if (res) { closeAdminModal(); refreshData(); } }
-            async function deleteLocation(id) { niceConfirm('Видалення', 'Видалити цю локацію?', async () => { await apiFetch(`locations/${id}`, 'DELETE'); refreshData(); }); }
+            async function deleteLocation(id) { niceConfirm('Видалення', 'Видалити цю локацію?', async () => { await apiFetch(`locations/${id}`, 'DELETE'); closeAdminModal(); refreshData(); }); }
 
             async function loadSocials() {
                 showLoader(true);
@@ -694,8 +743,11 @@
                 list.innerHTML = `<div class="admin-toolbar"><h3>Персонал</h3>${!isDev ? `<button class="btn btn--primary btn--sm" onclick='openTeamModal(null, ${JSON.stringify(locs)})'>+ Додати</button>` : ''}</div><div id="team-list"></div>`;
                 team.forEach(t => { 
                     const div = document.createElement('div'); div.className = 'order-item'; 
-                    div.innerHTML = `<div>${t[2]} (@${t[1] || '—'}) - ${roleName(t[3])}</div>
-                        ${!isDev ? `<button class="btn btn--danger btn--sm" onclick="deleteTeam('${t[0]}')">Видалити</button>` : ''}`; 
+                    div.innerHTML = `<div class="order-info">
+                            <div style="font-weight:800; color:var(--color-dark-brown);">${t[2]}</div>
+                            <div style="font-size:0.9rem; color:var(--color-text-muted);">@${t[1] || '—'} | TG: ${t[0]} | ${roleName(t[3])}</div>
+                        </div>
+                        ${!isDev ? `<button class="btn btn--danger btn--sm" onclick="deleteTeam('${t[0]}')"><i class="fas fa-trash"></i></button>` : ''}`; 
                     document.getElementById('team-list').appendChild(div); 
                 });
                 showLoader(false);
@@ -719,12 +771,12 @@
             async function saveTeam() { 
                 const form = document.getElementById('team-form'); 
                 const fd = new FormData(form); 
-                const userIdVal = fd.get('user_id');
+                const userIdVal = fd.get('user_id').trim();
                 let user_id = userIdVal;
                 let username = '';
                 
-                if (userIdVal.startsWith('@')) { username = userIdVal.substring(1); user_id = 0; }
-                else if (!isNaN(userIdVal)) { user_id = parseInt(userIdVal); }
+                if (userIdVal.startsWith('@')) { username = userIdVal.substring(1); user_id = '0'; }
+                else if (!isNaN(userIdVal)) { user_id = userIdVal; }
                 
                 const data = { 
                     user_id: user_id, 
