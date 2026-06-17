@@ -67,7 +67,7 @@ function renderLocations(locations) {
                 <img src="${window.fixImageUrl(loc.image_url)}" class="popup__image">
                 <div class="popup__body-inner">
                     <h3 class="popup__title popup__title--margin-bottom">${loc.name}</h3>
-                    <p class="popup__description">${loc.atmosphere || ''}</p>
+                    <p class="popup__description">${loc.atmosphere || loc.description || ''}</p>
                     <div class="popup__info-list">
                         <div class="popup__info-item">
                             <i class="fas fa-map-marker-alt popup__info-icon"></i>
@@ -79,7 +79,7 @@ function renderLocations(locations) {
                         </div>
                     </div>
                     <div class="amenities-tags">
-                        ${(loc.amenities || []).map((a) => `<span class="tag">${a}</span>`).join('')}
+                        ${Array.isArray(loc.amenities) ? loc.amenities.map((a) => `<span class="tag">${a}</span>`).join('') : ''}
                     </div>
                     <a href="${loc.google_maps_url}" target="_blank" class="btn btn--full-width"><i class="fas fa-route" style="margin-right:8px;"></i> Прокласти маршрут</a>
                 </div>

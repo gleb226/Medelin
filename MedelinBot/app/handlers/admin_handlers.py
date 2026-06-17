@@ -1220,7 +1220,7 @@ async def finish_order_handler(callback: CallbackQuery, bot: Bot):
     from app.utils.admin_notifications import update_order_notifications
     await update_order_notifications(oid, 'completed')
     
-    await callback.answer('Замовлення завершено!')
+    await callback.answer('Замовлення завершено')
     try:
         await callback.message.delete()
     except:
@@ -1385,16 +1385,15 @@ def _bean_card_text(bean: dict) -> str:
     lines = [
         f"<b>{html.escape(str(bean.get('name') or 'Без назви'))}</b>",
         f"━━━━━━━━━━━━━━━",
-        f"📊 Категорія: <b>{category}{grade_info}</b>{stock_info}",
         f"💰 Ціна 250г: <b>{bean.get('price_250', 0)} ₴</b>",
         f"🔥 Обсмаження: <b>{html.escape(str(bean.get('roast') or '—'))}</b>"
     ]
     
     if is_specialty:
         lines.append(f"📈 Оцінка: <b>{html.escape(score)}</b>")
+        if stock_info: lines.append(stock_info)
 
     lines.extend([
-        f"🌿 Склад: <b>{html.escape(str(bean.get('species') or '—'))}</b>",
         f"🍓 Дескриптори: <b>{html.escape(str(bean.get('descriptors') or '—'))}</b>",
         f"🧬 Різновид: <b>{html.escape(str(bean.get('variety') or '—'))}</b>",
         f"⛰ Висота: <b>{html.escape(str(bean.get('altitude') or '—'))}</b>",

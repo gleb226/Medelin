@@ -240,7 +240,7 @@
                     <h2 style="font-family:var(--font-accent); font-size: 2rem; margin-bottom: 1rem;">Очікування...</h2>
                     <p style="color: var(--color-text-muted); line-height: 1.6;">Ми надіслали повідомлення в Telegram.<br>Будь ласка, натисніть <b>"ПІДТВЕРДИТИ"</b>.</p>
                     <div class="verify-pulse"><i class="fab fa-telegram-plane" style="font-size:2.5rem; color:var(--color-coffee);"></i></div>
-                    <button class="btn btn--outline" onclick="resetLogin()">Скасувати</button>
+                    <button class="btn--outline" onclick="resetLogin()">Скасувати</button>
                 </div>
             </div>
         </div>
@@ -491,7 +491,7 @@
                 showLoader(false);
             }
 
-            async function confirmOrder(oid) { if (confirm('Підтвердити це замовлення?')) { const res = await apiFetch(`orders/${oid}/confirm`, 'POST'); if (res) refreshData(); } }
+            async function confirmOrder(oid) { const res = await apiFetch(`orders/${oid}/confirm`, 'POST'); if (res) refreshData(); }
             async function rejectOrder(oid) { if (confirm('Видалити та відхилити замовлення?')) { const res = await apiFetch(`orders/${oid}/reject`, 'POST'); if (res) refreshData(); } }
 
             async function loadOrders() {
@@ -511,14 +511,14 @@
                         </div>
                         ${!isDev ? `
                         <div class="order-actions">
-                            <button class="btn btn--success btn--sm" onclick="completeOrder('${o.order_id}')">Готово</button>
+                            <button class="btn btn--success btn--sm" onclick="completeOrder('${o.order_id}')">Завершити</button>
                         </div>` : ''}`;
                     list.appendChild(div);
                 });
                 showLoader(false);
             }
 
-            async function completeOrder(oid) { if (confirm('Замовлення виконано?')) { await apiFetch(`orders/${oid}/complete`, 'POST'); refreshData(); } }
+            async function completeOrder(oid) { await apiFetch(`orders/${oid}/complete`, 'POST'); refreshData(); }
 
             async function loadBeans() {
                 showLoader(true);
@@ -549,23 +549,21 @@
                         <div class="admin-modal__header"><h3>Деталі сорту</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:2.5rem;">
                             <div>
-                                <img src="${window.fixImageUrl(b.image_url)}" style="width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:25px; box-shadow: var(--shadow);">
+                                <img src="${window.fixImageUrl(b.image_url)}" style="width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:25px; box-shadow: var(--shadow);">
                             </div>
                             <div style="display:flex; flex-direction:column; gap:0.8rem;">
                                 <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown); font-size:2.5rem; margin-bottom:0.5rem;">${b.name}</h2>
                                 <div class="admin-grid" style="grid-template-columns: 1fr 1fr; gap:1rem;">
                                     <div class="info-block"><b>Ціна (250г):</b> ${b.price_250} ₴</div>
-                                    <div class="info-block"><b>Склад:</b> ${b.composition || '—'}</div>
                                     <div class="info-block"><b>Обсмажка:</b> ${b.roast || '—'}</div>
                                     <div class="info-block"><b>Врожай:</b> ${b.harvest || '—'}</div>
                                     <div class="info-block"><b>Різновид:</b> ${b.variety || '—'}</div>
                                     <div class="info-block"><b>Висота:</b> ${b.altitude || '—'}</div>
                                     <div class="info-block"><b>Метод обробки:</b> ${b.processing || '—'}</div>
-                                    <div class="info-block"><b>Категорія:</b> ${b.category==='specialty'?'Спешелті':'Комерційна'}</div>
-                                    ${b.category === 'specialty' ? `<div class="info-block"><b>Оцінка якості (SCA):</b> ${b.quality_score || b.cup_score || '—'}</div>` : ''}
+                                    <div class="info-block"><b>Оцінка якості (SCA):</b> ${b.quality_score || b.cup_score || '—'}</div>
                                 </div>
                                 <div style="margin-top:1rem; padding:1.2rem; background:var(--color-cream); border-radius:15px;">
-                                    <p><b>Дескриптори:</b> ${b.descriptors || '—'}</p>
+                                    <p><b>Дескриптори:</b> ${b.descriptors || b.taste || '—'}</p>
                                 </div>
                                 <div style="margin-top:1rem; padding:1.5rem; background:#fdfcf9; border-radius:20px; border:1px solid var(--color-coffee-soft); line-height:1.6;">
                                     <h4 style="font-family:var(--font-accent); color:var(--color-coffee); margin-bottom:0.8rem;">ОПИС</h4>
@@ -602,20 +600,18 @@
                             <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
                                 <div class="admin-field"><label>Назва</label><input name="name" value="${b?.name || ''}" placeholder="Ethiopia Sidamo" required></div>
                                 <div class="admin-field"><label>Ціна 250г</label><input type="number" name="price_250" value="${b?.price_250 || ''}" placeholder="400" required></div>
-                                <div class="admin-field"><label>Категорія</label><select name="category" onchange="toggleQualityScore(this.value)"><option value="commercial" ${b?.category==='commercial'?'selected':''}>Комерційна</option><option value="specialty" ${b?.category==='specialty'?'selected':''}>Спешелті</option></select></div>
-                                <div class="admin-field"><label>Склад</label><input name="composition" value="${b?.composition || ''}" placeholder="100% Arabica"></div>
                                 <div class="admin-field"><label>Обсмажка</label><input name="roast" value="${b?.roast || ''}" placeholder="Світла / Середня"></div>
                                 <div class="admin-field"><label>Врожай</label><input name="harvest" value="${b?.harvest || ''}" placeholder="2023/24"></div>
                                 <div class="admin-field"><label>Різновид</label><input name="variety" value="${b?.variety || ''}" placeholder="Heirloom / Bourbon"></div>
                                 <div class="admin-field"><label>Висота</label><input name="altitude" value="${b?.altitude || ''}" placeholder="1800-2100 м"></div>
                                 <div class="admin-field"><label>Метод обробки</label><input name="processing" value="${b?.processing || ''}" placeholder="Natural / Washed"></div>
-                                <div class="admin-field" id="quality-score-field" style="display: ${b?.category === 'specialty' ? 'block' : 'none'}"><label>Оцінка якості (SCA)</label><input name="quality_score" value="${b?.quality_score || b?.cup_score || ''}" placeholder="87"></div>
+                                <div class="admin-field"><label>Оцінка якості (SCA)</label><input name="quality_score" value="${b?.quality_score || b?.cup_score || ''}" placeholder="87"></div>
                             </div>
-                            <div class="admin-field" style="margin-top:1.5rem;"><label>Дескриптори</label><input name="descriptors" value="${b?.descriptors || ''}" placeholder="Жасмин, персик, бергамот"></div>
+                            <div class="admin-field" style="margin-top:1.5rem;"><label>Дескриптори</label><input name="descriptors" value="${b?.descriptors || b?.taste || ''}" placeholder="Жасмин, персик, бергамот"></div>
                             <div class="admin-field" style="margin-top:1.5rem;"><label>Опис</label><textarea name="description" rows="4" placeholder="Детальний опис для покупця...">${b?.description || ''}</textarea></div>
                             <div class="admin-field" style="margin-top:2rem;"><label>Фото (вертикальне)</label>
                                 <div style="display:flex; align-items:center; gap:2rem;">
-                                    <img id="bean-img-preview" src="${window.fixImageUrl(b?.image_url)}" style="width:120px; aspect-ratio:2/3; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
+                                    <img id="bean-img-preview" src="${window.fixImageUrl(b?.image_url)}" style="width:120px; aspect-ratio:3/4; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
                                     <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="bean-file-input" style="display:none;"></label>
                                     <input type="hidden" name="image_url" id="bean-image-url" value="${b?.image_url || ''}">
                                 </div>

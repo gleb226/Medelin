@@ -125,7 +125,7 @@ class AdminDatabase:
         if not rows: return []
         role_rank = {'developer': 5, 'owner': 4, 'admin': 2}
         rows.sort(key=lambda r: (-role_rank.get(r.get('role') or 'admin', 1), int(r.get('user_id') or 0)))
-        return [(r['user_id'], r.get('username'), r.get('display_name'), r.get('role') or 'admin') for r in rows]
+        return [(int(r['user_id']), r.get('username'), r.get('display_name'), r.get('role') or 'admin') for r in rows]
 
     async def get_admins_with_locations(self) -> list:
 

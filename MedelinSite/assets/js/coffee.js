@@ -218,7 +218,6 @@ function openBeanDetail(item, pushState = true) {
                     <p class="bean-full-view__description">${item.description || 'Преміальна свіжообсмажена кава Medelin, створена для справжніх поціновувачів.'}</p>
                     
                     <div class="bean-full-view__primary-stats">
-                        ${item.species ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Склад</label><p class="bean-full-view__stat-value">${item.species}</p></div>` : ''}
                         ${item.roast ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Обсмаження</label><p class="bean-full-view__stat-value">${item.roast}</p></div>` : ''}
                         ${!isCommercial && score ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Оцінка якості</label><p class="bean-full-view__stat-value">${score}</p></div>` : ''}
                         ${item.harvest ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Врожай</label><p class="bean-full-view__stat-value">${item.harvest}</p></div>` : ''}
