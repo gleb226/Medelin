@@ -700,33 +700,36 @@ async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
         user_id_val = data.get('user_id')
         username = data.get('username', '').strip().replace('@', '')
         
-        # Enforce integer user_id
-        user_id = 0
-        try:
-            if user_id_val: user_id = int(str(user_id_val).strip())
-        except:
-            user_id = 0
+        # Try to find user via the same logic as the bot
+        identifier = user_id_val if user_id_val and user_id_val != '0' else f"@{username}"
+        target = await admin_db.find_admin_by_identifier(identifier)
         
-        if user_id == 0 and username:
-            from app.databases.user_database import user_db
-            u_info = await user_db.get_user_by_username(username)
-            if u_info:
-                user_id = int(u_info[0])
-                logger.info(f"Resolved username @{username} to user_id {user_id}")
-            else:
-                logger.warning(f"Username @{username} not found in user_db")
-                raise HTTPException(status_code=404, detail=f'Користувача @{username} не знайдено в базі. Він має хоча б раз написати боту.')
-        
-        if not user_id:
-            raise HTTPException(status_code=400, detail='Вкажіть вірний TG ID або @username')
+        if not target and username:
+             # Double check user_db if not found in admin_db discovery
+             from app.databases.user_database import user_db
+             u_info = await user_db.get_user_by_username(username)
+             if u_info:
+                 target = {'user_id': int(u_info[0]), 'username': username, 'display_name': u_info[1] or username}
 
+        if not target and str(user_id_val).isdigit():
+             from app.databases.user_database import user_db
+             u_info = await user_db.get_user_by_id(int(user_id_val))
+             if u_info:
+                 target = {'user_id': int(u_info[0]), 'username': u_info[2], 'display_name': u_info[1] or str(user_id_val)}
+
+        if not target:
+            raise HTTPException(status_code=404, detail='Користувача не знайдено. Він має натиснути /start у боті.')
+
+        user_id = int(target['user_id'])
+        final_username = target.get('username') or username
+        
         me_role = admin.get('role')
         target_role = data.get('role', 'admin')
         
         if me_role == 'owner' and target_role == 'owner':
             raise HTTPException(status_code=403, detail='Власник не може створювати інших власників')
 
-        await admin_db.add_admin(user_id=user_id, username=username, display_name=data['display_name'], added_by=admin['user_id'], role=target_role, locations=data.get('locations', []))
+        await admin_db.add_admin(user_id=user_id, username=final_username, display_name=data['display_name'], added_by=admin['user_id'], role=target_role, locations=data.get('locations', []))
         return {'status': 'ok'}
     except HTTPException: raise
     except Exception as e:
@@ -739,14 +742,14 @@ async def admin_delete_team(uid: str, admin: dict = Depends(get_current_admin)):
         logger.info(f"Deleting team member {uid}. Admin: {admin['user_id']}")
         if admin.get('role') not in ('owner', 'developer'):
             raise HTTPException(status_code=403, detail='Недостатньо прав')
-        
-        if admin.get('role') == 'admin':
-            raise HTTPException(status_code=403, detail='Адміністратор не може видаляти персонал')
             
         try:
             target_uid = int(uid)
         except:
-            raise HTTPException(status_code=400, detail='Невірний ID користувача')
+            # Try to find by username if uid is not numeric
+            target = await admin_db.find_admin_by_identifier(uid)
+            if target: target_uid = int(target['user_id'])
+            else: raise HTTPException(status_code=400, detail='Невірний ID користувача')
 
         await admin_db.remove_admin(target_uid)
         return {'status': 'ok'}
@@ -768,10 +771,12 @@ async def get_admin_stats(admin: dict = Depends(get_current_admin)):
         for s in sales if s.get('record_type') == 'sale'
     )
     total_sales = len([s for s in sales if s.get('record_type') == 'sale'])
+    avg_check = int(total_revenue / total_sales) if total_sales > 0 else 0
     
     return {
         'total_revenue': int(total_revenue),
         'total_sales': total_sales,
+        'avg_check': avg_check,
         'recent_sales': sales[:20]
     }
 

@@ -124,8 +124,7 @@
             .order-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: flex-end; }
 
             .admin-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; padding-bottom: 1rem; border-bottom: 2px solid var(--color-coffee-soft); }
-            .admin-toolbar h3 { font-family: var(--font-accent); color: var(--color-dark-brown); font-size: 1.8rem; font-weight: 400; }
-            .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+            .admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(24%, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
             
             .bean-card, .location-card {
                 background: white; border-radius: 18px; overflow: hidden;
@@ -133,14 +132,15 @@
                 transition: all 0.3s ease; display: flex; flex-direction: column;
             }
             .bean-card:hover, .location-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(139, 94, 60, 0.1); }
-            .card-img { width: 100%; aspect-ratio: 16/9; height: auto; object-fit: cover; cursor: zoom-in; }
-            .card-body { padding: 0.8rem; flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+            .bean-card .card-img { width: 100%; aspect-ratio: 2/3; height: auto; object-fit: cover; cursor: zoom-in; }
+            .location-card .card-img { width: 100%; aspect-ratio: 16/9; height: auto; object-fit: cover; cursor: zoom-in; }
+            .card-body { padding: 1.2rem; flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
 
             .info-block { background: #fdfcf9; padding: 0.8rem 1.2rem; border-radius: 12px; border: 1px solid var(--color-coffee-soft); font-size: 0.9rem; }
             .info-block b { color: var(--color-coffee); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.2rem; }
-            .card-title { font-family: var(--font-accent); font-size: 1rem; color: var(--color-dark-brown); margin-bottom: 0.1rem; }
-            .card-desc { font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 0.5rem; flex: 1; line-height: 1.4; }
-            .card-stats { display: flex; gap: 0.6rem; font-size: 0.75rem; font-weight: 700; color: var(--color-coffee); margin-bottom: 0.4rem; }
+            .card-title { font-family: var(--font-accent); font-size: 1.2rem; color: var(--color-dark-brown); margin-bottom: 0.1rem; }
+            .card-desc { font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.5rem; flex: 1; line-height: 1.5; }
+            .card-stats { display: flex; gap: 0.6rem; font-size: 0.8rem; font-weight: 700; color: var(--color-coffee); margin-bottom: 0.4rem; }
 
             .hint-text { font-size: 0.75rem; color: var(--color-coffee); margin-top: 0.3rem; font-weight: 600; opacity: 0.8; }
 
@@ -521,11 +521,7 @@
                         <div class="admin-modal__header"><h3>Деталі сорту</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:2.5rem;">
                             <div>
-                                <img src="${window.fixImageUrl(b.image_url)}" style="width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:25px; box-shadow: var(--shadow);">
-                                <div style="margin-top:1.5rem; padding:1.5rem; background:#fdfcf9; border-radius:20px; border:1px solid var(--color-coffee-soft); line-height:1.6;">
-                                    <h4 style="font-family:var(--font-accent); color:var(--color-coffee); margin-bottom:0.8rem;">ОПИС</h4>
-                                    ${b.description || 'Опис відсутній'}
-                                </div>
+                                <img src="${window.fixImageUrl(b.image_url)}" style="width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:25px; box-shadow: var(--shadow);">
                             </div>
                             <div style="display:flex; flex-direction:column; gap:0.8rem;">
                                 <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown); font-size:2.5rem; margin-bottom:0.5rem;">${b.name}</h2>
@@ -539,10 +535,13 @@
                                     <div class="info-block"><b>Метод обробки:</b> ${b.processing || '—'}</div>
                                     <div class="info-block"><b>Категорія:</b> ${b.category==='specialty'?'Спешелті':'Комерційна'}</div>
                                     ${b.category === 'specialty' ? `<div class="info-block"><b>Оцінка якості (SCA):</b> ${b.quality_score || b.cup_score || '—'}</div>` : ''}
-                                    <div class="info-block"><b>Залишок:</b> ${b.stock_packs ?? '—'} пачок</div>
                                 </div>
                                 <div style="margin-top:1rem; padding:1.2rem; background:var(--color-cream); border-radius:15px;">
                                     <p><b>Дескриптори:</b> ${b.descriptors || '—'}</p>
+                                </div>
+                                <div style="margin-top:1rem; padding:1.5rem; background:#fdfcf9; border-radius:20px; border:1px solid var(--color-coffee-soft); line-height:1.6;">
+                                    <h4 style="font-family:var(--font-accent); color:var(--color-coffee); margin-bottom:0.8rem;">ОПИС</h4>
+                                    ${b.description || 'Опис відсутній'}
                                 </div>
                             </div>
                         </div>
@@ -575,32 +574,21 @@
                             <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
                                 <div class="admin-field"><label>Назва</label><input name="name" value="${b?.name || ''}" placeholder="Ethiopia Sidamo" required></div>
                                 <div class="admin-field"><label>Ціна 250г</label><input type="number" name="price_250" value="${b?.price_250 || ''}" placeholder="400" required></div>
-                                <div class="admin-field"><label>Категорія</label><select name="category"><option value="commercial" ${b?.category==='commercial'?'selected':''}>Комерційна</option><option value="specialty" ${b?.category==='specialty'?'selected':''}>Спешелті</option></select></div>
-                                <div class="admin-field"><label>Країна</label><input name="country" value="${b?.country || ''}" placeholder="Ефіопія"></div>
-                                <div class="admin-field"><label>Регіон</label><input name="region" value="${b?.region || ''}" placeholder="Guji"></div>
-                                <div class="admin-field"><label>Score / Cup</label><input name="quality_score" value="${b?.quality_score || b?.cup_score || ''}" placeholder="87"></div>
+                                <div class="admin-field"><label>Категорія</label><select name="category" onchange="toggleQualityScore(this.value)"><option value="commercial" ${b?.category==='commercial'?'selected':''}>Комерційна</option><option value="specialty" ${b?.category==='specialty'?'selected':''}>Спешелті</option></select></div>
+                                <div class="admin-field"><label>Склад</label><input name="composition" value="${b?.composition || ''}" placeholder="100% Arabica"></div>
                                 <div class="admin-field"><label>Обсмажка</label><input name="roast" value="${b?.roast || ''}" placeholder="Світла / Середня"></div>
-                                <div class="admin-field"><label>Обробка</label><input name="processing" value="${b?.processing || ''}" placeholder="Natural / Washed"></div>
-                                <div class="admin-field"><label>Вид</label><input name="species" value="${b?.species || ''}" placeholder="Arabica / Robusta"></div>
-                                <div class="admin-field"><label>Варіація</label><input name="variety" value="${b?.variety || ''}" placeholder="Heirloom / Bourbon"></div>
-                                <div class="admin-field"><label>Висота</label><input name="altitude" value="${b?.altitude || ''}" placeholder="1800-2100 м"></div>
                                 <div class="admin-field"><label>Врожай</label><input name="harvest" value="${b?.harvest || ''}" placeholder="2023/24"></div>
-                                <div class="admin-field"><label>Залишок (пачок)</label><input type="number" name="stock_packs" value="${b?.stock_packs ?? ''}" placeholder="10"></div>
+                                <div class="admin-field"><label>Різновид</label><input name="variety" value="${b?.variety || ''}" placeholder="Heirloom / Bourbon"></div>
+                                <div class="admin-field"><label>Висота</label><input name="altitude" value="${b?.altitude || ''}" placeholder="1800-2100 м"></div>
+                                <div class="admin-field"><label>Метод обробки</label><input name="processing" value="${b?.processing || ''}" placeholder="Natural / Washed"></div>
+                                <div class="admin-field" id="quality-score-field" style="display: ${b?.category === 'specialty' ? 'block' : 'none'}"><label>Оцінка якості (SCA)</label><input name="quality_score" value="${b?.quality_score || b?.cup_score || ''}" placeholder="87"></div>
                             </div>
-                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:1rem; margin-top:1rem;">
-                                <div class="admin-field"><label>Кислотність (0-10)</label><input type="number" name="acidity" value="${b?.acidity || ''}" placeholder="7"></div>
-                                <div class="admin-field"><label>Тіло (0-10)</label><input type="number" name="body" value="${b?.body || ''}" placeholder="6"></div>
-                                <div class="admin-field"><label>Солодкість (0-10)</label><input type="number" name="sweetness" value="${b?.sweetness || ''}" placeholder="8"></div>
-                            </div>
-                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1.5rem; margin-top:1.5rem;">
-                                <div class="admin-field"><label>Дескриптори</label><input name="descriptors" value="${b?.descriptors || ''}" placeholder="Жасмин, персик, бергамот"></div>
-                                <div class="admin-field"><label>Профіль смаку</label><input name="taste" value="${b?.taste || ''}" placeholder="Квітковий, солодкий"></div>
-                            </div>
+                            <div class="admin-field" style="margin-top:1.5rem;"><label>Дескриптори</label><input name="descriptors" value="${b?.descriptors || ''}" placeholder="Жасмин, персик, бергамот"></div>
                             <div class="admin-field" style="margin-top:1.5rem;"><label>Опис</label><textarea name="description" rows="4" placeholder="Детальний опис для покупця...">${b?.description || ''}</textarea></div>
-                            <div class="admin-field" style="margin-top:2rem;"><label>Фото</label>
+                            <div class="admin-field" style="margin-top:2rem;"><label>Фото (вертикальне)</label>
                                 <div style="display:flex; align-items:center; gap:2rem;">
-                                    <img id="bean-img-preview" src="${window.fixImageUrl(b?.image_url)}" style="width:200px; aspect-ratio:16/9; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
-                                    <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="bean-file-input"></label>
+                                    <img id="bean-img-preview" src="${window.fixImageUrl(b?.image_url)}" style="width:120px; aspect-ratio:2/3; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
+                                    <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="bean-file-input" style="display:none;"></label>
                                     <input type="hidden" name="image_url" id="bean-image-url" value="${b?.image_url || ''}">
                                 </div>
                             </div>
@@ -631,6 +619,7 @@
                         <img src="${window.fixImageUrl(l.image_url)}" class="card-img">
                         <div class="card-body" style="text-align:center;">
                             <div class="card-title">${l.name}</div>
+                            <div class="card-desc">${l.address}</div>
                         </div>`;
                     document.getElementById('locs-grid').appendChild(div);
                 });
@@ -641,18 +630,25 @@
                 const modal = document.getElementById('admin-modal');
                 const isDev = currentAdmin.role === 'developer';
                 modal.innerHTML = `
-                    <div class="admin-modal__panel">
+                    <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>Деталі локації</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
-                        <div style="display:flex; gap:2rem; flex-wrap:wrap;">
-                            <img src="${window.fixImageUrl(l.image_url)}" style="width:200px; height:150px; object-fit:cover; border-radius:20px;">
-                            <div style="flex:1; min-width:250px;">
-                                <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown); margin-bottom:1rem;">${l.name}</h2>
-                                <p style="margin-bottom:0.5rem;"><i class="fas fa-map-marker-alt"></i> ${l.address}</p>
-                                <p style="margin-bottom:0.5rem;"><i class="fas fa-clock"></i> ${l.schedule || '—'}</p>
-                                ${l.google_maps_url ? `<a href="${l.google_maps_url}" target="_blank" style="color:var(--color-coffee); font-weight:800; font-size:0.85rem;">ВІДКРИТИ НА КАРТАХ <i class="fas fa-external-link-alt"></i></a>` : ''}
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:2.5rem;">
+                            <div>
+                                <img src="${window.fixImageUrl(l.image_url)}" style="width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:25px; box-shadow: var(--shadow);">
+                            </div>
+                            <div style="flex:1;">
+                                <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown); font-size:2.2rem; margin-bottom:1.5rem;">${l.name}</h2>
+                                <div style="display:flex; flex-direction:column; gap:1rem;">
+                                    <p><b>📍 Адреса:</b> ${l.address}</p>
+                                    <p><b>⏰ Графік:</b> ${l.schedule || '—'}</p>
+                                    <p><b>💰 Середній чек:</b> ${l.avg_check || '—'} ₴</p>
+                                    <p><b>✨ Зручності:</b> ${l.amenities || '—'}</p>
+                                    <p><b>📝 Опис:</b> ${l.description || '—'}</p>
+                                    ${l.google_maps_url ? `<a href="${l.google_maps_url}" target="_blank" class="btn btn--outline btn--sm" style="margin-top:1rem;">ВІДКРИТИ НА КАРТАХ <i class="fas fa-external-link-alt"></i></a>` : ''}
+                                </div>
                             </div>
                         </div>
-                        <div class="admin-modal__footer" style="justify-content: space-between;">
+                        <div class="admin-modal__footer" style="justify-content: space-between; margin-top:2rem;">
                             ${!isDev ? `
                                 <button class="btn btn--danger btn--sm" onclick="deleteLocation('${l.id}')"><i class="fas fa-trash"></i> Видалити</button>
                                 <button class="btn btn--outline btn--sm" onclick='openLocationModal(${JSON.stringify(l).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i> Редагувати</button>
@@ -667,18 +663,24 @@
                 modal.innerHTML = `
                     <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>${l ? 'Редагувати' : 'Додати'} локацію</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
-                        <form id="loc-form"><div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                            <div class="admin-field"><label>Назва</label><input name="name" value="${l?.name || ''}" placeholder="Наприклад: Меделін Центр" required></div>
-                            <div class="admin-field"><label>Адреса</label><input name="address" value="${l?.address || ''}" placeholder="вул. Корятовича, 1" required></div>
-                            <div class="admin-field"><label>Графік</label><input name="schedule" value="${l?.schedule || ''}" placeholder="Пн-Пт: 08:00-20:00"></div>
-                            <div class="admin-field"><label>Maps URL</label><input name="google_maps_url" value="${l?.google_maps_url || ''}" placeholder="https://maps.app.goo.gl/..."></div>
-                        </div><div class="admin-field" style="margin-top:1.5rem;"><label>Фото</label>
-                            <div style="display:flex; align-items:center; gap:1.5rem;">
-                                <img id="loc-img-preview" src="${window.fixImageUrl(l?.image_url)}" style="width:150px; height:100px; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
-                                <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="loc-file-input"></label>
-                                <input type="hidden" name="image_url" id="loc-image-url" value="${l?.image_url || ''}">
+                        <form id="loc-form">
+                            <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
+                                <div class="admin-field"><label>Назва</label><input name="name" value="${l?.name || ''}" placeholder="Меделін Центр" required></div>
+                                <div class="admin-field"><label>Адреса</label><input name="address" value="${l?.address || ''}" placeholder="вул. Корятовича, 1" required></div>
+                                <div class="admin-field"><label>Графік</label><input name="schedule" value="${l?.schedule || ''}" placeholder="Пн-Пт: 08:00-20:00"></div>
+                                <div class="admin-field"><label>Середній чек</label><input name="avg_check" value="${l?.avg_check || ''}" placeholder="250"></div>
+                                <div class="admin-field"><label>Зручності</label><input name="amenities" value="${l?.amenities || ''}" placeholder="Wi-Fi, Тераса, Pets friendly"></div>
+                                <div class="admin-field"><label>Maps URL</label><input name="google_maps_url" value="${l?.google_maps_url || ''}" placeholder="https://maps.app.goo.gl/..."></div>
                             </div>
-                        </div></form>
+                            <div class="admin-field" style="margin-top:1.5rem;"><label>Опис</label><textarea name="description" rows="3" placeholder="Короткий опис закладу...">${l?.description || ''}</textarea></div>
+                            <div class="admin-field" style="margin-top:2rem;"><label>Фото (горизонтальне)</label>
+                                <div style="display:flex; align-items:center; gap:2rem;">
+                                    <img id="loc-img-preview" src="${window.fixImageUrl(l?.image_url)}" style="width:160px; aspect-ratio:16/9; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
+                                    <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="loc-file-input" style="display:none;"></label>
+                                    <input type="hidden" name="image_url" id="loc-image-url" value="${l?.image_url || ''}">
+                                </div>
+                            </div>
+                        </form>
                         <div class="admin-modal__footer"><button class="btn btn--primary" id="btn-save-loc">Зберегти</button></div>
                     </div>`;
                 modal.classList.add('admin-modal--active');
@@ -728,17 +730,21 @@
                 if (!stats) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
                 list.innerHTML = `
                     <div class="admin-toolbar">
-                        <h3>Статистика (тільки розробник)</h3>
+                        <h3>Статистика</h3>
                         <button class="btn btn--danger btn--sm" onclick="resetStats()">Скинути статистику</button>
                     </div>
-                    <div class="admin-grid">
-                        <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none;">
-                            <div style="font-size:0.8rem; font-weight:800; color:var(--color-coffee); margin-bottom:0.5rem;">ЗАГАЛЬНА ВИРУЧКА</div>
-                            <div style="font-size:2.5rem; font-weight:400; font-family:var(--font-accent); color:var(--color-dark-brown);">${stats.total_revenue || 0} ₴</div>
+                    <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                        <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none; padding:1.5rem;">
+                            <div style="font-size:0.7rem; font-weight:800; color:var(--color-coffee); margin-bottom:0.5rem; text-transform:uppercase;">ЗАГАЛЬНА ВИРУЧКА</div>
+                            <div style="font-size:1.8rem; font-weight:400; font-family:var(--font-accent); color:var(--color-dark-brown);">${stats.total_revenue || 0} ₴</div>
                         </div>
-                        <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none;">
-                            <div style="font-size:0.8rem; font-weight:800; color:var(--color-coffee); margin-bottom:0.5rem;">КІЛЬКІСТЬ ПРОДАЖІВ</div>
-                            <div style="font-size:2.5rem; font-weight:400; font-family:var(--font-accent); color:var(--color-dark-brown);">${stats.total_sales || 0}</div>
+                        <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none; padding:1.5rem;">
+                            <div style="font-size:0.7rem; font-weight:800; color:var(--color-coffee); margin-bottom:0.5rem; text-transform:uppercase;">КІЛЬКІСТЬ ПРОДАЖІВ</div>
+                            <div style="font-size:1.8rem; font-weight:400; font-family:var(--font-accent); color:var(--color-dark-brown);">${stats.total_sales || 0}</div>
+                        </div>
+                        <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none; padding:1.5rem;">
+                            <div style="font-size:0.7rem; font-weight:800; color:var(--color-coffee); margin-bottom:0.5rem; text-transform:uppercase;">СЕРЕДНІЙ ЧЕК</div>
+                            <div style="font-size:1.8rem; font-weight:400; font-family:var(--font-accent); color:var(--color-dark-brown);">${stats.avg_check || 0} ₴</div>
                         </div>
                     </div>
                     <div class="admin-toolbar" style="border:none; margin-top:2rem;"><h3>Останні продажі</h3></div>
@@ -774,15 +780,15 @@
             async function loadTeam() {
                 showLoader(true); const [team, locs] = await Promise.all([apiFetch('team'), apiFetch('locations')]);
                 const list = document.getElementById('items-list'); if (!team) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                const isDev = currentAdmin.role === 'developer';
-                list.innerHTML = `<div class="admin-toolbar"><h3>Персонал</h3>${!isDev ? `<button class="btn btn--primary btn--sm" onclick='openTeamModal(null, ${JSON.stringify(locs).replace(/'/g, "&apos;")})'>+ Додати</button>` : ''}</div><div id="team-list"></div>`;
+                const canManage = currentAdmin.role === 'developer' || currentAdmin.role === 'owner';
+                list.innerHTML = `<div class="admin-toolbar"><h3>Персонал</h3>${canManage ? `<button class="btn btn--primary btn--sm" onclick='openTeamModal(null, ${JSON.stringify(locs).replace(/'/g, "&apos;")})'>+ Додати</button>` : ''}</div><div id="team-list"></div>`;
                 team.forEach(t => { 
                     const div = document.createElement('div'); div.className = 'order-item'; 
                     div.innerHTML = `<div class="order-info">
                             <div style="font-weight:800; color:var(--color-dark-brown);">${t[2]}</div>
                             <div style="font-size:0.9rem; color:var(--color-text-muted);">@${t[1] || '—'} | TG: ${t[0]} | ${roleName(t[3])}</div>
                         </div>
-                        ${!isDev ? `<button class="btn btn--danger btn--sm" onclick="deleteTeam('${t[0]}')"><i class="fas fa-trash"></i></button>` : ''}`; 
+                        ${canManage ? `<button class="btn btn--danger btn--sm" onclick="deleteTeam('${t[0]}')"><i class="fas fa-trash"></i></button>` : ''}`; 
                     document.getElementById('team-list').appendChild(div); 
                 });
                 showLoader(false);
