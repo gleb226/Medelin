@@ -228,16 +228,23 @@ class AdminDatabase:
     async def verify_session(self, token: str):
         db = await get_db()
         now = datetime.utcnow()
-        sess = await db.admin_sessions.find_one({
-            'token': token,
-            'expires_at': {'$gt': now}
-        })
-        if not sess: return None
+        # Search without expiry first to debug, then check expiry
+        sess = await db.admin_sessions.find_one({'token': token})
         
-        # Refresh session for another 2 hours on each request (inactivity timeout)
+        if not sess:
+            # logger.error(f"Session not found for token: {token[:10]}...")
+            return None
+        
+        # Check expiry (allow 24h for robustness if expires_at is missing or weird)
+        expiry = sess.get('expires_at') or (sess['created_at'] + timedelta(hours=24))
+        if now > expiry:
+            # logger.info(f"Session expired for token: {token[:10]}...")
+            return None
+        
+        # Refresh session
         await db.admin_sessions.update_one(
             {'_id': sess['_id']},
-            {'$set': {'expires_at': now + timedelta(hours=2)}}
+            {'$set': {'expires_at': now + timedelta(hours=24)}} # Extend to 24h
         )
         
         user_id = sess['user_id']

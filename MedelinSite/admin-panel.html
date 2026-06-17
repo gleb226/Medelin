@@ -406,7 +406,10 @@
                 sessionToken = token; currentAdmin = admin;
                 localStorage.setItem('medelin_admin_token', token);
                 localStorage.setItem('medelin_admin_user', JSON.stringify(admin));
-                location.reload();
+                
+                // Instead of reload, just transition UI
+                document.getElementById('login-screen').classList.add('login-screen--hidden');
+                showPanel();
             }
 
             function showPanel() {

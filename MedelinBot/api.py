@@ -77,27 +77,42 @@ async def get_admin_panel():
     logger.error(f"admin-panel.html NOT FOUND at: {path}")
     raise HTTPException(status_code=404)
 
+import secrets
+
 @app.get('/api/admin/verify')
 async def verify_admin_login(user_id: int):
-    req = await admin_db.get_auth_request(user_id)
-    if req and req.get('confirmed'):
-        # Create session token
-        token = base64.b64encode(os.urandom(32)).decode()
-        # Save session to DB
-        await admin_db.create_session(user_id, token)
-        admin = await admin_db.get_admin_by_id(user_id)
-        
-        if not admin:
-            if str(user_id) in DEVELOPER_IDS:
-                admin = {'display_name': 'Developer', 'role': 'developer'}
-            else:
-                logger.error(f"Admin record not found for user_id: {user_id}")
-                return {'status': 'error', 'message': 'Запис адміністратора не знайдено'}
+    try:
+        req = await admin_db.get_auth_request(user_id)
+        if req and req.get('confirmed'):
+            # Create session token
+            token = secrets.token_hex(32)
+            # Save session to DB
+            await admin_db.create_session(user_id, token)
+            
+            admin = await admin_db.get_admin_by_id(user_id)
+            if not admin:
+                if str(user_id) in DEVELOPER_IDS:
+                    admin = {'user_id': user_id, 'display_name': 'Developer', 'role': 'developer'}
+                else:
+                    logger.error(f"Admin record not found for user_id: {user_id}")
+                    return {'status': 'error', 'message': 'Запис адміністратора не знайдено'}
 
-        # Delete auth request
-        await admin_db.delete_auth_request(user_id)
-        return {'status': 'ok', 'token': token, 'admin': {'name': admin['display_name'], 'role': admin['role']}}
-    return {'status': 'pending'}
+            # Delete auth request
+            await admin_db.delete_auth_request(user_id)
+            logger.info(f"Login verified for user {user_id}. Token created.")
+            return {
+                'status': 'ok', 
+                'token': token, 
+                'admin': {
+                    'name': admin.get('display_name') or admin.get('name') or 'Admin', 
+                    'role': admin.get('role', 'admin'),
+                    'user_id': admin.get('user_id')
+                }
+            }
+        return {'status': 'pending'}
+    except Exception as e:
+        logger.error(f"Error in verify_admin_login: {e}", exc_info=True)
+        return {'status': 'error', 'message': str(e)}
 
 # --- Моделі ---
 class CheckoutRequest(BaseModel):
