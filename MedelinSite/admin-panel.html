@@ -831,21 +831,6 @@
 
             function closeAdminModal() { document.getElementById('admin-modal').classList.remove('admin-modal--active'); }
 
-            function refreshData() {
-                if (currentSection === 'new_orders') loadNewOrders();
-                else if (currentSection === 'orders') loadOrders();
-                else if (currentSection === 'beans') loadBeans();
-                else if (currentSection === 'locations') loadLocations();
-                else if (currentSection === 'socials') loadSocials();
-                else if (currentSection === 'stats') loadStats();
-                else if (currentSection === 'team') loadTeam();
-            }
-
-            document.getElementById('refresh-btn').onclick = refreshData;
-            if (sessionToken && currentAdmin) { document.getElementById('login-screen').style.display = 'none'; showPanel(); }
-        </script>
-    </body>
-</html>
             function toggleQualityScore(val) {
                 const field = document.getElementById('quality-score-field');
                 if (field) field.style.display = val === 'specialty' ? 'block' : 'none';
@@ -862,10 +847,6 @@
             }
 
             document.getElementById('refresh-btn').onclick = refreshData;
-            if (sessionToken && currentAdmin) { document.getElementById('login-screen').style.display = 'none'; showPanel(); }
-        </script>
-    </body>
-</html>ck = refreshData;
             if (sessionToken && currentAdmin) { document.getElementById('login-screen').style.display = 'none'; showPanel(); }
         </script>
     </body>
