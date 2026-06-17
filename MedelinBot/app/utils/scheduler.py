@@ -14,7 +14,7 @@ async def cleanup_old_data() -> None:
     # Retention rules (user request)
     cut_active = now - timedelta(days=5)
     cut_logs = now - timedelta(days=5)
-    cut_sales_bookings = now - timedelta(days=5)
+    # cut_sales_bookings = now - timedelta(days=5) # DEACTIVATED: stats reset monthly now
     cut_users = now - timedelta(days=180)
     cut_support = now - timedelta(days=3)
     cut_errors = now - timedelta(days=30)
@@ -25,8 +25,8 @@ async def cleanup_old_data() -> None:
 
         res_logs = await db.activity_logs.delete_many({'timestamp': {'$lt': cut_logs}})
 
-        res_sales = await db.sales.delete_many({'timestamp': {'$lt': cut_sales_bookings}})
-        res_bookings = await db.bookings.delete_many({'created_at': {'$lt': cut_sales_bookings}})
+        # res_sales = await db.sales.delete_many({'timestamp': {'$lt': cut_sales_bookings}})
+        # res_bookings = await db.bookings.delete_many({'created_at': {'$lt': cut_sales_bookings}})
 
         # Users: keep admins; remove inactive users older than 6 months
         admins = await admin_db.get_admins_basic()
@@ -45,8 +45,8 @@ async def cleanup_old_data() -> None:
             int(res_active_b.deleted_count or 0),
             int(res_active_o.deleted_count or 0),
             int(res_logs.deleted_count or 0),
-            int(res_sales.deleted_count or 0),
-            int(res_bookings.deleted_count or 0),
+            # int(res_sales.deleted_count or 0),
+            # int(res_bookings.deleted_count or 0),
             int(res_users.deleted_count or 0),
             int(res_msgs.deleted_count or 0),
             int(res_errors.deleted_count or 0),
@@ -60,7 +60,7 @@ async def cleanup_old_data() -> None:
                 'db_cleanup',
                 (
                     f'Cleanup: active_bookings={res_active_b.deleted_count}, active_orders={res_active_o.deleted_count}, '
-                    f'logs={res_logs.deleted_count}, sales={res_sales.deleted_count}, bookings={res_bookings.deleted_count}, '
+                    f'logs={res_logs.deleted_count}, '
                     f'users={res_users.deleted_count}, guest_messages={res_msgs.deleted_count}, errors={res_errors.deleted_count}'
                 ),
             )
@@ -125,6 +125,15 @@ async def send_monthly_stats() -> None:
             await bot.send_message(dev_id, stats_text, parse_mode='HTML')
         except:
             pass
+
+    # RESET STATS for the new month
+    try:
+        await db.sales.delete_many({})
+        if 'bookings' in await db.list_collection_names():
+            await db.bookings.delete_many({})
+        await log_activity(0, 'system', 'stats_reset', 'Monthly stats reset performed')
+    except Exception as e:
+        logger.error(f"Failed to reset stats: {e}")
 
 def start_scheduler() -> None:
     scheduler = AsyncIOScheduler()

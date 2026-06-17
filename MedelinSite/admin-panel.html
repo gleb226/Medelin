@@ -215,9 +215,8 @@
                 <a class="nav-item" data-section="orders"><i class="fas fa-shopping-bag"></i> Активні</a>
                 <a class="nav-item" data-section="beans"><i class="fas fa-coffee"></i> Зерно</a>
                 <a class="nav-item" data-section="locations"><i class="fas fa-map-marker-alt"></i> Локації</a>
-                <a class="nav-item" data-section="socials"><i class="fas fa-address-book"></i> Контакти</a>
+                <a class="nav-item" data-section="socials"><i class="fas fa-hashtag"></i> Контакти</a>
                 <a class="nav-item" data-section="stats"><i class="fas fa-chart-line"></i> Статистика</a>
-                <a class="nav-item" data-section="broadcast"><i class="fas fa-paper-plane"></i> Розсилка</a>
                 <a class="nav-item" data-section="team"><i class="fas fa-users-gear"></i> Персонал</a>
                 <a href="/" class="nav-item" style="margin-top:auto; border-top:1px solid rgba(255,255,255,0.05);"><i class="fas fa-external-link-alt"></i> На сайт</a>
             </nav>
@@ -237,6 +236,7 @@
             <div id="content-area"><div class="card"><div id="items-list">Завантаження...</div></div></div>
         </main>
 
+        <div class="full-image-modal" id="image-modal" onclick="this.style.display='none'"><img src="" id="full-img"></div>
         <div class="loader-wrap" id="loader"><div class="spinner"></div></div>
         <div class="admin-modal" id="admin-modal"></div>
 
@@ -253,6 +253,13 @@
                 if (url.startsWith('/uploads/') || url.startsWith('/photos/') || url.startsWith('/assets/')) return url;
                 return '/uploads/' + url;
             };
+
+            function showFullImage(url) {
+                const modal = document.getElementById('image-modal');
+                const img = document.getElementById('full-img');
+                img.src = window.fixImageUrl(url);
+                modal.style.display = 'flex';
+            }
 
             // Auto-logout after 2 hours
             setInterval(() => {
@@ -345,8 +352,6 @@
                     const sec = item.getAttribute('data-section');
                     if (role === 'admin') {
                         if (sec !== 'new_orders' && sec !== 'orders') item.style.display = 'none';
-                    } else if (role === 'owner') {
-                        if (sec === 'stats') item.style.display = 'none';
                     }
                 });
                 refreshData();
@@ -363,7 +368,12 @@
                 try {
                     const resp = await fetch(`/api/admin/${endpoint}`, options);
                     if (resp.status === 401) return logout();
-                    return resp.ok ? await resp.json() : null;
+                    if (!resp.ok) {
+                        const err = await resp.json();
+                        alert(err.detail || 'Помилка виконання');
+                        return null;
+                    }
+                    return await resp.json();
                 } catch(e) { return null; }
             }
 
@@ -391,8 +401,8 @@
                 showLoader(false);
             }
 
-            async function confirmOrder(oid) { if (confirm('Підтвердити?')) { const res = await apiFetch(`orders/${oid}/confirm`, 'POST'); if (res) refreshData(); } }
-            async function rejectOrder(oid) { if (confirm('Відхилити?')) { const res = await apiFetch(`orders/${oid}/reject`, 'POST'); if (res) refreshData(); } }
+            async function confirmOrder(oid) { if (confirm('Підтвердити замовлення?')) { const res = await apiFetch(`orders/${oid}/confirm`, 'POST'); if (res) refreshData(); } }
+            async function rejectOrder(oid) { if (confirm('Відхилити замовлення?')) { const res = await apiFetch(`orders/${oid}/reject`, 'POST'); if (res) refreshData(); } }
 
             async function loadOrders() {
                 showLoader(true);
@@ -407,7 +417,7 @@
                 showLoader(false);
             }
 
-            async function completeOrder(oid) { if (confirm('Виконано?')) { await apiFetch(`orders/${oid}/complete`, 'POST'); refreshData(); } }
+            async function completeOrder(oid) { if (confirm('Замовлення виконано?')) { await apiFetch(`orders/${oid}/complete`, 'POST'); refreshData(); } }
 
             async function loadBeans() {
                 showLoader(true);
@@ -416,8 +426,18 @@
                 if (!beans) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
                 list.innerHTML = `<div class="admin-toolbar"><h3>Зерно</h3><button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати</button></div><div id="beans-grid" class="admin-grid"></div>`;
                 beans.forEach(b => {
-                    const div = document.createElement('div'); div.className = 'card'; div.style.padding = '1rem';
-                    div.innerHTML = `<div style="display:flex; gap:1rem;"><div style="width:60px; height:60px; border-radius:10px; background:url('${window.fixImageUrl(b.image_url)}') center/cover;"></div><div style="flex:1;"><div style="font-weight:700;">${b.name}</div><div style="font-size:0.8rem; opacity:0.7;">${b.price_250} ₴ | ${b.roast || '—'}</div></div></div><div class="order-actions" style="margin-top:1rem;"><button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')">Видалити</button></div>`;
+                    const div = document.createElement('div'); div.className = 'bean-card';
+                    div.innerHTML = `
+                        <img src="${window.fixImageUrl(b.image_url)}" class="card-img" onclick="showFullImage('${b.image_url}')">
+                        <div class="card-body">
+                            <div class="card-title">${b.name}</div>
+                            <div class="card-stats"><span>${b.price_250} ₴</span> | <span>${b.roast || '—'}</span></div>
+                            <div class="card-desc">${b.description || 'Немає опису'}</div>
+                            <div class="order-actions">
+                                <button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'>Редагувати</button>
+                                <button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')">Видалити</button>
+                            </div>
+                        </div>`;
                     document.getElementById('beans-grid').appendChild(div);
                 });
                 showLoader(false);
@@ -425,7 +445,12 @@
 
             async function uploadImage(file) {
                 const formData = new FormData(); formData.append('file', file);
-                try { const resp = await fetch('/api/admin/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${sessionToken}` }, body: formData }); const res = await resp.json(); return res.url; } catch (e) { return null; }
+                try { 
+                    const resp = await fetch('/api/admin/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${sessionToken}` }, body: formData }); 
+                    const res = await resp.json(); 
+                    if (!resp.ok) { alert(res.detail || 'Помилка завантаження'); return null; }
+                    return res.url; 
+                } catch (e) { return null; }
             }
 
             function openBeanModal(b = null) {
@@ -441,7 +466,13 @@
                             <div class="admin-field"><label>Залишок</label><input type="number" name="stock_packs" value="${b?.stock_packs ?? ''}"></div>
                             <div class="admin-field"><label>Обсмажка</label><input name="roast" value="${b?.roast || ''}"></div>
                         </div><div class="admin-field" style="margin-top:1rem;"><label>Опис</label><textarea name="description" rows="3">${b?.description || ''}</textarea></div>
-                        <div class="admin-field" style="margin-top:1.5rem;"><label>Фото</label><div style="display:flex; gap:1rem;"><img id="bean-img-preview" src="${window.fixImageUrl(b?.image_url)}" style="width:80px; height:80px; object-fit:cover;"><input type="file" id="bean-file-input"><input type="hidden" name="image_url" id="bean-image-url" value="${b?.image_url || ''}"></div></div></form>
+                        <div class="admin-field" style="margin-top:1.5rem;"><label>Фото</label>
+                            <div style="display:flex; align-items:center; gap:1.5rem;">
+                                <img id="bean-img-preview" src="${window.fixImageUrl(b?.image_url)}" style="width:100px; height:100px; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
+                                <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="bean-file-input"></label>
+                                <input type="hidden" name="image_url" id="bean-image-url" value="${b?.image_url || ''}">
+                            </div>
+                        </div></form>
                         <div class="admin-modal__footer"><button class="btn btn--primary" id="btn-save-bean">Зберегти</button></div>
                     </div>`;
                 modal.classList.add('admin-modal--active');
@@ -451,7 +482,7 @@
             }
 
             async function saveBean(id) { const res = await apiFetch(id ? `beans/${id}` : 'beans', 'POST', Object.fromEntries(new FormData(document.getElementById('bean-form')).entries())); if (res) { closeAdminModal(); refreshData(); } }
-            async function deleteBean(id) { if (confirm('Видалити?')) { await apiFetch(`beans/${id}`, 'DELETE'); refreshData(); } }
+            async function deleteBean(id) { if (confirm('Видалити цей сорт?')) { await apiFetch(`beans/${id}`, 'DELETE'); refreshData(); } }
 
             async function loadLocations() {
                 showLoader(true);
@@ -460,8 +491,17 @@
                 if (!locs) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
                 list.innerHTML = `<div class="admin-toolbar"><h3>Локації</h3><button class="btn btn--primary btn--sm" onclick="openLocationModal()">+ Додати</button></div><div id="locs-grid" class="admin-grid"></div>`;
                 locs.forEach(l => {
-                    const div = document.createElement('div'); div.className = 'card'; div.style.padding = '1rem';
-                    div.innerHTML = `<div style="display:flex; gap:1rem;"><div style="width:60px; height:60px; border-radius:10px; background:url('${window.fixImageUrl(l.image_url)}') center/cover;"></div><div style="flex:1;"><div style="font-weight:700;">${l.name}</div><div style="font-size:0.8rem; opacity:0.7;">${l.address}</div></div></div><div class="order-actions" style="margin-top:1rem;"><button class="btn btn--outline btn--sm" onclick='openLocationModal(${JSON.stringify(l).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteLocation('${l.id}')">Видалити</button></div>`;
+                    const div = document.createElement('div'); div.className = 'location-card';
+                    div.innerHTML = `
+                        <img src="${window.fixImageUrl(l.image_url)}" class="card-img" onclick="showFullImage('${l.image_url}')">
+                        <div class="card-body">
+                            <div class="card-title">${l.name}</div>
+                            <div class="card-desc"><i class="fas fa-map-marker-alt"></i> ${l.address}<br><i class="fas fa-clock"></i> ${l.schedule || '—'}</div>
+                            <div class="order-actions">
+                                <button class="btn btn--outline btn--sm" onclick='openLocationModal(${JSON.stringify(l).replace(/'/g, "&apos;")})'>Редагувати</button>
+                                <button class="btn btn--danger btn--sm" onclick="deleteLocation('${l.id}')">Видалити</button>
+                            </div>
+                        </div>`;
                     document.getElementById('locs-grid').appendChild(div);
                 });
                 showLoader(false);
@@ -477,7 +517,13 @@
                             <div class="admin-field"><label>Адреса</label><input name="address" value="${l?.address || ''}" required></div>
                             <div class="admin-field"><label>Графік</label><input name="schedule" value="${l?.schedule || ''}"></div>
                             <div class="admin-field"><label>Maps URL</label><input name="google_maps_url" value="${l?.google_maps_url || ''}"></div>
-                        </div><div class="admin-field" style="margin-top:1.5rem;"><label>Фото</label><div style="display:flex; gap:1rem;"><img id="loc-img-preview" src="${window.fixImageUrl(l?.image_url)}" style="width:120px; height:80px; object-fit:cover;"><input type="file" id="loc-file-input"><input type="hidden" name="image_url" id="loc-image-url" value="${l?.image_url || ''}"></div></div></form>
+                        </div><div class="admin-field" style="margin-top:1.5rem;"><label>Фото</label>
+                            <div style="display:flex; align-items:center; gap:1.5rem;">
+                                <img id="loc-img-preview" src="${window.fixImageUrl(l?.image_url)}" style="width:150px; height:100px; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
+                                <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="loc-file-input"></label>
+                                <input type="hidden" name="image_url" id="loc-image-url" value="${l?.image_url || ''}">
+                            </div>
+                        </div></form>
                         <div class="admin-modal__footer"><button class="btn btn--primary" id="btn-save-loc">Зберегти</button></div>
                     </div>`;
                 modal.classList.add('admin-modal--active');
@@ -486,8 +532,8 @@
                 document.getElementById('btn-save-loc').onclick = () => saveLocation(l?.id);
             }
 
-            async function saveLocation(id) { const fd = new FormData(document.getElementById('loc-form')); const data = Object.fromEntries(fd.entries()); const res = await apiFetch(id ? `locations/${id}` : 'locations', 'POST', data); if (res) { closeAdminModal(); refreshData(); } }
-            async function deleteLocation(id) { if (confirm('Видалити?')) { await apiFetch(`locations/${id}`, 'DELETE'); refreshData(); } }
+            async function saveLocation(id) { const res = await apiFetch(id ? `locations/${id}` : 'locations', 'POST', Object.fromEntries(new FormData(document.getElementById('loc-form')).entries())); if (res) { closeAdminModal(); refreshData(); } }
+            async function deleteLocation(id) { if (confirm('Видалити цю локацію?')) { await apiFetch(`locations/${id}`, 'DELETE'); refreshData(); } }
 
             async function loadSocials() {
                 showLoader(true);
@@ -496,8 +542,15 @@
                 if (!socials) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
                 list.innerHTML = `<div class="admin-toolbar"><h3>Контакти</h3><button class="btn btn--primary btn--sm" onclick="openSocialModal()">+ Додати</button></div><div id="socials-list"></div>`;
                 socials.forEach(s => {
+                    let icon = 'fas fa-link';
+                    const name = s.name.toLowerCase();
+                    if (name.includes('insta')) icon = 'fab fa-instagram';
+                    else if (name.includes('face')) icon = 'fab fa-facebook';
+                    else if (name.includes('tele')) icon = 'fab fa-telegram';
+                    else if (name.includes('phone') || name.includes('тел')) icon = 'fas fa-phone';
+                    
                     const div = document.createElement('div'); div.className = 'order-item';
-                    div.innerHTML = `<div class="order-info"><div style="font-weight:700;"><i class="fas fa-address-book"></i> ${s.name}</div><div style="font-size:0.9rem; opacity:0.7;">${s.url}</div></div><div class="order-actions"><button class="btn btn--outline btn--sm" onclick='openSocialModal(${JSON.stringify(s).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button></div>`;
+                    div.innerHTML = `<div class="order-info"><div style="font-weight:700;"><i class="${icon}"></i> ${s.name}</div><div style="font-size:0.9rem; opacity:0.7;">${s.url}</div></div><div class="order-actions"><button class="btn btn--outline btn--sm" onclick='openSocialModal(${JSON.stringify(s).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button></div>`;
                     document.getElementById('socials-list').appendChild(div);
                 });
                 showLoader(false);
@@ -509,26 +562,56 @@
                 modal.classList.add('admin-modal--active');
             }
             async function saveSocial(id) { await apiFetch(id ? `socials/${id}` : 'socials', 'POST', Object.fromEntries(new FormData(document.getElementById('social-form')).entries())); closeAdminModal(); refreshData(); }
-            async function deleteSocial(id) { if (confirm('Видалити?')) { await apiFetch(`socials/${id}`, 'DELETE'); refreshData(); } }
+            async function deleteSocial(id) { if (confirm('Видалити цей контакт?')) { await apiFetch(`socials/${id}`, 'DELETE'); refreshData(); } }
 
             async function loadStats() {
                 showLoader(true);
                 const stats = await apiFetch('stats');
                 const list = document.getElementById('items-list');
                 if (!stats) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                list.innerHTML = `<div class="admin-toolbar"><h3>Статистика</h3></div><div class="admin-grid"><div class="card" style="text-align:center;">ВИРУЧКА: ${stats.total_revenue} ₴</div><div class="card" style="text-align:center;">ПРОДАЖІ: ${stats.total_sales}</div></div><div id="stats-recent"></div>`;
-                stats.recent_sales?.forEach(s => { const div = document.createElement('div'); div.className = 'order-item'; div.innerHTML = `<div>${s.fullname}</div><div>${s.total} ₴</div>`; document.getElementById('stats-recent').appendChild(div); });
+                list.innerHTML = `
+                    <div class="admin-toolbar">
+                        <h3>Статистика (тільки розробник)</h3>
+                        <button class="btn btn--danger btn--sm" onclick="resetStats()">Скинути статистику</button>
+                    </div>
+                    <div class="admin-grid">
+                        <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none;">
+                            <div style="font-size:0.8rem; font-weight:800; color:var(--color-coffee); margin-bottom:0.5rem;">ЗАГАЛЬНА ВИРУЧКА</div>
+                            <div style="font-size:2.5rem; font-weight:400; font-family:var(--font-accent); color:var(--color-dark-brown);">${stats.total_revenue} ₴</div>
+                        </div>
+                        <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none;">
+                            <div style="font-size:0.8rem; font-weight:800; color:var(--color-coffee); margin-bottom:0.5rem;">КІЛЬКІСТЬ ПРОДАЖІВ</div>
+                            <div style="font-size:2.5rem; font-weight:400; font-family:var(--font-accent); color:var(--color-dark-brown);">${stats.total_sales}</div>
+                        </div>
+                    </div>
+                    <div class="admin-toolbar" style="border:none; margin-top:2rem;"><h3>Останні продажі</h3></div>
+                    <div id="stats-recent"></div>`;
+                
+                if (stats.recent_sales?.length) {
+                    stats.recent_sales.forEach(s => { 
+                        const div = document.createElement('div'); div.className = 'order-item'; 
+                        const date = s.timestamp ? new Date(s.timestamp).toLocaleString('uk-UA') : '—';
+                        div.innerHTML = `
+                            <div class="order-info">
+                                <div style="font-weight:700;">${s.fullname || 'Гість'}</div>
+                                <div style="font-size:0.85rem; opacity:0.7;">${date}</div>
+                            </div>
+                            <div style="font-weight:800; color:var(--color-coffee); font-size:1.2rem;">${s.total} ₴</div>`; 
+                        document.getElementById('stats-recent').appendChild(div); 
+                    });
+                } else {
+                    document.getElementById('stats-recent').innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.5;">Дані про продажі відсутні</p>';
+                }
                 showLoader(false);
             }
 
-            async function loadBroadcast() {
-                document.getElementById('items-list').innerHTML = `<div class="admin-toolbar"><h3>Розсилка</h3></div><div class="card"><textarea id="broadcast-msg" rows="6" style="width:100%;" placeholder="Текст розсилки..."></textarea><button class="btn btn--primary btn--block" onclick="sendBroadcast()" style="margin-top:1rem;">🚀 Запустити</button></div>`;
-            }
-
-            async function sendBroadcast() {
-                const msg = document.getElementById('broadcast-msg').value; if (!msg || !confirm('Надіслати всім?')) return;
-                showLoader(true); const res = await apiFetch('broadcast', 'POST', { message: msg }); showLoader(false);
-                if (res) { alert(`Надіслано: ${res.sent_to}/${res.total}`); document.getElementById('broadcast-msg').value = ''; }
+            async function resetStats() {
+                if (confirm('Ви впевнені, що хочете скинути всю статистику? Ця дія незворотна.')) {
+                    showLoader(true);
+                    const res = await apiFetch('stats/reset', 'POST');
+                    if (res) refreshData();
+                    showLoader(false);
+                }
             }
 
             async function loadTeam() {
@@ -541,12 +624,12 @@
 
             function openTeamModal(t = null, allLocs = []) {
                 const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `<div class="admin-modal__panel"><div class="admin-modal__header"><h3>Додати</h3><button onclick="closeAdminModal()">X</button></div><form id="team-form"><div class="admin-field"><label>TG ID / @username</label><input name="user_id" required></div><div class="admin-field"><label>Ім'я</label><input name="display_name" required></div><div class="admin-field"><label>Роль</label><select name="role"><option value="admin">Адмін</option><option value="owner">Власник</option></select></div><div style="max-height:150px; overflow-y:auto;">${(allLocs||[]).map(l=>`<label><input type="checkbox" name="locations" value="${l.id}"> ${l.name}</label><br>`).join('')}</div></form><button onclick="saveTeam()" class="btn btn--primary">Зберегти</button></div>`;
+                modal.innerHTML = `<div class="admin-modal__panel"><div class="admin-modal__header"><h3>Додати</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="team-form"><div class="admin-field"><label>TG ID / @username</label><input name="user_id" required></div><div class="admin-field"><label>Ім'я</label><input name="display_name" required></div><div class="admin-field"><label>Роль</label><select name="role"><option value="admin">Адмін</option><option value="owner">Власник</option></select></div><div style="max-height:150px; overflow-y:auto; margin-top:1rem; padding:1rem; background:#f9f9f9; border-radius:15px;">${(allLocs||[]).map(l=>`<label style="display:block; margin-bottom:0.5rem; cursor:pointer;"><input type="checkbox" name="locations" value="${l.id}"> ${l.name}</label>`).join('')}</div></form><div class="admin-modal__footer"><button onclick="saveTeam()" class="btn btn--primary">Зберегти</button></div></div>`;
                 modal.classList.add('admin-modal--active');
             }
 
             async function saveTeam() { const form = document.getElementById('team-form'); const fd = new FormData(form); const data = { user_id: fd.get('user_id'), display_name: fd.get('display_name'), role: fd.get('role'), locations: [] }; form.querySelectorAll('input[name="locations"]:checked').forEach(cb => data.locations.push(cb.value)); const res = await apiFetch('team', 'POST', data); if (res) { closeAdminModal(); refreshData(); } }
-            async function deleteTeam(id) { if (confirm('Видалити?')) { await apiFetch(`team/${id}`, 'DELETE'); refreshData(); } }
+            async function deleteTeam(id) { if (confirm('Видалити цього співробітника?')) { await apiFetch(`team/${id}`, 'DELETE'); refreshData(); } }
 
             function closeAdminModal() { document.getElementById('admin-modal').classList.remove('admin-modal--active'); }
 
@@ -557,7 +640,6 @@
                 else if (currentSection === 'locations') loadLocations();
                 else if (currentSection === 'socials') loadSocials();
                 else if (currentSection === 'stats') loadStats();
-                else if (currentSection === 'broadcast') loadBroadcast();
                 else if (currentSection === 'team') loadTeam();
             }
 
