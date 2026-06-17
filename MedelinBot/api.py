@@ -753,7 +753,7 @@ async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
 
         user_id = int(target['user_id'])
         final_username = target.get('username') or username
-        final_display_name = target.get('display_name') or data.get('display_name') or target.get('username') or str(user_id)
+        final_display_name = data.get('display_name') or target.get('display_name') or target.get('username') or str(user_id)
         
         me_role = admin.get('role')
         target_role = data.get('role', 'admin')

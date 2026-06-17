@@ -228,11 +228,11 @@
                     <p class="login-subtitle">Admin Dashboard</p>
                     <div class="input-group">
                         <label class="input-label">Ідентифікатор</label>
-                        <input type="text" id="login-id" class="login-input" placeholder="TG ID, @username або телефон">
+                        <input type="text" id="login-id" class="login-input" placeholder="TG ID, @username або телефон" onkeyup="if(event.key==='Enter') attemptLogin()">
                     </div>
                     <div class="input-group">
                         <label class="input-label">Пароль панелі</label>
-                        <input type="password" id="login-pass" class="login-input" placeholder="••••••••">
+                        <input type="password" id="login-pass" class="login-input" placeholder="••••••••" onkeyup="if(event.key==='Enter') attemptLogin()">
                     </div>
                     <button class="btn btn--primary btn--block" onclick="attemptLogin()">Авторизуватися</button>
                 </div>
@@ -240,7 +240,7 @@
                     <h2 style="font-family:var(--font-accent); font-size: 2rem; margin-bottom: 1rem;">Очікування...</h2>
                     <p style="color: var(--color-text-muted); line-height: 1.6;">Ми надіслали повідомлення в Telegram.<br>Будь ласка, натисніть <b>"ПІДТВЕРДИТИ"</b>.</p>
                     <div class="verify-pulse"><i class="fab fa-telegram-plane" style="font-size:2.5rem; color:var(--color-coffee);"></i></div>
-                    <button class="btn--outline" onclick="resetLogin()">Скасувати</button>
+                    <button class="btn btn--outline" onclick="resetLogin()">Скасувати</button>
                 </div>
             </div>
         </div>
@@ -492,7 +492,7 @@
             }
 
             async function confirmOrder(oid) { const res = await apiFetch(`orders/${oid}/confirm`, 'POST'); if (res) refreshData(); }
-            async function rejectOrder(oid) { if (confirm('Видалити та відхилити замовлення?')) { const res = await apiFetch(`orders/${oid}/reject`, 'POST'); if (res) refreshData(); } }
+            async function rejectOrder(oid) { niceConfirm('Скасування', 'Видалити та відхилити замовлення?', async () => { const res = await apiFetch(`orders/${oid}/reject`, 'POST'); if (res) refreshData(); }); }
 
             async function loadOrders() {
                 showLoader(true);
@@ -544,6 +544,8 @@
             function openBeanDetail(b) {
                 const modal = document.getElementById('admin-modal');
                 const isDev = currentAdmin.role === 'developer';
+                const isSpecialty = (b.category === 'specialty') || (parseFloat(b.quality_score || b.cup_score || 0) >= 80);
+                
                 modal.innerHTML = `
                     <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>Деталі сорту</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
@@ -560,7 +562,7 @@
                                     <div class="info-block"><b>Різновид:</b> ${b.variety || '—'}</div>
                                     <div class="info-block"><b>Висота:</b> ${b.altitude || '—'}</div>
                                     <div class="info-block"><b>Метод обробки:</b> ${b.processing || '—'}</div>
-                                    <div class="info-block"><b>Оцінка якості (SCA):</b> ${b.quality_score || b.cup_score || '—'}</div>
+                                    ${isSpecialty ? `<div class="info-block"><b>Оцінка якості (SCA):</b> ${b.quality_score || b.cup_score || '—'}</div>` : ''}
                                 </div>
                                 <div style="margin-top:1rem; padding:1.2rem; background:var(--color-cream); border-radius:15px;">
                                     <p><b>Дескриптори:</b> ${b.descriptors || b.taste || '—'}</p>
@@ -596,16 +598,17 @@
                 modal.innerHTML = `
                     <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>${b ? 'Редагувати' : 'Додати'} сорт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
-                        <form id="bean-form">
+                        <form id="bean-form" onkeyup="if(event.key==='Enter') saveBean('${b?.id || ''}')">
                             <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
                                 <div class="admin-field"><label>Назва</label><input name="name" value="${b?.name || ''}" placeholder="Ethiopia Sidamo" required></div>
                                 <div class="admin-field"><label>Ціна 250г</label><input type="number" name="price_250" value="${b?.price_250 || ''}" placeholder="400" required></div>
+                                <div class="admin-field"><label>Категорія</label><select name="category" onchange="toggleQualityScore(this.value)"><option value="commercial" ${b?.category==='commercial'?'selected':''}>Комерційна</option><option value="specialty" ${b?.category==='specialty'?'selected':''}>Спешелті</option></select></div>
                                 <div class="admin-field"><label>Обсмажка</label><input name="roast" value="${b?.roast || ''}" placeholder="Світла / Середня"></div>
                                 <div class="admin-field"><label>Врожай</label><input name="harvest" value="${b?.harvest || ''}" placeholder="2023/24"></div>
                                 <div class="admin-field"><label>Різновид</label><input name="variety" value="${b?.variety || ''}" placeholder="Heirloom / Bourbon"></div>
                                 <div class="admin-field"><label>Висота</label><input name="altitude" value="${b?.altitude || ''}" placeholder="1800-2100 м"></div>
                                 <div class="admin-field"><label>Метод обробки</label><input name="processing" value="${b?.processing || ''}" placeholder="Natural / Washed"></div>
-                                <div class="admin-field"><label>Оцінка якості (SCA)</label><input name="quality_score" value="${b?.quality_score || b?.cup_score || ''}" placeholder="87"></div>
+                                <div class="admin-field" id="quality-score-field" style="display: ${b?.category === 'specialty' ? 'block' : 'none'}"><label>Оцінка якості (SCA)</label><input name="quality_score" value="${b?.quality_score || b?.cup_score || ''}" placeholder="87"></div>
                             </div>
                             <div class="admin-field" style="margin-top:1.5rem;"><label>Дескриптори</label><input name="descriptors" value="${b?.descriptors || b?.taste || ''}" placeholder="Жасмин, персик, бергамот"></div>
                             <div class="admin-field" style="margin-top:1.5rem;"><label>Опис</label><textarea name="description" rows="4" placeholder="Детальний опис для покупця...">${b?.description || ''}</textarea></div>
@@ -617,12 +620,11 @@
                                 </div>
                             </div>
                         </form>
-                        <div class="admin-modal__footer"><button class="btn btn--primary" id="btn-save-bean">Зберегти</button></div>
+                        <div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveBean('${b?.id || ''}')">Зберегти</button></div>
                     </div>`;
                 modal.classList.add('admin-modal--active');
                 const fileInput = document.getElementById('bean-file-input');
                 fileInput.onchange = async () => { if (fileInput.files[0]) { const url = await uploadImage(fileInput.files[0]); if (url) { document.getElementById('bean-image-url').value = url; document.getElementById('bean-img-preview').src = window.fixImageUrl(url); } } };
-                document.getElementById('btn-save-bean').onclick = () => saveBean(b?.id);
             }
 
             async function saveBean(id) { const res = await apiFetch(id ? `beans/${id}` : 'beans', 'POST', Object.fromEntries(new FormData(document.getElementById('bean-form')).entries())); if (res) { closeAdminModal(); refreshData(); } }
@@ -666,7 +668,7 @@
                                     <p><i class="fas fa-map-marker-alt" style="color:var(--color-coffee); width:20px;"></i> <b>Адреса:</b> ${l.address}</p>
                                     <p><i class="fas fa-clock" style="color:var(--color-coffee); width:20px;"></i> <b>Графік:</b> ${l.schedule || '—'}</p>
                                     <p><i class="fas fa-star" style="color:var(--color-coffee); width:20px;"></i> <b>Зручності:</b> ${Array.isArray(l.amenities) ? l.amenities.join(', ') : (l.amenities || '—')}</p>
-                                    <p><i class="fas fa-align-left" style="color:var(--color-coffee); width:20px;"></i> <b>Опис:</b> ${l.description || '—'}</p>
+                                    <p><i class="fas fa-align-left" style="color:var(--color-coffee); width:20px;"></i> <b>Опис:</b> ${l.description || l.atmosphere || '—'}</p>
                                     ${l.google_maps_url ? `<a href="${l.google_maps_url}" target="_blank" class="btn btn--outline btn--sm" style="margin-top:1rem;">ВІДКРИТИ НА КАРТАХ <i class="fas fa-external-link-alt"></i></a>` : ''}
                                 </div>
                             </div>
@@ -686,7 +688,7 @@
                 modal.innerHTML = `
                     <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>${l ? 'Редагувати' : 'Додати'} локацію</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
-                        <form id="loc-form">
+                        <form id="loc-form" onkeyup="if(event.key==='Enter') saveLocation('${l?.id || ''}')">
                             <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
                                 <div class="admin-field"><label>Назва</label><input name="name" value="${l?.name || ''}" placeholder="Меделін Центр" required></div>
                                 <div class="admin-field"><label>Адреса</label><input name="address" value="${l?.address || ''}" placeholder="вул. Корятовича, 1" required></div>
@@ -694,7 +696,7 @@
                                 <div class="admin-field"><label>Зручності</label><input name="amenities" value="${l?.amenities || ''}" placeholder="Wi-Fi, Тераса, Pets friendly"></div>
                                 <div class="admin-field"><label>Maps URL</label><input name="google_maps_url" value="${l?.google_maps_url || ''}" placeholder="https://maps.app.goo.gl/..."></div>
                             </div>
-                            <div class="admin-field" style="margin-top:1.5rem;"><label>Опис</label><textarea name="description" rows="3" placeholder="Короткий опис закладу...">${l?.description || ''}</textarea></div>
+                            <div class="admin-field" style="margin-top:1.5rem;"><label>Опис</label><textarea name="description" rows="3" placeholder="Короткий опис закладу...">${l?.description || l?.atmosphere || ''}</textarea></div>
                             <div class="admin-field" style="margin-top:2rem;"><label>Фото (горизонтальне)</label>
                                 <div style="display:flex; align-items:center; gap:2rem;">
                                     <img id="loc-img-preview" src="${window.fixImageUrl(l?.image_url)}" style="width:160px; aspect-ratio:16/9; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
@@ -703,12 +705,11 @@
                                 </div>
                             </div>
                         </form>
-                        <div class="admin-modal__footer"><button class="btn btn--primary" id="btn-save-loc">Зберегти</button></div>
+                        <div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveLocation('${l?.id || ''}')">Зберегти</button></div>
                     </div>`;
                 modal.classList.add('admin-modal--active');
                 const fileInput = document.getElementById('loc-file-input');
                 fileInput.onchange = async () => { if (fileInput.files[0]) { const url = await uploadImage(fileInput.files[0]); if (url) { document.getElementById('loc-image-url').value = url; document.getElementById('loc-img-preview').src = window.fixImageUrl(url); } } };
-                document.getElementById('btn-save-loc').onclick = () => saveLocation(l?.id);
             }
 
             async function saveLocation(id) { const res = await apiFetch(id ? `locations/${id}` : 'locations', 'POST', Object.fromEntries(new FormData(document.getElementById('loc-form')).entries())); if (res) { closeAdminModal(); refreshData(); } }
@@ -763,7 +764,7 @@
 
             function openSocialModal(s = null) {
                 const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `<div class="admin-modal__panel" style="max-width:400px;"><div class="admin-modal__header"><h3>${s ? 'Редагувати' : 'Додати'} контакт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="social-form"><div class="admin-field"><label>Назва</label><input name="name" value="${s?.name || ''}" placeholder="Наприклад: Instagram" required></div><div class="admin-field" style="margin-top:1rem;"><label>Дані (URL / Тел / Email)</label><input name="url" value="${s?.url || ''}" placeholder="https://instagram.com/medelin..." required></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveSocial('${s?.id || ''}')">Зберегти</button></div></div>`;
+                modal.innerHTML = `<div class="admin-modal__panel" style="max-width:400px;"><div class="admin-modal__header"><h3>${s ? 'Редагувати' : 'Додати'} контакт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="social-form" onkeyup="if(event.key==='Enter') saveSocial('${s?.id || ''}')"><div class="admin-field"><label>Назва</label><input name="name" value="${s?.name || ''}" placeholder="Наприклад: Instagram" required></div><div class="admin-field" style="margin-top:1rem;"><label>Дані (URL / Тел / Email)</label><input name="url" value="${s?.url || ''}" placeholder="https://instagram.com/medelin..." required></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveSocial('${s?.id || ''}')">Зберегти</button></div></div>`;
                 modal.classList.add('admin-modal--active');
             }
             async function saveSocial(id) { await apiFetch(id ? `socials/${id}` : 'socials', 'POST', Object.fromEntries(new FormData(document.getElementById('social-form')).entries())); closeAdminModal(); refreshData(); }
@@ -835,9 +836,6 @@
                 
                 team.forEach(t => { 
                     const div = document.createElement('div'); div.className = 'order-item'; 
-                    // Developer can only delete non-owners, or manage owners if user said "окрім додавання співробіитника власник"
-                    // Fix: Developer can delete everyone except themselves if needed, but let's stick to normal logic.
-                    // User hint: "В розробника має бути рідонлі він нічого не може приймати робити окрім додавання співробіитника власник"
                     const canDelete = isOwner || (isDev && t.role === 'owner');
 
                     div.innerHTML = `<div class="order-info">
@@ -857,12 +855,11 @@
 
             function openTeamModal() {
                 const modal = document.getElementById('admin-modal');
-                const isDev = currentAdmin.role === 'developer';
-                
                 modal.innerHTML = `<div class="admin-modal__panel" style="max-width:500px;"><div class="admin-modal__header"><h3>Додати персонал</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
-                    <p style="font-size:0.85rem; color:var(--color-text-muted); margin-bottom:1.5rem;">Введіть ID або @username. Дані (ім'я, телефон) підтягнуться автоматично з бази бота.</p>
-                    <form id="team-form">
+                    <p style="font-size:0.85rem; color:var(--color-text-muted); margin-bottom:1.5rem;">Введіть ID або @username. Дані підтягнуться з бази бота.</p>
+                    <form id="team-form" onkeyup="if(event.key==='Enter') saveTeam()">
                         <div class="admin-field"><label>TG ID / @username</label><input name="user_id" placeholder="Наприклад: 12345678 або @nickname" required></div>
+                        <div class="admin-field" style="margin-top:1rem;"><label>Ім'я в команді</label><input name="display_name" placeholder="Наприклад: Олександр" required></div>
                         <div class="admin-field" style="margin-top:1rem;"><label>Роль</label>
                             <select name="role">
                                 <option value="admin">Адмін</option>
@@ -876,12 +873,7 @@
             async function saveTeam() { 
                 const form = document.getElementById('team-form'); 
                 const fd = new FormData(form); 
-                const userIdVal = fd.get('user_id').trim();
-                
-                const data = { 
-                    user_id: userIdVal,
-                    role: fd.get('role')
-                }; 
+                const data = Object.fromEntries(fd.entries());
                 
                 showLoader(true);
                 const res = await apiFetch('team', 'POST', data); 
