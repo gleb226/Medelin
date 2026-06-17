@@ -46,9 +46,10 @@
                 position: fixed; top: 0; left: 0; right: 0; bottom: 0;
                 background: linear-gradient(135deg, var(--color-cream) 0%, #e8e2d5 100%);
                 display: flex; justify-content: center; align-items: center;
-                z-index: 5000; transition: all 0.5s ease;
+                z-index: 5000; transition: opacity 0.5s ease, visibility 0.5s;
                 padding: 1rem;
             }
+            .login-screen--hidden { opacity: 0; visibility: hidden; pointer-events: none; }
 
             .login-card {
                 background: white; padding: clamp(1.5rem, 5vw, 4rem); border-radius: 40px;
@@ -347,14 +348,18 @@
             });
 
             async function checkSession() {
-                if (!sessionToken) return;
+                if (!sessionToken || sessionToken === 'undefined') { 
+                    sessionToken = ''; localStorage.removeItem('medelin_admin_token'); return; 
+                }
                 const admin = await apiFetch('me');
                 if (admin) {
                     currentAdmin = admin;
                     localStorage.setItem('medelin_admin_user', JSON.stringify(admin));
-                    document.getElementById('login-screen').style.display = 'none';
+                    document.getElementById('login-screen').classList.add('login-screen--hidden');
                     showPanel();
-                } else { logout(); }
+                } else {
+                    console.error('Session invalid or error fetching admin data');
+                }
             }
 
             window.onload = () => {
@@ -902,7 +907,7 @@
             }
 
             document.getElementById('refresh-btn').onclick = refreshData;
-            if (sessionToken && currentAdmin) { document.getElementById('login-screen').style.display = 'none'; showPanel(); }
+            if (sessionToken && currentAdmin) { document.getElementById('login-screen').classList.add('login-screen--hidden'); showPanel(); }
         </script>
     </body>
 </html>

@@ -149,9 +149,13 @@ class AdminDatabase:
 
         return result
 
-    async def get_admin_by_id(self, user_id: int):
+    async def get_admin_by_id(self, user_id: Any):
         db = await get_db()
-        return await db.admins.find_one({'user_id': int(user_id)}, projection_without_mongo_id())
+        try:
+            uid = int(user_id)
+            return await db.admins.find_one({'user_id': {'$in': [uid, str(uid)]}}, projection_without_mongo_id())
+        except:
+            return await db.admins.find_one({'user_id': str(user_id)}, projection_without_mongo_id())
 
     async def find_admin_by_identifier(self, identifier: str):
         db = await get_db()
