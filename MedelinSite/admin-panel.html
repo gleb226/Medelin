@@ -133,7 +133,7 @@
                 transition: all 0.3s ease; display: flex; flex-direction: column;
             }
             .bean-card:hover, .location-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(139, 94, 60, 0.1); }
-            .card-img { width: 100%; aspect-ratio: 21/9; height: auto; object-fit: cover; cursor: zoom-in; }
+            .card-img { width: 100%; aspect-ratio: 16/9; height: auto; object-fit: cover; cursor: zoom-in; }
             .card-body { padding: 0.8rem; flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
 
             .info-block { background: #fdfcf9; padding: 0.8rem 1.2rem; border-radius: 12px; border: 1px solid var(--color-coffee-soft); font-size: 0.9rem; }
@@ -531,7 +531,8 @@
                                 <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown); font-size:2.5rem; margin-bottom:0.5rem;">${b.name}</h2>
                                 <div class="admin-grid" style="grid-template-columns: 1fr 1fr; gap:1rem;">
                                     <div class="info-block"><b>Ціна (250г):</b> ${b.price_250} ₴</div>
-                                    <div class="info-block"><b>Score:</b> ${b.quality_score || '—'}</div>
+                                    <div class="info-block"><b>Країна / Регіон:</b> ${[b.country, b.region].filter(Boolean).join(' / ') || '—'}</div>
+                                    <div class="info-block"><b>Score / Cup:</b> ${b.quality_score || b.cup_score || '—'}</div>
                                     <div class="info-block"><b>Обсмажка:</b> ${b.roast || '—'}</div>
                                     <div class="info-block"><b>Обробка:</b> ${b.processing || '—'}</div>
                                     <div class="info-block"><b>Вид:</b> ${b.species || '—'}</div>
@@ -540,6 +541,11 @@
                                     <div class="info-block"><b>Врожай:</b> ${b.harvest || '—'}</div>
                                     <div class="info-block"><b>Категорія:</b> ${b.category==='specialty'?'Спешелті':'Комерційна'}</div>
                                     <div class="info-block"><b>Залишок:</b> ${b.stock_packs ?? '—'} пачок</div>
+                                </div>
+                                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.5rem; margin-top:0.5rem;">
+                                    <div class="info-block" style="text-align:center;"><b>Кислотність</b> ${b.acidity || 0}/10</div>
+                                    <div class="info-block" style="text-align:center;"><b>Тіло</b> ${b.body || 0}/10</div>
+                                    <div class="info-block" style="text-align:center;"><b>Солодкість</b> ${b.sweetness || 0}/10</div>
                                 </div>
                                 <div style="margin-top:1rem; padding:1.2rem; background:var(--color-cream); border-radius:15px;">
                                     <p><b>Дескриптори:</b> ${b.descriptors || '—'}</p>
@@ -577,7 +583,9 @@
                                 <div class="admin-field"><label>Назва</label><input name="name" value="${b?.name || ''}" placeholder="Ethiopia Sidamo" required></div>
                                 <div class="admin-field"><label>Ціна 250г</label><input type="number" name="price_250" value="${b?.price_250 || ''}" placeholder="400" required></div>
                                 <div class="admin-field"><label>Категорія</label><select name="category"><option value="commercial" ${b?.category==='commercial'?'selected':''}>Комерційна</option><option value="specialty" ${b?.category==='specialty'?'selected':''}>Спешелті</option></select></div>
-                                <div class="admin-field"><label>Score / Grade</label><input name="quality_score" value="${b?.quality_score || ''}" placeholder="87"></div>
+                                <div class="admin-field"><label>Країна</label><input name="country" value="${b?.country || ''}" placeholder="Ефіопія"></div>
+                                <div class="admin-field"><label>Регіон</label><input name="region" value="${b?.region || ''}" placeholder="Guji"></div>
+                                <div class="admin-field"><label>Score / Cup</label><input name="quality_score" value="${b?.quality_score || b?.cup_score || ''}" placeholder="87"></div>
                                 <div class="admin-field"><label>Обсмажка</label><input name="roast" value="${b?.roast || ''}" placeholder="Світла / Середня"></div>
                                 <div class="admin-field"><label>Обробка</label><input name="processing" value="${b?.processing || ''}" placeholder="Natural / Washed"></div>
                                 <div class="admin-field"><label>Вид</label><input name="species" value="${b?.species || ''}" placeholder="Arabica / Robusta"></div>
@@ -585,6 +593,11 @@
                                 <div class="admin-field"><label>Висота</label><input name="altitude" value="${b?.altitude || ''}" placeholder="1800-2100 м"></div>
                                 <div class="admin-field"><label>Врожай</label><input name="harvest" value="${b?.harvest || ''}" placeholder="2023/24"></div>
                                 <div class="admin-field"><label>Залишок (пачок)</label><input type="number" name="stock_packs" value="${b?.stock_packs ?? ''}" placeholder="10"></div>
+                            </div>
+                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:1rem; margin-top:1rem;">
+                                <div class="admin-field"><label>Кислотність (0-10)</label><input type="number" name="acidity" value="${b?.acidity || ''}" placeholder="7"></div>
+                                <div class="admin-field"><label>Тіло (0-10)</label><input type="number" name="body" value="${b?.body || ''}" placeholder="6"></div>
+                                <div class="admin-field"><label>Солодкість (0-10)</label><input type="number" name="sweetness" value="${b?.sweetness || ''}" placeholder="8"></div>
                             </div>
                             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1.5rem; margin-top:1.5rem;">
                                 <div class="admin-field"><label>Дескриптори</label><input name="descriptors" value="${b?.descriptors || ''}" placeholder="Жасмин, персик, бергамот"></div>
@@ -822,24 +835,6 @@
                 if (res) { closeAdminModal(); refreshData(); } 
             }
             async function deleteTeam(id) { niceConfirm('Видалення', 'Видалити цього співробітника?', async () => { await apiFetch(`team/${id}`, 'DELETE'); refreshData(); }); }
-
-            function closeAdminModal() { document.getElementById('admin-modal').classList.remove('admin-modal--active'); }
-
-            function refreshData() {
-                if (currentSection === 'new_orders') loadNewOrders();
-                else if (currentSection === 'orders') loadOrders();
-                else if (currentSection === 'beans') loadBeans();
-                else if (currentSection === 'locations') loadLocations();
-                else if (currentSection === 'socials') loadSocials();
-                else if (currentSection === 'stats') loadStats();
-                else if (currentSection === 'team') loadTeam();
-            }
-
-            document.getElementById('refresh-btn').onclick = refreshData;
-            if (sessionToken && currentAdmin) { document.getElementById('login-screen').style.display = 'none'; showPanel(); }
-        </script>
-    </body>
-</html>я', 'Видалити цього співробітника?', async () => { await apiFetch(`team/${id}`, 'DELETE'); refreshData(); }); }
 
             function closeAdminModal() { document.getElementById('admin-modal').classList.remove('admin-modal--active'); }
 
