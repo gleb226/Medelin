@@ -531,25 +531,18 @@
                                 <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown); font-size:2.5rem; margin-bottom:0.5rem;">${b.name}</h2>
                                 <div class="admin-grid" style="grid-template-columns: 1fr 1fr; gap:1rem;">
                                     <div class="info-block"><b>Ціна (250г):</b> ${b.price_250} ₴</div>
-                                    <div class="info-block"><b>Країна / Регіон:</b> ${[b.country, b.region].filter(Boolean).join(' / ') || '—'}</div>
-                                    <div class="info-block"><b>Score / Cup:</b> ${b.quality_score || b.cup_score || '—'}</div>
+                                    <div class="info-block"><b>Склад:</b> ${b.composition || '—'}</div>
                                     <div class="info-block"><b>Обсмажка:</b> ${b.roast || '—'}</div>
-                                    <div class="info-block"><b>Обробка:</b> ${b.processing || '—'}</div>
-                                    <div class="info-block"><b>Вид:</b> ${b.species || '—'}</div>
-                                    <div class="info-block"><b>Варіація:</b> ${b.variety || '—'}</div>
-                                    <div class="info-block"><b>Висота:</b> ${b.altitude || '—'}</div>
                                     <div class="info-block"><b>Врожай:</b> ${b.harvest || '—'}</div>
+                                    <div class="info-block"><b>Різновид:</b> ${b.variety || '—'}</div>
+                                    <div class="info-block"><b>Висота:</b> ${b.altitude || '—'}</div>
+                                    <div class="info-block"><b>Метод обробки:</b> ${b.processing || '—'}</div>
                                     <div class="info-block"><b>Категорія:</b> ${b.category==='specialty'?'Спешелті':'Комерційна'}</div>
+                                    ${b.category === 'specialty' ? `<div class="info-block"><b>Оцінка якості (SCA):</b> ${b.quality_score || b.cup_score || '—'}</div>` : ''}
                                     <div class="info-block"><b>Залишок:</b> ${b.stock_packs ?? '—'} пачок</div>
-                                </div>
-                                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.5rem; margin-top:0.5rem;">
-                                    <div class="info-block" style="text-align:center;"><b>Кислотність</b> ${b.acidity || 0}/10</div>
-                                    <div class="info-block" style="text-align:center;"><b>Тіло</b> ${b.body || 0}/10</div>
-                                    <div class="info-block" style="text-align:center;"><b>Солодкість</b> ${b.sweetness || 0}/10</div>
                                 </div>
                                 <div style="margin-top:1rem; padding:1.2rem; background:var(--color-cream); border-radius:15px;">
                                     <p><b>Дескриптори:</b> ${b.descriptors || '—'}</p>
-                                    <p style="margin-top:0.5rem;"><b>Смак:</b> ${b.taste || '—'}</p>
                                 </div>
                             </div>
                         </div>
@@ -849,6 +842,30 @@
             }
 
             document.getElementById('refresh-btn').onclick = refreshData;
+            if (sessionToken && currentAdmin) { document.getElementById('login-screen').style.display = 'none'; showPanel(); }
+        </script>
+    </body>
+</html>
+            function toggleQualityScore(val) {
+                const field = document.getElementById('quality-score-field');
+                if (field) field.style.display = val === 'specialty' ? 'block' : 'none';
+            }
+
+            function refreshData() {
+                if (currentSection === 'new_orders') loadNewOrders();
+                else if (currentSection === 'orders') loadOrders();
+                else if (currentSection === 'beans') loadBeans();
+                else if (currentSection === 'locations') loadLocations();
+                else if (currentSection === 'socials') loadSocials();
+                else if (currentSection === 'stats') loadStats();
+                else if (currentSection === 'team') loadTeam();
+            }
+
+            document.getElementById('refresh-btn').onclick = refreshData;
+            if (sessionToken && currentAdmin) { document.getElementById('login-screen').style.display = 'none'; showPanel(); }
+        </script>
+    </body>
+</html>ck = refreshData;
             if (sessionToken && currentAdmin) { document.getElementById('login-screen').style.display = 'none'; showPanel(); }
         </script>
     </body>
