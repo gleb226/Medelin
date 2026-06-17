@@ -607,6 +607,8 @@ async def admin_update_bean(bean_id: str, data: dict, admin: dict = Depends(get_
         raise HTTPException(status_code=403, detail='Недостатньо прав')
     if 'price_250' in data: data['price_250'] = int(data['price_250'])
     if 'stock_packs' in data and data['stock_packs']: data['stock_packs'] = int(data['stock_packs'])
+    for f in ['acidity', 'body', 'sweetness']:
+        if f in data and data[f]: data[f] = int(data[f])
     await coffee_beans_db.update_bean(bean_id, data)
     return {'status': 'ok'}
 
@@ -680,54 +682,78 @@ async def admin_delete_social(sid: str, admin: dict = Depends(get_current_admin)
 # CRUD for Team/Staff
 @app.get('/api/admin/team')
 async def admin_get_team(admin: dict = Depends(get_current_admin)):
-    if admin.get('role') not in ('owner', 'developer'):
-        raise HTTPException(status_code=403, detail='Недостатньо прав')
-    return await admin_db.get_admins_with_locations()
+    try:
+        if admin.get('role') not in ('owner', 'developer'):
+            raise HTTPException(status_code=403, detail='Недостатньо прав')
+        return await admin_db.get_admins_with_locations()
+    except Exception as e:
+        logger.error(f"Error in get_team: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post('/api/admin/team')
 async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
-    if admin.get('role') not in ('owner', 'developer'):
-        raise HTTPException(status_code=403, detail='Недостатньо прав')
-    
-    user_id_val = data.get('user_id')
-    username = data.get('username', '').strip().replace('@', '')
-    
-    # Enforce integer user_id
-    user_id = 0
     try:
-        if user_id_val: user_id = int(user_id_val)
-    except:
+        logger.info(f"Adding team member. Data: {data}. Admin: {admin['user_id']}")
+        if admin.get('role') not in ('owner', 'developer'):
+            raise HTTPException(status_code=403, detail='Недостатньо прав')
+        
+        user_id_val = data.get('user_id')
+        username = data.get('username', '').strip().replace('@', '')
+        
+        # Enforce integer user_id
         user_id = 0
-    
-    if user_id == 0 and username:
-        from app.databases.user_database import user_db
-        u_info = await user_db.get_user_by_username(username)
-        if u_info:
-            user_id = u_info[0]
-        else:
-            raise HTTPException(status_code=404, detail=f'Користувача @{username} не знайдено в базі. Він має хоча б раз написати боту.')
-    
-    if not user_id:
-        raise HTTPException(status_code=400, detail='Вкажіть вірний TG ID або @username')
+        try:
+            if user_id_val: user_id = int(str(user_id_val).strip())
+        except:
+            user_id = 0
+        
+        if user_id == 0 and username:
+            from app.databases.user_database import user_db
+            u_info = await user_db.get_user_by_username(username)
+            if u_info:
+                user_id = int(u_info[0])
+                logger.info(f"Resolved username @{username} to user_id {user_id}")
+            else:
+                logger.warning(f"Username @{username} not found in user_db")
+                raise HTTPException(status_code=404, detail=f'Користувача @{username} не знайдено в базі. Він має хоча б раз написати боту.')
+        
+        if not user_id:
+            raise HTTPException(status_code=400, detail='Вкажіть вірний TG ID або @username')
 
-    me_role = admin.get('role')
-    target_role = data.get('role', 'admin')
-    
-    if me_role == 'owner' and target_role == 'owner':
-        raise HTTPException(status_code=403, detail='Власник не може створювати інших власників')
+        me_role = admin.get('role')
+        target_role = data.get('role', 'admin')
+        
+        if me_role == 'owner' and target_role == 'owner':
+            raise HTTPException(status_code=403, detail='Власник не може створювати інших власників')
 
-    await admin_db.add_admin(user_id=user_id, username=username, display_name=data['display_name'], added_by=admin['user_id'], role=target_role, locations=data.get('locations', []))
-    return {'status': 'ok'}
+        await admin_db.add_admin(user_id=user_id, username=username, display_name=data['display_name'], added_by=admin['user_id'], role=target_role, locations=data.get('locations', []))
+        return {'status': 'ok'}
+    except HTTPException: raise
+    except Exception as e:
+        logger.error(f"Error in add_team: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete('/api/admin/team/{uid}')
-async def admin_delete_team(uid: int, admin: dict = Depends(get_current_admin)):
-    if admin.get('role') not in ('owner', 'developer'):
-        raise HTTPException(status_code=403, detail='Недостатньо прав')
-    if admin.get('role') == 'admin':
-        raise HTTPException(status_code=403, detail='Адміністратор не може видаляти персонал')
+async def admin_delete_team(uid: str, admin: dict = Depends(get_current_admin)):
+    try:
+        logger.info(f"Deleting team member {uid}. Admin: {admin['user_id']}")
+        if admin.get('role') not in ('owner', 'developer'):
+            raise HTTPException(status_code=403, detail='Недостатньо прав')
         
-    await admin_db.remove_admin(uid)
-    return {'status': 'ok'}
+        if admin.get('role') == 'admin':
+            raise HTTPException(status_code=403, detail='Адміністратор не може видаляти персонал')
+            
+        try:
+            target_uid = int(uid)
+        except:
+            raise HTTPException(status_code=400, detail='Невірний ID користувача')
+
+        await admin_db.remove_admin(target_uid)
+        return {'status': 'ok'}
+    except HTTPException: raise
+    except Exception as e:
+        logger.error(f"Error in delete_team: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Stats and Broadcast
 @app.get('/api/admin/stats')
