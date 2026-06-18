@@ -146,7 +146,7 @@
 
             .info-block { background: #fdfcf9; padding: 0.8rem 1.2rem; border-radius: 12px; border: 1px solid var(--color-coffee-soft); font-size: 0.95rem; }
             .info-block b { color: var(--color-coffee); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.2rem; }
-            .card-title { font-family: var(--font-accent); font-size: 1.35rem; color: var(--color-dark-brown); margin-bottom: 0.1rem; }
+            .card-title { font-family: var(--font-main); font-weight: 800; font-size: 1.35rem; color: var(--color-dark-brown); margin-bottom: 0.1rem; }
             .card-desc { font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: 0.5rem; flex: 1; line-height: 1.5; }
             .card-stats { display: flex; gap: 0.6rem; font-size: 0.85rem; font-weight: 700; color: var(--color-coffee); margin-bottom: 0.4rem; }
 
@@ -215,7 +215,7 @@
                 .order-actions .btn { flex: 0 1 auto; width: auto; }
                 .admin-toolbar .btn { width: auto; margin-top: 0.5rem; }
                 .admin-toolbar h3 { font-size: 1.5rem; }
-                .admin-modal__panel { border-radius: 20px; padding: 1.5rem; margin: 1rem; width: auto; max-width: 100%; overflow-y: auto; max-height: 90vh; }
+                .admin-modal__panel { border-radius: 20px; padding: 1.5rem; margin: 1rem; width: calc(100% - 2rem); max-width: 100%; overflow-y: auto; max-height: 90vh; }
                 .admin-modal__title { font-size: 1.6rem; }
                 .admin-modal__header { margin-bottom: 1.5rem; flex-wrap: wrap; }
                 .admin-grid { grid-template-columns: 1fr; }
@@ -532,6 +532,8 @@
                         deliveryInfo = o.delivery_info || '—';
                     }
 
+                    let paymentStr = o.is_paid ? 'Оплачено' : (o.payment_mode === 'pay_at_checkout' ? 'Накладний платіж' : 'Не оплачено');
+                    
                     // Construct cart items
                     let cartItems = '';
                     if (Array.isArray(o.cart) && o.cart.length > 0) {
@@ -542,17 +544,17 @@
                     
                     div.innerHTML = `
                         <div class="order-info">
-                            <div class="order-title"><i class="fas fa-box"></i> ЗАМОВЛЕННЯ #${num} (${o.status === 'new' ? 'НОВЕ' : 'АКТИВНЕ'})</div>
+                            <div class="order-title"><i class="fas fa-box" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ЗАМОВЛЕННЯ #${num} (${o.status === 'new' ? 'НОВЕ' : 'АКТИВНЕ'})</div>
                             <div class="order-meta">
-                                <i class="fas fa-user"></i> ${o.fullname || o.username || '—'} <br>
-                                <i class="fas fa-phone"></i> ${o.phone || '—'} <br>
-                                ${deliveryInfo ? deliveryInfo : ''} <br>
-                                <i class="fas fa-money-bill-wave"></i> Сума: ${o.total_amount || o.total || 0} ₴ <br>
-                                <i class="fas fa-credit-card"></i> Оплата: ${o.payment_mode || '—'} (Оплачено: ${o.is_paid ? 'Так' : 'Ні'})
+                                <i class="fas fa-user" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.fullname || o.username || '—'} <br>
+                                <i class="fas fa-phone" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.phone || '—'} <br>
+                                ${deliveryInfo ? deliveryInfo.replace('<i class="fas', '<i style="color:var(--color-coffee); width:20px; text-align:center;" class="fas') : ''} <br>
+                                <i class="fas fa-money-bill-wave" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Сума: ${o.total_amount || o.total || 0} ₴ <br>
+                                <i class="fas fa-credit-card" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Оплата: ${paymentStr}
                             </div>
                             <div class="order-items">
-                                <b><i class="fas fa-shopping-cart"></i> Товари:</b><br>${cartItems || 'Немає товарів'}
-                                ${o.wishes ? `<br><br><b><i class="fas fa-sticky-note"></i> ПОБАЖАННЯ:</b> ${o.wishes}` : ''}
+                                <b><i class="fas fa-shopping-cart" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Товари:</b><br>${cartItems || 'Немає товарів'}
+                                ${o.wishes ? `<br><br><b><i class="fas fa-sticky-note" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ПОБАЖАННЯ:</b> ${o.wishes}` : ''}
                             </div>
                         </div>
                         <div class="order-actions">
@@ -602,6 +604,8 @@
                         deliveryInfo = o.delivery_info || '—';
                     }
 
+                    let paymentStr = o.is_paid ? 'Оплачено' : (o.payment_mode === 'pay_at_checkout' ? 'Накладний платіж' : 'Не оплачено');
+                    
                     // Construct cart items
                     let cartItems = '';
                     if (Array.isArray(o.cart) && o.cart.length > 0) {
@@ -612,17 +616,17 @@
 
                     div.innerHTML = `
                         <div class="order-info">
-                            <div class="order-title"><i class="fas fa-box"></i> ЗАМОВЛЕННЯ #${num} (АКТИВНЕ)</div>
+                            <div class="order-title"><i class="fas fa-box" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ЗАМОВЛЕННЯ #${num} (АКТИВНЕ)</div>
                             <div class="order-meta">
-                                <i class="fas fa-user"></i> ${o.fullname || o.username || '—'} <br>
-                                <i class="fas fa-phone"></i> ${o.phone || '—'} <br>
-                                ${deliveryInfo ? deliveryInfo : ''} <br>
-                                <i class="fas fa-money-bill-wave"></i> Сума: ${o.total_amount || o.total || 0} ₴ <br>
-                                <i class="fas fa-credit-card"></i> Оплата: ${o.payment_mode || '—'} (Оплачено: ${o.is_paid ? 'Так' : 'Ні'})
+                                <i class="fas fa-user" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.fullname || o.username || '—'} <br>
+                                <i class="fas fa-phone" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.phone || '—'} <br>
+                                ${deliveryInfo ? deliveryInfo.replace('<i class="fas', '<i style="color:var(--color-coffee); width:20px; text-align:center;" class="fas') : ''} <br>
+                                <i class="fas fa-money-bill-wave" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Сума: ${o.total_amount || o.total || 0} ₴ <br>
+                                <i class="fas fa-credit-card" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Оплата: ${paymentStr}
                             </div>
                             <div class="order-items">
-                                <b><i class="fas fa-shopping-cart"></i> Товари:</b><br>${cartItems || 'Немає товарів'}
-                                ${o.wishes ? `<br><br><b><i class="fas fa-sticky-note"></i> ПОБАЖАННЯ:</b> ${o.wishes}` : ''}
+                                <b><i class="fas fa-shopping-cart" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Товари:</b><br>${cartItems || 'Немає товарів'}
+                                ${o.wishes ? `<br><br><b><i class="fas fa-sticky-note" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ПОБАЖАННЯ:</b> ${o.wishes}` : ''}
                             </div>
                         </div>
                         <div class="order-actions">

@@ -195,7 +195,9 @@
     .menu-item__image {
         height: 250px !important;
     }
+}
 
+@media (max-width: 900px) {
     /* ── Bean full view ── */
     .bean-full-view__container {
         grid-template-columns: 1fr;
@@ -210,7 +212,6 @@
         font-size: 2.4rem;
     }
 }
-
 /* ================================================================
    4. LARGE PHONES / PHABLETS ≤ 768px
    ================================================================ */
