@@ -270,7 +270,6 @@
                     <p id="admin-info" style="font-size:0.85rem; color:var(--color-coffee); font-weight:700;"></p>
                 </div>
                 <div class="header__actions">
-                    <button class="btn btn--primary" id="refresh-btn"><i class="fas fa-sync-alt"></i> Оновити</button>
                     <button class="btn btn--outline" onclick="logout()">Вийти</button>
                 </div>
             </header>
@@ -964,7 +963,6 @@
                 else if (currentSection === 'team') loadTeam();
             }
 
-            document.getElementById('refresh-btn').onclick = refreshData;
             if (sessionToken && currentAdmin) { document.getElementById('login-screen').classList.add('login-screen--hidden'); showPanel(); }
         </script>
     </body>
