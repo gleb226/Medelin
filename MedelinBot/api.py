@@ -742,6 +742,9 @@ async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
             u_info = await user_db.get_user_by_id(int(user_id_val))
             if u_info:
                 target = {'user_id': int(u_info[0]), 'display_name': u_info[1], 'username': u_info[2]}
+            elif data.get('display_name'):
+                # Allow adding if not in DB but we have a name and ID
+                target = {'user_id': int(user_id_val), 'display_name': data.get('display_name'), 'username': None}
         elif user_id_val.startswith('@') or username:
             un = username or user_id_val.replace('@', '')
             u_info = await user_db.get_user_by_username(un)
@@ -749,7 +752,7 @@ async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
                 target = {'user_id': int(u_info[0]), 'display_name': u_info[1], 'username': u_info[2]}
 
         if not target:
-            raise HTTPException(status_code=404, detail='Користувача не знайдено в базі бота. Він має натиснути /start.')
+            raise HTTPException(status_code=404, detail='Користувача не знайдено в базі бота. Будь ласка, введіть числовий ID та ім’я вручну, або нехай користувач натисне /start в боті.')
 
         user_id = int(target['user_id'])
         final_username = target.get('username') or username
@@ -758,8 +761,9 @@ async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
         me_role = admin.get('role')
         target_role = data.get('role', 'admin')
         
-        if me_role == 'owner' and target_role == 'owner':
-            raise HTTPException(status_code=403, detail='Власник не може створювати інших власників')
+        # Allow Owners and Developers to add anyone (including other Owners)
+        if me_role not in ('owner', 'developer'):
+            raise HTTPException(status_code=403, detail='Недостатньо прав для додавання персоналу')
 
         # Location access is removed as per user request
         await admin_db.add_admin(user_id=user_id, username=final_username, display_name=final_display_name, added_by=admin['user_id'], role=target_role, locations=[])

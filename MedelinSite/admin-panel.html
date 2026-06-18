@@ -481,11 +481,10 @@
                             <div class="order-meta">${date} | <b>${o.phone}</b> | ${o.total_amount} ₴</div>
                             <div class="order-items">${o.cart || ''}${o.wishes ? `<br><br><b>Побажання:</b> ${o.wishes}` : ''}</div>
                         </div>
-                        ${!isDev ? `
                         <div class="order-actions">
                             <button class="btn btn--success btn--sm" onclick="confirmOrder('${o.order_id}')">Підтвердити</button>
                             <button class="btn btn--danger btn--sm" onclick="rejectOrder('${o.order_id}')">Відхилити</button>
-                        </div>` : ''}`;
+                        </div>`;
                     list.appendChild(div);
                 });
                 showLoader(false);
@@ -509,10 +508,9 @@
                             <div class="order-meta">${o.phone} | ${o.location_name} | ${o.total} ₴</div>
                             <div class="order-items">${o.cart || ''}</div>
                         </div>
-                        ${!isDev ? `
                         <div class="order-actions">
                             <button class="btn btn--success btn--sm" onclick="completeOrder('${o.order_id}')">Завершити</button>
-                        </div>` : ''}`;
+                        </div>`;
                     list.appendChild(div);
                 });
                 showLoader(false);
@@ -526,7 +524,7 @@
                 const list = document.getElementById('items-list');
                 if (!beans) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
                 const isDev = currentAdmin.role === 'developer';
-                list.innerHTML = `<div class="admin-toolbar"><h3>Зерно</h3>${!isDev ? `<button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати</button>` : ''}</div><div id="beans-grid" class="admin-grid"></div>`;
+                list.innerHTML = `<div class="admin-toolbar"><h3>Зерно</h3><button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати</button></div><div id="beans-grid" class="admin-grid"></div>`;
                 beans.forEach(b => {
                     const div = document.createElement('div'); div.className = 'bean-card';
                     div.style.cursor = 'pointer';
@@ -574,10 +572,8 @@
                             </div>
                         </div>
                         <div class="admin-modal__footer" style="justify-content: space-between; margin-top:3rem;">
-                            ${!isDev ? `
                                 <button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')"><i class="fas fa-trash"></i> Видалити</button>
                                 <button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i> Редагувати</button>
-                            ` : ''}
                         </div>
                     </div>`;
                 modal.classList.add('admin-modal--active');
@@ -612,7 +608,7 @@
                             </div>
                             <div class="admin-field" style="margin-top:1.5rem;"><label>Дескриптори</label><input name="descriptors" value="${b?.descriptors || b?.taste || ''}" placeholder="Жасмин, персик, бергамот"></div>
                             <div class="admin-field" style="margin-top:1.5rem;"><label>Опис</label><textarea name="description" rows="4" placeholder="Детальний опис для покупця...">${b?.description || ''}</textarea></div>
-                            <div class="admin-field" style="margin-top:2rem;"><label>Фото (вертикальне)</label>
+                            <div class="admin-field" style="margin-top:2rem;"><label>Фото</label>
                                 <div style="display:flex; align-items:center; gap:2rem;">
                                     <img id="bean-img-preview" src="${window.fixImageUrl(b?.image_url)}" style="width:120px; aspect-ratio:3/4; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
                                     <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="bean-file-input" style="display:none;"></label>
@@ -636,7 +632,7 @@
                 const list = document.getElementById('items-list');
                 if (!locs) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
                 const isDev = currentAdmin.role === 'developer';
-                list.innerHTML = `<div class="admin-toolbar"><h3>Локації</h3>${!isDev ? `<button class="btn btn--primary btn--sm" onclick="openLocationModal()">+ Додати</button>` : ''}</div><div id="locs-grid" class="admin-grid"></div>`;
+                list.innerHTML = `<div class="admin-toolbar"><h3>Локації</h3><button class="btn btn--primary btn--sm" onclick="openLocationModal()">+ Додати</button></div><div id="locs-grid" class="admin-grid"></div>`;
                 locs.forEach(l => {
                     const div = document.createElement('div'); div.className = 'location-card';
                     div.style.cursor = 'pointer';
@@ -674,10 +670,8 @@
                             </div>
                         </div>
                         <div class="admin-modal__footer" style="justify-content: space-between; margin-top:2rem;">
-                            ${!isDev ? `
                                 <button class="btn btn--danger btn--sm" onclick="deleteLocation('${l.id}')"><i class="fas fa-trash"></i> Видалити</button>
                                 <button class="btn btn--outline btn--sm" onclick='openLocationModal(${JSON.stringify(l).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i> Редагувати</button>
-                            ` : ''}
                         </div>
                     </div>`;
                 modal.classList.add('admin-modal--active');
@@ -689,19 +683,19 @@
                     <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>${l ? 'Редагувати' : 'Додати'} локацію</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
                         <form id="loc-form" onkeyup="if(event.key==='Enter') saveLocation('${l?.id || ''}')">
-                            <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
+                            <div class="admin-grid" style="grid-template-columns: 1fr; gap:1.5rem;">
                                 <div class="admin-field"><label>Назва</label><input name="name" value="${l?.name || ''}" placeholder="Меделін Центр" required></div>
-                                <div class="admin-field"><label>Адреса</label><input name="address" value="${l?.address || ''}" placeholder="вул. Корятовича, 1" required></div>
-                                <div class="admin-field"><label>Графік</label><input name="schedule" value="${l?.schedule || ''}" placeholder="Пн-Пт: 08:00-20:00"></div>
-                                <div class="admin-field"><label>Зручності</label><input name="amenities" value="${l?.amenities || ''}" placeholder="Wi-Fi, Тераса, Pets friendly"></div>
+                                <div class="admin-field"><label>Адреса</label><textarea name="address" placeholder="вул. Корятовича, 1" required style="min-height:80px;">${l?.address || ''}</textarea></div>
+                                <div class="admin-field"><label>Графік</label><textarea name="schedule" placeholder="Пн-Пт: 08:00-20:00" style="min-height:80px;">${l?.schedule || ''}</textarea></div>
+                                <div class="admin-field"><label>Зручності (через кому)</label><textarea name="amenities" placeholder="Wi-Fi, Тераса, Pets friendly" style="min-height:80px;">${l?.amenities || ''}</textarea></div>
                                 <div class="admin-field"><label>Maps URL</label><input name="google_maps_url" value="${l?.google_maps_url || ''}" placeholder="https://maps.app.goo.gl/..."></div>
-                            </div>
-                            <div class="admin-field" style="margin-top:1.5rem;"><label>Опис</label><textarea name="description" rows="3" placeholder="Короткий опис закладу...">${l?.description || l?.atmosphere || ''}</textarea></div>
-                            <div class="admin-field" style="margin-top:2rem;"><label>Фото (горизонтальне)</label>
-                                <div style="display:flex; align-items:center; gap:2rem;">
-                                    <img id="loc-img-preview" src="${window.fixImageUrl(l?.image_url)}" style="width:160px; aspect-ratio:16/9; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
-                                    <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="loc-file-input" style="display:none;"></label>
-                                    <input type="hidden" name="image_url" id="loc-image-url" value="${l?.image_url || ''}">
+                                <div class="admin-field"><label>Атмосфера / Опис</label><textarea name="description" rows="4" placeholder="Короткий опис закладу..." style="min-height:100px;">${l?.description || l?.atmosphere || ''}</textarea></div>
+                                <div class="admin-field"><label>Фото</label>
+                                    <div style="display:flex; align-items:center; gap:2rem;">
+                                        <img id="loc-img-preview" src="${window.fixImageUrl(l?.image_url)}" style="width:200px; aspect-ratio:16/9; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
+                                        <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="loc-file-input" style="display:none;"></label>
+                                        <input type="hidden" name="image_url" id="loc-image-url" value="${l?.image_url || ''}">
+                                    </div>
                                 </div>
                             </div>
                         </form>
@@ -836,7 +830,7 @@
                 
                 team.forEach(t => { 
                     const div = document.createElement('div'); div.className = 'order-item'; 
-                    const canDelete = isOwner || (isDev && t.role === 'owner');
+                    const canDelete = isDev || isOwner;
 
                     div.innerHTML = `<div class="order-info">
                             <div style="font-weight:800; color:var(--color-dark-brown);">${t.display_name}</div>

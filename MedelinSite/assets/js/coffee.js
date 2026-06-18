@@ -96,7 +96,7 @@ function renderCoffeeData(coffeeData) {
         }
 
         art.innerHTML = `
-            <div class="product-card__image" style="background-image: url('${window.fixImageUrl(item.image_url) || defImg}');">
+            <div class="product-card__image product-card__image--bean" style="background-image: url('${window.fixImageUrl(item.image_url) || defImg}');">
                 ${stockLabel}
             </div>
             <div class="product-card__content">

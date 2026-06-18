@@ -49,7 +49,7 @@ function renderLocations(locations) {
         article.onclick = () => window.openPopup(locId);
 
         article.innerHTML = `
-            <div class="product-card__image" style="background-image: url('${window.fixImageUrl(loc.image_url)}')"></div>
+            <div class="product-card__image product-card__image--location" style="background-image: url('${window.fixImageUrl(loc.image_url)}')"></div>
             <div class="product-card__content">
                 <h3 class="product-card__title">${loc.name}</h3>
                 <p style="font-size: 0.9rem; color: var(--color-muted);">${loc.address}</p>

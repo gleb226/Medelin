@@ -1440,6 +1440,14 @@ h4 {
     position: relative;
 }
 
+.product-card__image--bean {
+    height: 400px;
+}
+
+.product-card__image--location {
+    height: 260px;
+}
+
 .stock-badge {
     position: absolute;
     top: 15px;
