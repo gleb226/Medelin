@@ -472,7 +472,7 @@
                 const list = document.getElementById('items-list');
                 if (!orders || orders.length === 0) { list.innerHTML = '<p style="text-align:center; padding:2rem;">Немає нових замовлень</p>'; showLoader(false); return; }
                 list.innerHTML = '';
-                const isOwner = currentAdmin.role === 'owner';
+                const isOwner = ['owner', 'boss', 'super'].includes(currentAdmin.role);
                 const isAdmin = currentAdmin.role === 'admin';
                 const canManage = isOwner || isAdmin;
                 
@@ -505,7 +505,7 @@
                 const orders = await apiFetch('active-orders');
                 const list = document.getElementById('items-list');
                 list.innerHTML = orders?.length ? '' : '<p style="text-align:center; padding:2rem;">Немає активних замовлень</p>';
-                const isOwner = currentAdmin.role === 'owner';
+                const isOwner = ['owner', 'boss', 'super'].includes(currentAdmin.role);
                 const isAdmin = currentAdmin.role === 'admin';
                 const canManage = isOwner || isAdmin;
 
@@ -533,7 +533,7 @@
                 const beans = await apiFetch('beans');
                 const list = document.getElementById('items-list');
                 if (!beans) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                const isOwner = currentAdmin.role === 'owner';
+                const isOwner = ['owner', 'boss', 'super'].includes(currentAdmin.role);
                 list.innerHTML = `<div class="admin-toolbar"><h3>Зерно</h3>${isOwner ? `<button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати</button>` : ''}</div><div id="beans-grid" class="admin-grid"></div>`;
                 beans.forEach(b => {
                     const div = document.createElement('div'); div.className = 'bean-card';
@@ -551,7 +551,7 @@
 
             function openBeanDetail(b) {
                 const modal = document.getElementById('admin-modal');
-                const isOwner = currentAdmin.role === 'owner';
+                const isOwner = ['owner', 'boss', 'super'].includes(currentAdmin.role);
                 const isSpecialty = (b.category === 'specialty') || (parseFloat(b.quality_score || b.cup_score || 0) >= 80);
                 
                 modal.innerHTML = `
@@ -643,7 +643,7 @@
                 const locs = await apiFetch('locations');
                 const list = document.getElementById('items-list');
                 if (!locs) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                const isOwner = currentAdmin.role === 'owner';
+                const isOwner = ['owner', 'boss', 'super'].includes(currentAdmin.role);
                 list.innerHTML = `<div class="admin-toolbar"><h3>Локації</h3>${isOwner ? `<button class="btn btn--primary btn--sm" onclick="openLocationModal()">+ Додати</button>` : ''}</div><div id="locs-grid" class="admin-grid"></div>`;
                 locs.forEach(l => {
                     const div = document.createElement('div'); div.className = 'location-card';
@@ -662,7 +662,7 @@
 
             function openLocationDetail(l) {
                 const modal = document.getElementById('admin-modal');
-                const isOwner = currentAdmin.role === 'owner';
+                const isOwner = ['owner', 'boss', 'super'].includes(currentAdmin.role);
                 modal.innerHTML = `
                     <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>Деталі локації</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
@@ -728,7 +728,7 @@
                 const socials = await apiFetch('socials');
                 const list = document.getElementById('items-list');
                 if (!socials) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                const isOwner = currentAdmin.role === 'owner';
+                const isOwner = ['owner', 'boss', 'super'].includes(currentAdmin.role);
                 list.innerHTML = `<div class="admin-toolbar"><h3>Контакти</h3>${isOwner ? `<button class="btn btn--primary btn--sm" onclick="openSocialModal()">+ Додати</button>` : ''}</div><div id="socials-list"></div>`;
                 
                 const SOCIAL_ICONS = {
@@ -783,7 +783,7 @@
                 const stats = await apiFetch('stats');
                 const list = document.getElementById('items-list');
                 if (!stats) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                const isOwner = currentAdmin.role === 'owner';
+                const isOwner = ['owner', 'boss', 'super'].includes(currentAdmin.role);
                 list.innerHTML = `
                     <div class="admin-toolbar">
                         <h3>Статистика</h3>
@@ -839,7 +839,7 @@
                 const list = document.getElementById('items-list');
                 if (!team) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
                 const isDev = currentAdmin.role === 'developer';
-                const isOwner = currentAdmin.role === 'owner';
+                const isOwner = ['owner', 'boss', 'super'].includes(currentAdmin.role);
                 
                 list.innerHTML = `<div class="admin-toolbar"><h3>Персонал</h3>${(isDev || isOwner) ? `<button class="btn btn--primary btn--sm" onclick='openTeamModal()'>+ Додати</button>` : ''}</div><div id="team-list"></div>`;
                 

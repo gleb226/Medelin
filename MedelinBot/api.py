@@ -471,7 +471,7 @@ async def get_new_orders(admin: dict = Depends(get_current_admin)):
 
 @app.post('/api/admin/orders/{order_id}/confirm')
 async def confirm_order(order_id: str, admin: dict = Depends(get_current_admin)):
-    if admin.get('role') not in ('owner', 'admin'):
+    if admin.get('role') not in ('owner', 'boss', 'super', 'admin'):
         raise HTTPException(status_code=403, detail='Недостатньо прав (тільки Власник або Адмін)')
         
     order = await orders_db.get_order_by_id(order_id)
@@ -503,7 +503,7 @@ async def confirm_order(order_id: str, admin: dict = Depends(get_current_admin))
 
 @app.post('/api/admin/orders/{order_id}/reject')
 async def reject_order(order_id: str, admin: dict = Depends(get_current_admin)):
-    if admin.get('role') not in ('owner', 'admin'):
+    if admin.get('role') not in ('owner', 'boss', 'super', 'admin'):
         raise HTTPException(status_code=403, detail='Недостатньо прав (тільки Власник або Адмін)')
         
     await orders_db.update_status(order_id, 'rejected')
@@ -549,7 +549,7 @@ async def get_active_orders(admin: dict = Depends(get_current_admin)):
 
 @app.post('/api/admin/orders/{order_id}/complete')
 async def complete_order(order_id: str, admin: dict = Depends(get_current_admin)):
-    if admin.get('role') not in ('owner', 'admin'):
+    if admin.get('role') not in ('owner', 'boss', 'super', 'admin'):
         raise HTTPException(status_code=403, detail='Недостатньо прав (тільки Власник або Адмін)')
     from app.databases.active_orders_database import active_orders_db
 
@@ -579,7 +579,7 @@ async def complete_order(order_id: str, admin: dict = Depends(get_current_admin)
 # CRUD for Beans
 @app.post('/api/admin/upload')
 async def admin_upload_image(file: UploadFile = File(...), admin: dict = Depends(get_current_admin)):
-    if admin.get('role') != 'owner':
+    if admin.get('role') not in ('owner', 'boss', 'super'):
         raise HTTPException(status_code=403, detail='Тільки власник може завантажувати фото')
     from app.utils.paths import get_uploads_dir
     import uuid
@@ -609,7 +609,7 @@ async def admin_get_beans(admin: dict = Depends(get_current_admin)):
 
 @app.post('/api/admin/beans')
 async def admin_add_bean(data: dict, admin: dict = Depends(get_current_admin)):
-    if admin.get('role') != 'owner':
+    if admin.get('role') not in ('owner', 'boss', 'super'):
         raise HTTPException(status_code=403, detail='Тільки власник може додавати товари')
     if 'price_250' in data: data['price_250'] = int(data['price_250'])
     if 'stock_packs' in data and data['stock_packs']: data['stock_packs'] = int(data['stock_packs'])
@@ -618,7 +618,7 @@ async def admin_add_bean(data: dict, admin: dict = Depends(get_current_admin)):
 
 @app.post('/api/admin/beans/{bean_id}')
 async def admin_update_bean(bean_id: str, data: dict, admin: dict = Depends(get_current_admin)):
-    if admin.get('role') != 'owner':
+    if admin.get('role') not in ('owner', 'boss', 'super'):
         raise HTTPException(status_code=403, detail='Тільки власник може редагувати товари')
     if 'price_250' in data: data['price_250'] = int(data['price_250'])
     if 'stock_packs' in data and data['stock_packs']: data['stock_packs'] = int(data['stock_packs'])
@@ -629,7 +629,7 @@ async def admin_update_bean(bean_id: str, data: dict, admin: dict = Depends(get_
 
 @app.delete('/api/admin/beans/{bean_id}')
 async def admin_delete_bean(bean_id: str, admin: dict = Depends(get_current_admin)):
-    if admin.get('role') != 'owner':
+    if admin.get('role') not in ('owner', 'boss', 'super'):
         raise HTTPException(status_code=403, detail='Тільки власник може видаляти товари')
     logger.info(f"Deleting bean {bean_id}. Admin: {admin['user_id']}")
     success = await coffee_beans_db.delete_bean(bean_id)
@@ -649,21 +649,21 @@ async def admin_get_locations(admin: dict = Depends(get_current_admin)):
 
 @app.post('/api/admin/locations')
 async def admin_add_location(data: dict, admin: dict = Depends(get_current_admin)):
-    if admin.get('role') != 'owner':
+    if admin.get('role') not in ('owner', 'boss', 'super'):
         raise HTTPException(status_code=403, detail='Тільки власник може додавати локації')
     await location_db.add_location(**data)
     return {'status': 'ok'}
 
 @app.post('/api/admin/locations/{loc_id}')
 async def admin_update_location(loc_id: str, data: dict, admin: dict = Depends(get_current_admin)):
-    if admin.get('role') != 'owner':
+    if admin.get('role') not in ('owner', 'boss', 'super'):
         raise HTTPException(status_code=403, detail='Тільки власник може редагувати локації')
     await location_db.update_location(loc_id, data)
     return {'status': 'ok'}
 
 @app.delete('/api/admin/locations/{loc_id}')
 async def admin_delete_location(loc_id: str, admin: dict = Depends(get_current_admin)):
-    if admin.get('role') != 'owner':
+    if admin.get('role') not in ('owner', 'boss', 'super'):
         raise HTTPException(status_code=403, detail='Тільки власник може видаляти локації')
     logger.info(f"Deleting location {loc_id}. Admin: {admin['user_id']}")
     success = await location_db.delete_location(loc_id)
@@ -683,21 +683,21 @@ async def admin_get_socials(admin: dict = Depends(get_current_admin)):
 
 @app.post('/api/admin/socials')
 async def admin_add_social(data: dict, admin: dict = Depends(get_current_admin)):
-    if admin.get('role') != 'owner':
+    if admin.get('role') not in ('owner', 'boss', 'super'):
         raise HTTPException(status_code=403, detail='Тільки власник може додавати контакти')
     await contacts_db.add_contact(data['name'], data['url'])
     return {'status': 'ok'}
 
 @app.post('/api/admin/socials/{sid}')
 async def admin_update_social(sid: str, data: dict, admin: dict = Depends(get_current_admin)):
-    if admin.get('role') != 'owner':
+    if admin.get('role') not in ('owner', 'boss', 'super'):
         raise HTTPException(status_code=403, detail='Тільки власник може редагувати контакти')
     await contacts_db.update_contact(sid, data)
     return {'status': 'ok'}
 
 @app.delete('/api/admin/socials/{sid}')
 async def admin_delete_social(sid: str, admin: dict = Depends(get_current_admin)):
-    if admin.get('role') != 'owner':
+    if admin.get('role') not in ('owner', 'boss', 'super'):
         raise HTTPException(status_code=403, detail='Тільки власник може видаляти контакти')
     logger.info(f"Deleting social {sid}. Admin: {admin['user_id']}")
     success = await contacts_db.delete_contact(sid)
@@ -744,12 +744,12 @@ async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
         target_role = data.get('role', 'admin')
 
         # Permission check
-        if me_role == 'developer':
-            if target_role != 'owner':
-                raise HTTPException(status_code=403, detail='Розробник може додавати тільки власників')
-        elif me_role == 'owner':
+        if me_role in ('owner', 'boss', 'super'):
             # Owners can add anyone
             pass
+        elif me_role == 'developer':
+            if target_role not in ('owner', 'boss', 'super'):
+                raise HTTPException(status_code=403, detail='Розробник може додавати тільки власників')
         else:
             raise HTTPException(status_code=403, detail='Недостатньо прав')
         
@@ -792,7 +792,7 @@ async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
 async def admin_delete_team(uid: str, admin: dict = Depends(get_current_admin)):
     try:
         logger.info(f"Deleting team member {uid}. Admin: {admin['user_id']}")
-        if admin.get('role') != 'owner':
+        if admin.get('role') not in ('owner', 'boss', 'super'):
             raise HTTPException(status_code=403, detail='Тільки власник може видаляти персонал')
             
         try:
@@ -834,7 +834,7 @@ async def get_admin_stats(admin: dict = Depends(get_current_admin)):
 
 @app.post('/api/admin/stats/reset')
 async def reset_admin_stats(admin: dict = Depends(get_current_admin)):
-    if admin.get('role') != 'owner':
+    if admin.get('role') not in ('owner', 'boss', 'super'):
         raise HTTPException(status_code=403, detail='Тільки Власник може скидати статистику')
     
     db = await get_db()

@@ -39,11 +39,12 @@ class AdminDatabase:
         return bool(r)
 
     async def is_owner(self, user_id: int) -> bool:
-        if str(user_id) in DEVELOPER_IDS:
-            return True
         db = await get_db()
         r = await db.admins.find_one({'user_id': {'$in': [int(user_id), str(user_id)]}}, {'_id': 0, 'role': 1})
-        return (r or {}).get('role') == 'owner'
+        role = (r or {}).get('role')
+        if role in ('owner', 'boss', 'super'):
+            return True
+        return False
 
     async def is_developer(self, user_id: int) -> bool:
         return str(user_id) in DEVELOPER_IDS
