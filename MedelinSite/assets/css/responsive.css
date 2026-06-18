@@ -892,28 +892,6 @@
         display: flex !important;
     }
 
-    /* ── Bean detail: hide inline price card, show sticky bar on tablet portrait ── */
-    .bean-full-view .bean-full-view__price-card {
-        display: none;
-    }
-    .bean-detail-sticky-bar {
-        display: flex;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 900;
-        background: var(--color-dark-brown);
-        padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom, 0px));
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        box-shadow: 0 -12px 40px rgba(0,0,0,0.3);
-        border-top: 1px solid rgba(201,169,110,0.2);
-    }
-    #bean-detail-section {
-        padding-bottom: 100px !important;
-    }
 }
 
 /* ================================================================
@@ -952,7 +930,7 @@
     display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (max-width: 1024px) and (orientation: portrait) {
 
     /* Hide the inline price card on mobile — use sticky bar instead */
     .bean-full-view .bean-full-view__price-card {
@@ -1079,6 +1057,13 @@
         min-height: auto !important;
         width: auto !important;
         display: inline-flex !important;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+    .bean-full-view__image {
+        height: 500px !important;
+        border-radius: 30px !important;
     }
 }
 

@@ -170,10 +170,10 @@
             .admin-field input, .admin-field select, .admin-field textarea {
                 width: 100%; padding: 1rem 1.2rem; border: 2px solid var(--color-coffee-soft);
                 border-radius: 15px; font-family: var(--font-main); font-size: 0.95rem; outline: none; background: white; transition: all 0.3s;
-                resize: none;
+                resize: none; box-sizing: border-box;
             }
             .admin-field input:focus { border-color: var(--color-coffee); box-shadow: 0 0 0 4px var(--color-coffee-soft); }
-            textarea { resize: none !important; }
+            textarea { resize: none !important; box-sizing: border-box; }
 
             .admin-modal { position: fixed; inset: 0; background: rgba(60, 47, 47, 0.6); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(8px); overflow: hidden; touch-action: none; overscroll-behavior: contain; }
             .admin-modal--active { display: flex; }
@@ -250,7 +250,7 @@
                 </div>
                 <div id="verify-state">
                     <h2 style="font-family:var(--font-accent); font-size: 2rem; margin-bottom: 1rem;">Очікування...</h2>
-                    <p style="color: var(--color-text-muted); line-height: 1.6;">Ми надіслали повідомлення в Telegram.<br>Будь ласка, натисніть <b>"ПІДТВЕРДИТИ"</b>.</p>
+                    <p style="color: var(--color-text-muted); line-height: 1.6; padding: 0 1rem;">Ми надіслали повідомлення в Telegram.<br>Будь ласка, натисніть <b>"ПІДТВЕРДИТИ"</b>.<br><br><small style="color:var(--color-danger);">Якщо ви нічого не отримали, натисніть <b>/start</b> у боті та спробуйте ще раз.</small></p>
                     <div class="verify-pulse"><i class="fab fa-telegram-plane" style="font-size:2.5rem; color:var(--color-coffee);"></i></div>
                     <button class="btn btn--outline" onclick="resetLogin()">Скасувати</button>
                 </div>
