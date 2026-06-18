@@ -580,7 +580,10 @@
                                     <div class="info-block"><b>Різновид:</b> ${b.variety || '—'}</div>
                                     <div class="info-block"><b>Висота:</b> ${b.altitude || '—'}</div>
                                     <div class="info-block"><b>Метод обробки:</b> ${b.processing || '—'}</div>
-                                    ${isSpecialty ? `<div class="info-block"><b>Оцінка якості (SCA):</b> ${b.quality_score || b.cup_score || '—'}</div>` : ''}
+                                    ${isSpecialty ? `
+                                    <div class="info-block"><b>Оцінка якості (SCA):</b> ${b.quality_score || b.cup_score || '—'}</div>
+                                    <div class="info-block"><b>Запас:</b> ${b.stock_packs || 0} пачок (≈ ${(b.stock_packs || 0) * 0.25} кг)</div>
+                                    ` : ''}
                                 </div>
                                 <div style="margin-top:1rem; padding:1.2rem; background:var(--color-cream); border-radius:15px;">
                                     <p><b>Дескриптори:</b> ${b.descriptors || b.taste || '—'}</p>
@@ -592,13 +595,51 @@
                             </div>
                         </div>
                         <div class="admin-modal__footer" style="justify-content: space-between; margin-top:3rem;">
-                                ${isOwner ? `
-                                <button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')"><i class="fas fa-trash"></i> Видалити</button>
-                                <button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i> Редагувати</button>
+                                <div>
+                                    ${isOwner ? `
+                                    <button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')"><i class="fas fa-trash"></i> Видалити</button>
+                                    <button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i> Редагувати</button>
+                                    ` : ''}
+                                </div>
+                                ${isSpecialty && isOwner ? `
+                                <button class="btn btn--success btn--sm" onclick="openRestockModal('${b.id}', '${b.name.replace(/'/g, "\\'")}')"><i class="fas fa-plus"></i> Поповнити запас</button>
                                 ` : ''}
                         </div>
                     </div>`;
                 modal.classList.add('admin-modal--active');
+            }
+
+            function openRestockModal(bid, name) {
+                const modal = document.getElementById('admin-modal');
+                const oldContent = modal.innerHTML;
+                modal.innerHTML = `
+                    <div class="admin-modal__panel" style="max-width:400px;">
+                        <div class="admin-modal__header"><h3>Поповнити запас</h3><button class="btn btn--outline btn--sm" onclick="this.closest('.admin-modal').classList.remove('admin-modal--active')">X</button></div>
+                        <p style="margin-bottom:1.5rem;"><b>${name}</b></p>
+                        <div class="admin-field">
+                            <label>Кількість пачок або КГ</label>
+                            <input type="text" id="restock-amount" placeholder="Наприклад: 10 або 2.5 кг" required onkeyup="if(event.key==='Enter') saveRestock('${bid}')">
+                            <p class="hint-text">1 кг автоматично конвертується в 4 пачки</p>
+                        </div>
+                        <div class="admin-modal__footer">
+                            <button class="btn btn--primary btn--block" onclick="saveRestock('${bid}')">Додати</button>
+                        </div>
+                    </div>`;
+                // If we want to go back to details on cancel, we'd need more logic, 
+                // but usually user just closes it.
+            }
+
+            async function saveRestock(bid) {
+                const amount = document.getElementById('restock-amount').value;
+                if (!amount) return;
+                showLoader(true);
+                const res = await apiFetch(`beans/${bid}/restock`, 'POST', { amount });
+                showLoader(false);
+                if (res) {
+                    closeAdminModal();
+                    refreshData();
+                    alert(`Запас оновлено! Додано ${res.added} пачок. Загалом: ${res.total}`);
+                }
             }
 
             async function uploadImage(file) {
@@ -772,8 +813,10 @@
                     const byUrl = guessSocialKeyFromUrl(s.url);
                     const icon = SOCIAL_ICONS[nameKey] || (byUrl ? SOCIAL_ICONS[byUrl] : null) || 'fas fa-link';
                     
+                    const displayUrl = s.url.replace(/^mailto:/, '').replace(/^tel:/, '');
+                    
                     const div = document.createElement('div'); div.className = 'order-item';
-                    div.innerHTML = `<div class="order-info"><div style="font-weight:700;"><i class="${icon}" style="width:24px; color:var(--color-coffee);"></i> ${s.name}</div><div style="font-size:0.9rem; opacity:0.7;">${s.url}</div></div>
+                    div.innerHTML = `<div class="order-info"><div style="font-weight:700;"><i class="${icon}" style="width:24px; color:var(--color-coffee);"></i> ${s.name}</div><div style="font-size:0.9rem; opacity:0.7;">${displayUrl}</div></div>
                         ${isOwner ? `<div class="order-actions"><button class="btn btn--outline btn--sm" onclick='openSocialModal(${JSON.stringify(s).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button></div>` : ''}`;
                     document.getElementById('socials-list').appendChild(div);
                 });

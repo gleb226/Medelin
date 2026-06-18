@@ -638,6 +638,36 @@ async def admin_delete_bean(bean_id: str, admin: dict = Depends(get_current_admi
         raise HTTPException(status_code=400, detail='Не вдалося видалити товар')
     return {'status': 'ok'}
 
+@app.post('/api/admin/beans/{bean_id}/restock')
+async def admin_restock_bean(bean_id: str, data: dict, admin: dict = Depends(get_current_admin)):
+    if admin.get('role') not in ('owner', 'boss', 'super', 'developer'):
+        raise HTTPException(status_code=403, detail='Недостатньо прав')
+    
+    amount_str = str(data.get('amount', '')).lower().replace(',', '.').strip()
+    packs_to_add = 0
+    if 'кг' in amount_str:
+        try:
+            val = float(amount_str.replace('кг', '').strip())
+            packs_to_add = int(val * 4)
+        except: pass
+    else:
+        try:
+            digits = re.sub(r'[^\d]', '', amount_str)
+            packs_to_add = int(digits) if digits else 0
+        except: pass
+
+    if packs_to_add <= 0:
+        raise HTTPException(status_code=400, detail='Невірна кількість. Введіть число пачок або вагу в кг (напр. 2 кг)')
+
+    bean = await coffee_beans_db.get_bean_by_id(bean_id)
+    if not bean:
+        raise HTTPException(status_code=404, detail='Товар не знайдено')
+    
+    current = bean.get('stock_packs') or 0
+    new_total = current + packs_to_add
+    await coffee_beans_db.update_bean(bean_id, {'stock_packs': new_total})
+    return {'status': 'ok', 'added': packs_to_add, 'total': new_total}
+
 # CRUD for Locations
 @app.get('/api/admin/locations')
 async def admin_get_locations(admin: dict = Depends(get_current_admin)):
