@@ -313,7 +313,6 @@
                 modal.style.display = 'flex';
             }
 
-            // Auto-logout after 2 hours
             setInterval(() => {
                 if (sessionToken && (Date.now() - lastActivity > 2 * 60 * 60 * 1000)) { logout(); }
             }, 60000);
@@ -672,9 +671,9 @@
                             <div class="admin-field" style="margin-top:1.5rem;"><label>Опис</label><textarea name="description" rows="4" placeholder="Детальний опис для покупця...">${b?.description || ''}</textarea></div>
                             <div class="admin-field" style="margin-top:2rem;"><label>Фото</label>
                                 <div style="display:flex; align-items:center; gap:2rem;">
-                                    <img id="bean-img-preview" src="${window.fixImageUrl(b?.image_url)}" style="width:120px; aspect-ratio:3/4; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
+                                    <img id="bean-img-preview" src="/photos/Comercial.png" style="width:120px; aspect-ratio:3/4; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
                                     <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="bean-file-input" style="display:none;"></label>
-                                    <input type="hidden" name="image_url" id="bean-image-url" value="${b?.image_url || ''}">
+                                    <input type="hidden" name="image_url" id="bean-image-url" value="">
                                 </div>
                             </div>
                         </form>
@@ -756,7 +755,7 @@
                                 <div class="admin-field"><label>Атмосфера / Опис</label><textarea name="description" rows="4" placeholder="Короткий опис закладу..." style="min-height:100px;">${l?.description || l?.atmosphere || ''}</textarea></div>
                                 <div class="admin-field"><label>Фото</label>
                                     <div style="display:flex; align-items:center; gap:2rem;">
-                                        <img id="loc-img-preview" src="${window.fixImageUrl(l?.image_url)}" style="width:200px; aspect-ratio:16/9; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
+                                        <img id="loc-img-preview" src="https://images.unsplash.com/photo-1567880905822-56f8e06fe630?q=80&w=735&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" style="width:200px; aspect-ratio:16/9; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
                                         <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="loc-file-input" style="display:none;"></label>
                                         <input type="hidden" name="image_url" id="loc-image-url" value="${l?.image_url || ''}">
                                     </div>
