@@ -866,7 +866,7 @@ async def admin_delete_team(uid: str, admin: dict = Depends(get_current_admin)):
 # Stats and Broadcast
 @app.get('/api/admin/stats')
 async def get_admin_stats(admin: dict = Depends(get_current_admin)):
-    if admin.get('role') not in ('developer', 'owner'):
+    if admin.get('role') not in ('developer', 'owner', 'boss', 'super'):
         raise HTTPException(status_code=403, detail='Тільки Розробник або Власник мають доступ до статистики')
     
     sales = await sales_db.get_all_sales()

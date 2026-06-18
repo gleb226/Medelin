@@ -127,7 +127,7 @@
             .order-item:last-child { border-bottom: none; }
             .order-info { display: flex; flex-direction: column; gap: 0.6rem; flex: 1; }
             .order-title { font-weight: 800; font-size: 1.3rem; color: var(--color-dark-brown); }
-            .order-meta { color: var(--color-text-muted); font-size: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+            .order-meta { color: var(--color-text-muted); font-size: 1rem; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
             .order-items { margin-top: 1rem; font-size: 1.05rem; color: #444; background: #fdfaf5; padding: 1.5rem; border-radius: 20px; border: 1px solid rgba(139, 94, 60, 0.03); line-height: 1.6; }
             .order-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: flex-end; }
 
@@ -155,6 +155,7 @@
             .confirm-modal {
                 position: fixed; inset: 0; background: rgba(60, 47, 47, 0.4); z-index: 4000;
                 display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px);
+                overflow: hidden;
             }
             .confirm-panel {
                 background: white; padding: 2.5rem; border-radius: 25px; width: 90%; max-width: 400px;
@@ -174,8 +175,8 @@
             .admin-field input:focus { border-color: var(--color-coffee); box-shadow: 0 0 0 4px var(--color-coffee-soft); }
             textarea { resize: none !important; }
 
-            .admin-modal { position: fixed; inset: 0; background: rgba(60, 47, 47, 0.6); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(8px); }
-            .admin-modal--active { display: flex; }
+            .admin-modal { position: fixed; inset: 0; background: rgba(60, 47, 47, 0.6); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(8px); overflow: hidden; }
+            .admin-modal--active { display: flex; overflow-y: auto; }
             .admin-modal__panel { width: min(800px, 100%); max-height: 90vh; overflow-y: auto; background: white; border-radius: 35px; padding: clamp(2rem, 5vw, 3.5rem); box-shadow: 0 40px 100px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.2); }
             .admin-modal__panel--large { width: min(1000px, 100%); }
             .admin-modal__header { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin-bottom: 2.5rem; }
@@ -215,7 +216,7 @@
                 .order-actions .btn { flex: 0 1 auto; width: auto; }
                 .admin-toolbar .btn { width: auto; margin-top: 0.5rem; }
                 .admin-toolbar h3 { font-size: 1.5rem; }
-                .admin-modal__panel { border-radius: 20px; padding: 1.5rem; margin: 1rem; width: calc(100% - 2rem); max-width: 100%; overflow-y: auto; max-height: 90vh; }
+                .admin-modal__panel { border-radius: 20px; padding: 1.5rem; margin: 1rem; width: calc(100% - 2rem); max-width: 100%; overflow-y: auto; max-height: 85vh; box-sizing: border-box; }
                 .admin-modal__title { font-size: 1.6rem; }
                 .admin-modal__header { margin-bottom: 1.5rem; flex-wrap: wrap; }
                 .admin-grid { grid-template-columns: 1fr; }
@@ -520,14 +521,14 @@
                     if (o.order_type === 'beans_delivery') {
                         const branch = o.delivery_branch_id ? `Відділення №${o.delivery_branch_id}` : '';
                         const dt = o.delivery_type === 'branch' ? 'Відділення' : (o.delivery_type === 'courier' ? "Кур'єр" : (branch ? 'Відділення' : "Кур'єр"));
-                        let adr = `<i class="fas fa-truck"></i> ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch}: ${o.delivery_address || ''}`;
+                        let adr = `<i class="fas fa-truck"></i> Куди: ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch}: ${o.delivery_address || ''}`;
                         deliveryInfo = adr.replace(', :', ':').replace(' ,', ',');
                     } else if (o.order_type === 'beans_booking' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-map-marker-alt"></i> Самовивіз: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-map-marker-alt"></i> Куди: Самовивіз: ${o.location_name}`;
                     } else if (o.order_type === 'takeaway' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-walking"></i> З собою: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-walking"></i> Куди: З собою: ${o.location_name}`;
                     } else if (o.order_type === 'in_house' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-coffee"></i> В залі: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-coffee"></i> Куди: В залі: ${o.location_name}`;
                     } else {
                         deliveryInfo = o.delivery_info || '—';
                     }
@@ -546,11 +547,11 @@
                         <div class="order-info">
                             <div class="order-title"><i class="fas fa-box" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ЗАМОВЛЕННЯ #${num} (${o.status === 'new' ? 'НОВЕ' : 'АКТИВНЕ'})</div>
                             <div class="order-meta">
-                                <i class="fas fa-user" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.fullname || o.username || '—'} <br>
-                                <i class="fas fa-phone" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.phone || '—'} <br>
-                                ${deliveryInfo ? deliveryInfo.replace('<i class="fas', '<i style="color:var(--color-coffee); width:20px; text-align:center;" class="fas') : ''} <br>
-                                <i class="fas fa-money-bill-wave" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Сума: ${o.total_amount || o.total || 0} ₴ <br>
-                                <i class="fas fa-credit-card" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Оплата: ${paymentStr}
+                                <div><i class="fas fa-user" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.fullname || o.username || '—'}</div>
+                                <div><i class="fas fa-phone" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.phone || '—'}</div>
+                                ${deliveryInfo ? `<div>${deliveryInfo.replace('<i class="fas', '<i style="color:var(--color-coffee); width:20px; text-align:center;" class="fas')}</div>` : ''}
+                                <div><i class="fas fa-money-bill-wave" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Сума: ${o.total_amount || o.total || 0} ₴</div>
+                                <div><i class="fas fa-credit-card" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Оплата: ${paymentStr}</div>
                             </div>
                             <div class="order-items">
                                 <b><i class="fas fa-shopping-cart" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Товари:</b><br>${cartItems || 'Немає товарів'}
@@ -592,14 +593,14 @@
                     if (o.order_type === 'beans_delivery') {
                         const branch = o.delivery_branch_id ? `Відділення №${o.delivery_branch_id}` : '';
                         const dt = o.delivery_type === 'branch' ? 'Відділення' : (o.delivery_type === 'courier' ? "Кур'єр" : (branch ? 'Відділення' : "Кур'єр"));
-                        let adr = `<i class="fas fa-truck"></i> ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch}: ${o.delivery_address || ''}`;
+                        let adr = `<i class="fas fa-truck"></i> Куди: ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch}: ${o.delivery_address || ''}`;
                         deliveryInfo = adr.replace(', :', ':').replace(' ,', ',');
                     } else if (o.order_type === 'beans_booking' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-map-marker-alt"></i> Самовивіз: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-map-marker-alt"></i> Куди: Самовивіз: ${o.location_name}`;
                     } else if (o.order_type === 'takeaway' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-walking"></i> З собою: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-walking"></i> Куди: З собою: ${o.location_name}`;
                     } else if (o.order_type === 'in_house' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-coffee"></i> В залі: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-coffee"></i> Куди: В залі: ${o.location_name}`;
                     } else {
                         deliveryInfo = o.delivery_info || '—';
                     }
@@ -618,11 +619,11 @@
                         <div class="order-info">
                             <div class="order-title"><i class="fas fa-box" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ЗАМОВЛЕННЯ #${num} (АКТИВНЕ)</div>
                             <div class="order-meta">
-                                <i class="fas fa-user" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.fullname || o.username || '—'} <br>
-                                <i class="fas fa-phone" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.phone || '—'} <br>
-                                ${deliveryInfo ? deliveryInfo.replace('<i class="fas', '<i style="color:var(--color-coffee); width:20px; text-align:center;" class="fas') : ''} <br>
-                                <i class="fas fa-money-bill-wave" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Сума: ${o.total_amount || o.total || 0} ₴ <br>
-                                <i class="fas fa-credit-card" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Оплата: ${paymentStr}
+                                <div><i class="fas fa-user" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.fullname || o.username || '—'}</div>
+                                <div><i class="fas fa-phone" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.phone || '—'}</div>
+                                ${deliveryInfo ? `<div>${deliveryInfo.replace('<i class="fas', '<i style="color:var(--color-coffee); width:20px; text-align:center;" class="fas')}</div>` : ''}
+                                <div><i class="fas fa-money-bill-wave" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Сума: ${o.total_amount || o.total || 0} ₴</div>
+                                <div><i class="fas fa-credit-card" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Оплата: ${paymentStr}</div>
                             </div>
                             <div class="order-items">
                                 <b><i class="fas fa-shopping-cart" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Товари:</b><br>${cartItems || 'Немає товарів'}
@@ -955,7 +956,7 @@
                 list.innerHTML = `
                     <div class="admin-toolbar">
                         <h3>Статистика</h3>
-                        ${(isOwner && !isDeveloper) ? `<button class="btn btn--danger btn--sm" onclick="resetStats()">Скинути статистику</button>` : ''}
+                        ${(isOwner || isDeveloper) ? `<button class="btn btn--danger btn--sm" onclick="resetStats()">Скинути статистику</button>` : ''}
                     </div>
                     <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                         <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none; padding:1.5rem;">
