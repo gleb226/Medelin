@@ -866,9 +866,9 @@
                 const modal = document.getElementById('admin-modal');
                 const isDev = currentAdmin.role === 'developer';
                 modal.innerHTML = `<div class="admin-modal__panel" style="max-width:500px;"><div class="admin-modal__header"><h3>Додати персонал</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
-                    <p style="font-size:0.85rem; color:var(--color-text-muted); margin-bottom:1.5rem;">Введіть ID або @username. Дані підтягнуться з бази бота.</p>
+                    <p style="font-size:0.85rem; color:var(--color-text-muted); margin-bottom:1.5rem;">Введіть ID, @username або номер телефону. Дані підтягнуться з бази бота.</p>
                     <form id="team-form" onkeyup="if(event.key==='Enter') saveTeam()">
-                        <div class="admin-field"><label>TG ID / @username</label><input name="user_id" placeholder="Наприклад: 12345678 або @nickname" required></div>
+                        <div class="admin-field"><label>ID / @username / Телефон</label><input name="user_id" placeholder="ID, @username або +380..." required></div>
                         <div class="admin-field" style="margin-top:1rem;"><label>Ім'я в команді</label><input name="display_name" placeholder="Наприклад: Олександр" required></div>
                         <div class="admin-field" style="margin-top:1rem;"><label>Роль</label>
                             <select name="role">

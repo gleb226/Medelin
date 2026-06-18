@@ -791,19 +791,30 @@ async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
 @app.delete('/api/admin/team/{uid}')
 async def admin_delete_team(uid: str, admin: dict = Depends(get_current_admin)):
     try:
-        logger.info(f"Deleting team member {uid}. Admin: {admin['user_id']}")
-        if admin.get('role') not in ('owner', 'boss', 'super'):
+        me_role = admin.get('role')
+        logger.info(f"DELETE TEAM REQUEST: target_uid={uid}, admin_id={admin.get('user_id')}, role={me_role}")
+        
+        if me_role not in ('owner', 'boss', 'super'):
             raise HTTPException(status_code=403, detail='Тільки власник може видаляти персонал')
             
-        try:
+        # Try numeric ID first
+        target_uid = None
+        if uid.isdigit():
             target_uid = int(uid)
-        except:
-            # Try to find by username if uid is not numeric
+        else:
+            # Try to find by identifier (@username or phone)
             target = await admin_db.find_admin_by_identifier(uid)
-            if target: target_uid = int(target['user_id'])
-            else: raise HTTPException(status_code=400, detail='Невірний ID користувача')
+            if target:
+                target_uid = int(target.get('user_id'))
+        
+        if target_uid is None:
+            raise HTTPException(status_code=400, detail=f'Не вдалося знайти користувача за ідентифікатором: {uid}')
+
+        if str(target_uid) in DEVELOPER_IDS:
+             raise HTTPException(status_code=403, detail='Неможливо видалити розробника')
 
         await admin_db.remove_admin(target_uid)
+        logger.info(f"Successfully removed admin {target_uid}")
         return {'status': 'ok'}
     except HTTPException: raise
     except Exception as e:
