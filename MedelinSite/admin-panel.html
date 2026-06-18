@@ -155,11 +155,11 @@
             .confirm-modal {
                 position: fixed; inset: 0; background: rgba(60, 47, 47, 0.4); z-index: 4000;
                 display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px);
-                overflow: hidden;
+                overflow: hidden; touch-action: none; overscroll-behavior: contain;
             }
             .confirm-panel {
-                background: white; padding: 2.5rem; border-radius: 25px; width: 90%; max-width: 400px;
-                text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.2); border: 1px solid var(--color-coffee-soft);
+                background: white; padding: 2.5rem; border-radius: 25px; width: calc(100% - 2rem); max-width: 400px;
+                text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.2); border: 1px solid var(--color-coffee-soft); box-sizing: border-box; margin: 1rem;
             }
             .confirm-panel h4 { font-family: var(--font-accent); font-size: 1.8rem; margin-bottom: 1rem; color: var(--color-dark-brown); }
             .confirm-panel p { margin-bottom: 2rem; color: var(--color-text-muted); }
@@ -175,9 +175,9 @@
             .admin-field input:focus { border-color: var(--color-coffee); box-shadow: 0 0 0 4px var(--color-coffee-soft); }
             textarea { resize: none !important; }
 
-            .admin-modal { position: fixed; inset: 0; background: rgba(60, 47, 47, 0.6); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(8px); overflow: hidden; }
-            .admin-modal--active { display: flex; overflow-y: auto; }
-            .admin-modal__panel { width: min(800px, 100%); max-height: 90vh; overflow-y: auto; background: white; border-radius: 35px; padding: clamp(2rem, 5vw, 3.5rem); box-shadow: 0 40px 100px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.2); }
+            .admin-modal { position: fixed; inset: 0; background: rgba(60, 47, 47, 0.6); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(8px); overflow: hidden; touch-action: none; overscroll-behavior: contain; }
+            .admin-modal--active { display: flex; }
+            .admin-modal__panel { width: min(800px, 100%); max-height: 90vh; overflow-y: auto; background: white; border-radius: 35px; padding: clamp(2rem, 5vw, 3.5rem); box-shadow: 0 40px 100px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.2); box-sizing: border-box; }
             .admin-modal__panel--large { width: min(1000px, 100%); }
             .admin-modal__header { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin-bottom: 2.5rem; }
             .admin-modal__title { font-family: var(--font-accent); color: var(--color-dark-brown); font-size: 2.2rem; font-weight: 400; }
@@ -193,7 +193,7 @@
                 font-size: 1.4rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             }
 
-            @media (max-width: 1024px) {
+            @media (max-width: 768px), (max-width: 1024px) and (orientation: portrait) {
                 .sidebar { transform: translateX(-100%); }
                 .sidebar--active { transform: translateX(0); }
                 .main-content { margin-left: 0; width: 100%; padding: 1.5rem; }
@@ -206,7 +206,8 @@
                 .header { margin-bottom: 2rem; flex-direction: column; align-items: flex-start; gap: 1rem; }
                 .header__actions { width: 100%; justify-content: space-between; }
                 .order-item { flex-direction: column; align-items: stretch; gap: 1rem; padding: 1.5rem 0; }
-                .order-actions { justify-content: flex-start; width: 100%; }
+                .order-actions { justify-content: flex-start; width: 100%; flex-direction: row !important; align-items: center; }
+                .order-actions .btn { width: auto !important; flex: none !important; }
                 .admin-toolbar { flex-direction: column; align-items: flex-start; gap: 1rem; }
             }
 
@@ -297,6 +298,17 @@
             </div>
         </div>
 
+        <div class="confirm-modal" id="nice-alert">
+            <div class="confirm-panel">
+                <i class="fas fa-info-circle" style="font-size:3rem; color:var(--color-coffee); margin-bottom:1.5rem; display:block;"></i>
+                <h4 id="nice-alert-title">Увага</h4>
+                <p id="nice-alert-msg"></p>
+                <div class="confirm-actions">
+                    <button class="btn btn--primary btn--sm" id="nice-alert-ok">ОК</button>
+                </div>
+            </div>
+        </div>
+
         <div class="full-image-modal" id="image-modal" onclick="this.style.display='none'"><img src="" id="full-img"></div>
         <div class="loader-wrap" id="loader"><div class="spinner"></div></div>
         <div class="admin-modal" id="admin-modal"></div>
@@ -320,6 +332,15 @@
                 const img = document.getElementById('full-img');
                 img.src = window.fixImageUrl(url);
                 modal.style.display = 'flex';
+            }
+
+            function niceAlert(title, msg) {
+                document.getElementById('nice-alert-title').textContent = title;
+                document.getElementById('nice-alert-msg').textContent = msg;
+                const modal = document.getElementById('nice-alert');
+                modal.style.display = 'flex';
+                document.getElementById('nice-alert-ok').onclick = () => { modal.style.display = 'none'; };
+                modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
             }
 
             setInterval(() => {
@@ -350,7 +371,7 @@
                     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('nav-item--active'));
                     item.classList.add('nav-item--active');
                     document.getElementById('section-title').textContent = item.textContent.trim();
-                    if (window.innerWidth <= 1024) {
+                    if (window.innerWidth <= 768 || (window.innerWidth <= 1024 && window.innerHeight > window.innerWidth)) {
                         sidebar.classList.remove('sidebar--active');
                         overlay.classList.remove('sidebar-overlay--active');
                     }
@@ -387,7 +408,7 @@
             async function attemptLogin() {
                 const id = document.getElementById('login-id').value;
                 const pass = document.getElementById('login-pass').value;
-                if (!id || !pass) return alert('Введіть дані');
+                if (!id || !pass) { niceAlert('Увага', 'Введіть дані'); return; }
                 showLoader(true);
                 try {
                     const resp = await fetch('/api/admin/login', {
@@ -398,7 +419,7 @@
                     if (!resp.ok) { const err = await resp.json(); throw new Error(err.detail || 'Помилка'); }
                     const data = await resp.json();
                     startVerification(data.user_id);
-                } catch (e) { alert(e.message); } finally { showLoader(false); }
+                } catch (e) { niceAlert('Помилка', e.message); } finally { showLoader(false); }
             }
 
             function startVerification(userId) {
@@ -521,16 +542,16 @@
                     if (o.order_type === 'beans_delivery') {
                         const branch = o.delivery_branch_id ? `Відділення №${o.delivery_branch_id}` : '';
                         const dt = o.delivery_type === 'branch' ? 'Відділення' : (o.delivery_type === 'courier' ? "Кур'єр" : (branch ? 'Відділення' : "Кур'єр"));
-                        let adr = `<i class="fas fa-truck"></i> Куди: ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch}: ${o.delivery_address || ''}`;
-                        deliveryInfo = adr.replace(', :', ':').replace(' ,', ',');
+                        let adr = `<i class="fas fa-truck" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch ? branch + ': ' : ''}${o.delivery_address || ''}`;
+                        deliveryInfo = adr.replace(', ,', ',').replace(' ,', ',');
                     } else if (o.order_type === 'beans_booking' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-map-marker-alt"></i> Куди: Самовивіз: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-map-marker-alt" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: Самовивіз: ${o.location_name}`;
                     } else if (o.order_type === 'takeaway' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-walking"></i> Куди: З собою: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-walking" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: З собою: ${o.location_name}`;
                     } else if (o.order_type === 'in_house' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-coffee"></i> Куди: В залі: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-coffee" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: В залі: ${o.location_name}`;
                     } else {
-                        deliveryInfo = o.delivery_info || '—';
+                        deliveryInfo = o.delivery_info ? `<i class="fas fa-info-circle" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.delivery_info}` : '—';
                     }
 
                     let paymentStr = o.is_paid ? 'Оплачено' : (o.payment_mode === 'pay_at_checkout' ? 'Накладний платіж' : 'Не оплачено');
@@ -549,7 +570,7 @@
                             <div class="order-meta">
                                 <div><i class="fas fa-user" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.fullname || o.username || '—'}</div>
                                 <div><i class="fas fa-phone" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.phone || '—'}</div>
-                                ${deliveryInfo ? `<div>${deliveryInfo.replace('<i class="fas', '<i style="color:var(--color-coffee); width:20px; text-align:center;" class="fas')}</div>` : ''}
+                                ${deliveryInfo && deliveryInfo !== '—' ? `<div>${deliveryInfo}</div>` : ''}
                                 <div><i class="fas fa-money-bill-wave" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Сума: ${o.total_amount || o.total || 0} ₴</div>
                                 <div><i class="fas fa-credit-card" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Оплата: ${paymentStr}</div>
                             </div>
@@ -593,16 +614,16 @@
                     if (o.order_type === 'beans_delivery') {
                         const branch = o.delivery_branch_id ? `Відділення №${o.delivery_branch_id}` : '';
                         const dt = o.delivery_type === 'branch' ? 'Відділення' : (o.delivery_type === 'courier' ? "Кур'єр" : (branch ? 'Відділення' : "Кур'єр"));
-                        let adr = `<i class="fas fa-truck"></i> Куди: ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch}: ${o.delivery_address || ''}`;
-                        deliveryInfo = adr.replace(', :', ':').replace(' ,', ',');
+                        let adr = `<i class="fas fa-truck" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch ? branch + ': ' : ''}${o.delivery_address || ''}`;
+                        deliveryInfo = adr.replace(', ,', ',').replace(' ,', ',');
                     } else if (o.order_type === 'beans_booking' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-map-marker-alt"></i> Куди: Самовивіз: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-map-marker-alt" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: Самовивіз: ${o.location_name}`;
                     } else if (o.order_type === 'takeaway' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-walking"></i> Куди: З собою: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-walking" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: З собою: ${o.location_name}`;
                     } else if (o.order_type === 'in_house' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-coffee"></i> Куди: В залі: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-coffee" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: В залі: ${o.location_name}`;
                     } else {
-                        deliveryInfo = o.delivery_info || '—';
+                        deliveryInfo = o.delivery_info ? `<i class="fas fa-info-circle" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.delivery_info}` : '—';
                     }
 
                     let paymentStr = o.is_paid ? 'Оплачено' : (o.payment_mode === 'pay_at_checkout' ? 'Накладний платіж' : 'Не оплачено');
@@ -621,7 +642,7 @@
                             <div class="order-meta">
                                 <div><i class="fas fa-user" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.fullname || o.username || '—'}</div>
                                 <div><i class="fas fa-phone" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.phone || '—'}</div>
-                                ${deliveryInfo ? `<div>${deliveryInfo.replace('<i class="fas', '<i style="color:var(--color-coffee); width:20px; text-align:center;" class="fas')}</div>` : ''}
+                                ${deliveryInfo && deliveryInfo !== '—' ? `<div>${deliveryInfo}</div>` : ''}
                                 <div><i class="fas fa-money-bill-wave" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Сума: ${o.total_amount || o.total || 0} ₴</div>
                                 <div><i class="fas fa-credit-card" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Оплата: ${paymentStr}</div>
                             </div>
@@ -1025,7 +1046,7 @@
                                 <b>${roleName(t.role)}</b>
                             </div>
                         </div>
-                        ${canDelete ? `<button class="btn btn--danger btn--sm" onclick="deleteTeam('${t.user_id}')"><i class="fas fa-trash"></i></button>` : ''}`; 
+                        <div class="order-actions" style="justify-content:flex-end; min-width:fit-content;">${canDelete ? `<button class="btn btn--danger btn--sm" style="width:auto !important; flex:none !important;" onclick="deleteTeam('${t.user_id}')"><i class="fas fa-trash"></i></button>` : ''}</div>`; 
                     document.getElementById('team-list').appendChild(div); 
                 });
                 showLoader(false);
