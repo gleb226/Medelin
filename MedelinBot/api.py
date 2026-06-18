@@ -506,8 +506,21 @@ async def reject_order(order_id: str, admin: dict = Depends(get_current_admin)):
     if admin.get('role') not in ('owner', 'boss', 'super', 'admin', 'developer'):
         raise HTTPException(status_code=403, detail='Недостатньо прав (тільки Власник або Адмін)')
         
+    order = await orders_db.get_order_by_id(order_id)
+    if order and order.get('is_paid') and order.get('payment_id'):
+        from app.common.bot_instance import bot
+        from app.utils.payment_refunds import refund_telegram_payment
+        user_id = order.get('user_id')
+        payment_id = order.get('payment_id')
+        provider_payment_id = order.get('provider_payment_id')
+        success, err = await refund_telegram_payment(bot, user_id, payment_id, provider_payment_id)
+        if success:
+            await orders_db.set_refund_status(order_id, 'refunded')
+        else:
+            await orders_db.set_refund_status(order_id, f'failed: {err}')
+            
     await orders_db.update_status(order_id, 'rejected')
-    
+
     # Bot Sync
     from app.utils.admin_notifications import update_order_notifications
     await update_order_notifications(order_id, 'rejected')
@@ -525,25 +538,28 @@ async def get_active_orders(admin: dict = Depends(get_current_admin)):
     
     orders = await active_orders_db.get_active_orders(locs)
     for o in orders:
-        o['order_id'] = str(o['_id'])
+        orig_oid = o.get('order_id')
+        o['active_order_id'] = str(o['_id'])
+        o['order_id'] = orig_oid if orig_oid else str(o['_id'])
+        
         if 'created_at' in o and o['created_at']:
             o['created_at'] = o['created_at'].isoformat()
         
-        # Get order_number from orders_db if missing in active_orders
-        if 'order_number' not in o or not o['order_number'] or o['order_number'] == '—':
-            orig_order = await orders_db.get_order_by_id(o.get('order_id'))
-            if orig_order:
-                o['order_number'] = orig_order.get('order_number')
+        orig_order = await orders_db.get_order_by_id(o['order_id'])
+        if orig_order:
+            for key in ['order_number', 'phone', 'delivery_info', 'wishes', 'is_paid', 'payment_id', 'delivery_type', 'delivery_city', 'delivery_state', 'delivery_branch_id', 'delivery_address', 'fullname', 'username']:
+                if key in orig_order and orig_order[key] is not None:
+                    o[key] = orig_order[key]
         
         if 'order_number' not in o or not o['order_number']:
             o['order_number'] = '—'
 
         del o['_id']
         # Add location name
-        if o['location_id'] == 'NP': o['location_name'] = 'Нова Пошта'
-        elif o['location_id'] == 'web': o['location_name'] = 'Сайт'
+        if o.get('location_id') == 'NP': o['location_name'] = 'Нова Пошта'
+        elif o.get('location_id') == 'web': o['location_name'] = 'Сайт'
         else:
-            loc = await location_db.get_location_by_id(o['location_id'])
+            loc = await location_db.get_location_by_id(o.get('location_id'))
             o['location_name'] = loc['name'] if loc else 'Web'
     return orders
 

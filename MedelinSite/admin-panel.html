@@ -197,6 +197,16 @@
                 .sidebar--active { transform: translateX(0); }
                 .main-content { margin-left: 0; width: 100%; padding: 1.5rem; }
                 .sidebar-toggle { display: flex; }
+
+                /* Tablet specific adjustments */
+                .admin-grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+                .admin-modal__panel--large { width: 90%; }
+                
+                .header { margin-bottom: 2rem; flex-direction: column; align-items: flex-start; gap: 1rem; }
+                .header__actions { width: 100%; justify-content: space-between; }
+                .order-item { flex-direction: column; align-items: stretch; gap: 1rem; padding: 1.5rem 0; }
+                .order-actions { justify-content: flex-start; width: 100%; }
+                .admin-toolbar { flex-direction: column; align-items: flex-start; gap: 1rem; }
             }
 
             @media (max-width: 768px) {
@@ -417,12 +427,21 @@
             function showPanel() {
                 document.getElementById('admin-info').textContent = `${currentAdmin.name} (${roleName(currentAdmin.role)})`;
                 const role = currentAdmin.role;
+                const isOwner = ['owner', 'boss', 'super'].includes(role);
+                const isAdmin = role === 'admin';
+                const isDeveloper = role === 'developer';
+
                 document.querySelectorAll('.nav-item[data-section]').forEach(item => {
                     const sec = item.getAttribute('data-section');
-                    if (role === 'admin') {
-                        if (sec !== 'new_orders' && sec !== 'orders') item.style.display = 'none';
+                    if (isDeveloper) {
+                        item.style.display = ''; // Ensure all are visible for developer
+                        return;
                     }
-                    if (role === 'owner') {
+
+                    if (isAdmin) {
+                        if (sec !== 'new_orders' && sec !== 'orders') item.style.display = 'none';
+                    } else if (isOwner) {
+                        // Owner sees all but stats (as before)
                         if (sec === 'stats') item.style.display = 'none';
                     }
                 });
@@ -448,30 +467,37 @@
                         } catch(e) {
                             msg = `Помилка ${resp.status}: ${resp.statusText}`;
                         }
-                        alert(msg);
+                        // Use niceConfirm for error messages instead of alert
+                        niceConfirm('Помилка', msg, () => {}); // A simple OK button popup
                         return null;
                     }
                     return await resp.json();
                 } catch(e) {
                     console.error('API Fetch Error:', e);
-                    alert('Помилка мережі або сервера');
+                    niceConfirm('Помилка мережі', 'Помилка мережі або сервера', () => {});
                     return null;
                 }
             }
 
-            async function niceConfirm(title, msg, onOk) {
+            async function niceConfirm(title, msg, onOk, onCancel = null, okText = 'Так', cancelText = 'Скасувати', okBtnClass = 'btn--danger', cancelBtnClass = 'btn--outline') {
                 const modal = document.getElementById('nice-confirm');
                 document.getElementById('nice-confirm-title').textContent = title;
                 document.getElementById('nice-confirm-msg').textContent = msg;
-                modal.style.display = 'flex';
                 
                 const okBtn = document.getElementById('nice-confirm-ok');
                 const cancelBtn = document.getElementById('nice-confirm-cancel');
                 
-                const cleanup = () => { modal.style.display = 'none'; };
+                okBtn.textContent = okText;
+                okBtn.className = `btn ${okBtnClass} btn--sm`;
+                cancelBtn.textContent = cancelText;
+                cancelBtn.className = `btn ${cancelBtnClass} btn--sm`;
+
+                const cleanup = () => { modal.style.display = 'none'; okBtn.onclick = null; cancelBtn.onclick = null; };
                 
                 okBtn.onclick = () => { cleanup(); onOk(); };
-                cancelBtn.onclick = cleanup;
+                cancelBtn.onclick = () => { cleanup(); if (onCancel) onCancel(); };
+
+                modal.style.display = 'flex';
             }
 
             async function loadNewOrders() {
@@ -480,22 +506,59 @@
                 const list = document.getElementById('items-list');
                 if (!orders || orders.length === 0) { list.innerHTML = '<p style="text-align:center; padding:2rem;">Немає нових замовлень</p>'; showLoader(false); return; }
                 list.innerHTML = '';
-                const isOwner = ['owner', 'boss', 'super', 'developer'].includes(currentAdmin.role);
-                const isAdmin = currentAdmin.role === 'admin';
+                const role = currentAdmin.role;
+                const isOwner = ['owner', 'boss', 'super'].includes(role);
+                const isAdmin = role === 'admin';
+                const isDeveloper = role === 'developer';
                 const canManage = isOwner || isAdmin;
                 
                 orders.forEach(o => {
                     const div = document.createElement('div'); div.className = 'order-item';
                     const date = o.created_at ? new Date(o.created_at).toLocaleString('uk-UA') : '—';
                     const num = o.order_number && o.order_number !== '—' ? o.order_number : '—';
+                    
+                    // Construct delivery info
+                    let deliveryInfo = '';
+                    if (o.order_type === 'beans_delivery') {
+                        const branch = o.delivery_branch_id ? `Відділення №${o.delivery_branch_id}` : '';
+                        const dt = o.delivery_type === 'branch' ? 'Відділення' : (o.delivery_type === 'courier' ? "Кур'єр" : (branch ? 'Відділення' : "Кур'єр"));
+                        let adr = `🚚 ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch}: ${o.delivery_address || ''}`;
+                        deliveryInfo = adr.replace(', :', ':').replace(' ,', ',');
+                    } else if (o.order_type === 'beans_booking' && o.location_name) {
+                        deliveryInfo = `📍 Самовивіз: ${o.location_name}`;
+                    } else if (o.order_type === 'takeaway' && o.location_name) {
+                        deliveryInfo = `🚶 З собою: ${o.location_name}`;
+                    } else if (o.order_type === 'in_house' && o.location_name) {
+                        deliveryInfo = `☕️ В залі: ${o.location_name}`;
+                    } else {
+                        deliveryInfo = o.delivery_info || '—';
+                    }
+
+                    // Construct cart items
+                    let cartItems = '';
+                    if (Array.isArray(o.cart) && o.cart.length > 0) {
+                        cartItems = o.cart.map(item => `— ${item.name} (${item.price * (item.quantity || 1)} грн)`).join('<br>');
+                    } else if (typeof o.cart === 'string') {
+                        cartItems = o.cart; // Fallback for old string format
+                    }
+                    
                     div.innerHTML = `
                         <div class="order-info">
-                            <div class="order-title">#${num} — ${o.fullname}</div>
-                            <div class="order-meta">${date} | <b>${o.phone}</b> | ${o.total_amount} ₴</div>
-                            <div class="order-items">${o.cart || ''}${o.wishes ? `<br><br><b>Побажання:</b> ${o.wishes}` : ''}</div>
+                            <div class="order-title">📦 ЗАМОВЛЕННЯ #${num} (${o.status === 'new' ? 'НОВЕ' : 'АКТИВНЕ'})</div>
+                            <div class="order-meta">
+                                👤 ${o.fullname || o.username || '—'} <br>
+                                📞 ${o.phone || '—'} <br>
+                                ${deliveryInfo ? `🚚 ${deliveryInfo}` : ''} <br>
+                                💰 Сума: ${o.total_amount || o.total || 0} ₴ <br>
+                                💳 Оплата: ${o.payment_mode || '—'} (Оплачено: ${o.is_paid ? 'Так' : 'Ні'})
+                            </div>
+                            <div class="order-items">
+                                <b>🛒 Товари:</b><br>${cartItems || 'Немає товарів'}
+                                ${o.wishes ? `<br><br><b>📝 ПОБАЖАННЯ:</b> ${o.wishes}` : ''}
+                            </div>
                         </div>
                         <div class="order-actions">
-                            ${canManage ? `
+                            ${canManage && !isDeveloper ? `
                             <button class="btn btn--success btn--sm" onclick="confirmOrder('${o.order_id}')">Підтвердити</button>
                             <button class="btn btn--danger btn--sm" onclick="rejectOrder('${o.order_id}')">Відхилити</button>
                             ` : ''}
@@ -512,22 +575,60 @@
                 showLoader(true);
                 const orders = await apiFetch('active-orders');
                 const list = document.getElementById('items-list');
-                list.innerHTML = orders?.length ? '' : '<p style="text-align:center; padding:2rem;">Немає активних замовлень</p>';
-                const isOwner = ['owner', 'boss', 'super', 'developer'].includes(currentAdmin.role);
-                const isAdmin = currentAdmin.role === 'admin';
+                if (!orders || orders.length === 0) { list.innerHTML = '<p style="text-align:center; padding:2rem;">Немає активних замовлень</p>'; showLoader(false); return; }
+                list.innerHTML = '';
+                const role = currentAdmin.role;
+                const isOwner = ['owner', 'boss', 'super'].includes(role);
+                const isAdmin = role === 'admin';
+                const isDeveloper = role === 'developer';
                 const canManage = isOwner || isAdmin;
 
-                orders?.forEach(o => {
+                orders.forEach(o => {
                     const div = document.createElement('div'); div.className = 'order-item';
                     const num = o.order_number && o.order_number !== '—' ? o.order_number : '—';
+
+                    // Construct delivery info
+                    let deliveryInfo = '';
+                    if (o.order_type === 'beans_delivery') {
+                        const branch = o.delivery_branch_id ? `Відділення №${o.delivery_branch_id}` : '';
+                        const dt = o.delivery_type === 'branch' ? 'Відділення' : (o.delivery_type === 'courier' ? "Кур'єр" : (branch ? 'Відділення' : "Кур'єр"));
+                        let adr = `🚚 ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch}: ${o.delivery_address || ''}`;
+                        deliveryInfo = adr.replace(', :', ':').replace(' ,', ',');
+                    } else if (o.order_type === 'beans_booking' && o.location_name) {
+                        deliveryInfo = `📍 Самовивіз: ${o.location_name}`;
+                    } else if (o.order_type === 'takeaway' && o.location_name) {
+                        deliveryInfo = `🚶 З собою: ${o.location_name}`;
+                    } else if (o.order_type === 'in_house' && o.location_name) {
+                        deliveryInfo = `☕️ В залі: ${o.location_name}`;
+                    } else {
+                        deliveryInfo = o.delivery_info || '—';
+                    }
+
+                    // Construct cart items
+                    let cartItems = '';
+                    if (Array.isArray(o.cart) && o.cart.length > 0) {
+                        cartItems = o.cart.map(item => `— ${item.name} (${item.price * (item.quantity || 1)} грн)`).join('<br>');
+                    } else if (typeof o.cart === 'string') {
+                        cartItems = o.cart; // Fallback for old string format
+                    }
+
                     div.innerHTML = `
                         <div class="order-info">
-                            <div class="order-title">#${num} — ${o.fullname}</div>
-                            <div class="order-meta">${o.phone} | ${o.location_name} | ${o.total} ₴</div>
-                            <div class="order-items">${o.cart || ''}</div>
+                            <div class="order-title">📦 ЗАМОВЛЕННЯ #${num} (АКТИВНЕ)</div>
+                            <div class="order-meta">
+                                👤 ${o.fullname || o.username || '—'} <br>
+                                📞 ${o.phone || '—'} <br>
+                                ${deliveryInfo ? `🚚 ${deliveryInfo}` : ''} <br>
+                                💰 Сума: ${o.total_amount || o.total || 0} ₴ <br>
+                                💳 Оплата: ${o.payment_mode || '—'} (Оплачено: ${o.is_paid ? 'Так' : 'Ні'})
+                            </div>
+                            <div class="order-items">
+                                <b>🛒 Товари:</b><br>${cartItems || 'Немає товарів'}
+                                ${o.wishes ? `<br><br><b>📝 ПОБАЖАННЯ:</b> ${o.wishes}` : ''}
+                            </div>
                         </div>
                         <div class="order-actions">
-                            ${canManage ? `<button class="btn btn--success btn--sm" onclick="completeOrder('${o.order_id}')">Завершити</button>` : ''}
+                            ${canManage && !isDeveloper ? `<button class="btn btn--success btn--sm" onclick="completeOrder('${o.order_id}')">Завершити</button>` : ''}
                         </div>`;
                     list.appendChild(div);
                 });
@@ -541,8 +642,10 @@
                 const beans = await apiFetch('beans');
                 const list = document.getElementById('items-list');
                 if (!beans) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                const isOwner = ['owner', 'boss', 'super', 'developer'].includes(currentAdmin.role);
-                list.innerHTML = `<div class="admin-toolbar"><h3>Зерно</h3>${isOwner ? `<button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати</button>` : ''}</div><div id="beans-grid" class="admin-grid"></div>`;
+                const role = currentAdmin.role;
+                const isOwner = ['owner', 'boss', 'super'].includes(role);
+                const isDeveloper = role === 'developer';
+                list.innerHTML = `<div class="admin-toolbar"><h3>Зерно</h3>${(isOwner && !isDeveloper) ? `<button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати</button>` : ''}</div><div id="beans-grid" class="admin-grid"></div>`;
                 beans.forEach(b => {
                     const div = document.createElement('div'); div.className = 'bean-card';
                     div.style.cursor = 'pointer';
@@ -559,7 +662,9 @@
 
             function openBeanDetail(b) {
                 const modal = document.getElementById('admin-modal');
-                const isOwner = ['owner', 'boss', 'super', 'developer'].includes(currentAdmin.role);
+                const role = currentAdmin.role;
+                const isOwner = ['owner', 'boss', 'super'].includes(role);
+                const isDeveloper = role === 'developer';
                 const isSpecialty = (b.category === 'specialty') || (parseFloat(b.quality_score || b.cup_score || 0) >= 80);
                 
                 modal.innerHTML = `
@@ -594,13 +699,13 @@
                         </div>
                         <div class="admin-modal__footer" style="justify-content: space-between; margin-top:3rem;">
                                 <div>
-                                    ${isOwner ? `
+                                    ${(isOwner && !isDeveloper) ? `
                                     <button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')"><i class="fas fa-trash"></i> Видалити</button>
                                     <button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i> Редагувати</button>
                                     ` : ''}
                                 </div>
-                                ${isSpecialty && isOwner ? `
-                                <button class="btn btn--success btn--sm" onclick="openRestockModal('${b.id}', '${b.name.replace(/'/g, "\\'")}')"><i class="fas fa-plus"></i> Поповнити запас</button>
+                                ${isSpecialty && (isOwner && !isDeveloper) ? `
+                                <button class="btn btn--success btn--sm" onclick="openRestockModal('${b.id}', '${b.name.replace(/'/g, "'")}')"><i class="fas fa-plus"></i> Поповнити запас</button>
                                 ` : ''}
                         </div>
                     </div>`;
@@ -609,10 +714,10 @@
 
             function openRestockModal(bid, name) {
                 const modal = document.getElementById('admin-modal');
-                const oldContent = modal.innerHTML;
+                const oldContent = modal.innerHTML; // Store current modal content to restore it on cancel if needed
                 modal.innerHTML = `
                     <div class="admin-modal__panel" style="max-width:400px;">
-                        <div class="admin-modal__header"><h3>Поповнити запас</h3><button class="btn btn--outline btn--sm" onclick="this.closest('.admin-modal').classList.remove('admin-modal--active')">X</button></div>
+                        <div class="admin-modal__header"><h3>Поповнити запас</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal();">${'X'}</button></div>
                         <p style="margin-bottom:1.5rem;"><b>${name}</b></p>
                         <div class="admin-field">
                             <label>Кількість пачок або КГ</label>
@@ -623,8 +728,6 @@
                             <button class="btn btn--primary btn--block" onclick="saveRestock('${bid}')">Додати</button>
                         </div>
                     </div>`;
-                // If we want to go back to details on cancel, we'd need more logic, 
-                // but usually user just closes it.
             }
 
             async function saveRestock(bid) {
@@ -636,7 +739,7 @@
                 if (res) {
                     closeAdminModal();
                     refreshData();
-                    alert(`Запас оновлено! Додано ${res.added} пачок. Загалом: ${res.total}`);
+                    niceConfirm('Успіх', `Запас оновлено! Додано ${res.added} пачок. Загалом: ${res.total}`, () => {}, null, 'ОК', '', 'btn--success');
                 }
             }
 
@@ -645,9 +748,9 @@
                 try { 
                     const resp = await fetch('/api/admin/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${sessionToken}` }, body: formData }); 
                     const res = await resp.json(); 
-                    if (!resp.ok) { alert(res.detail || 'Помилка завантаження'); return null; }
+                    if (!resp.ok) { niceConfirm('Помилка завантаження', res.detail || 'Помилка завантаження', () => {}); return null; }
                     return res.url; 
-                } catch (e) { return null; }
+                } catch (e) { niceConfirm('Помилка', 'Помилка мережі або сервера при завантаженні файлу', () => {}); return null; }
             }
 
             function openBeanModal(b = null) {
@@ -671,9 +774,9 @@
                             <div class="admin-field" style="margin-top:1.5rem;"><label>Опис</label><textarea name="description" rows="4" placeholder="Детальний опис для покупця...">${b?.description || ''}</textarea></div>
                             <div class="admin-field" style="margin-top:2rem;"><label>Фото</label>
                                 <div style="display:flex; align-items:center; gap:2rem;">
-                                    <img id="bean-img-preview" src="/photos/Comercial.png" style="width:120px; aspect-ratio:3/4; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
+                                    <img id="bean-img-preview" src="${window.fixImageUrl(b?.image_url || '/photos/Comercial.png')}" style="width:120px; aspect-ratio:3/4; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
                                     <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="bean-file-input" style="display:none;"></label>
-                                    <input type="hidden" name="image_url" id="bean-image-url" value="">
+                                    <input type="hidden" name="image_url" id="bean-image-url" value="${b?.image_url || ''}">
                                 </div>
                             </div>
                         </form>
@@ -682,18 +785,22 @@
                 modal.classList.add('admin-modal--active');
                 const fileInput = document.getElementById('bean-file-input');
                 fileInput.onchange = async () => { if (fileInput.files[0]) { const url = await uploadImage(fileInput.files[0]); if (url) { document.getElementById('bean-image-url').value = url; document.getElementById('bean-img-preview').src = window.fixImageUrl(url); } } };
+                // Set initial image preview if editing
+                if (b?.image_url) document.getElementById('bean-img-preview').src = window.fixImageUrl(b.image_url);
             }
 
             async function saveBean(id) { const res = await apiFetch(id ? `beans/${id}` : 'beans', 'POST', Object.fromEntries(new FormData(document.getElementById('bean-form')).entries())); if (res) { closeAdminModal(); refreshData(); } }
-            async function deleteBean(id) { niceConfirm('Видалення', 'Видалити цей сорт кави?', async () => { await apiFetch(`beans/${id}`, 'DELETE'); closeAdminModal(); refreshData(); }); }
+            async function deleteBean(id) { niceConfirm('Видалення', 'Видалити цей сорт кави?', async () => { await apiFetch(`beans/${id}`, 'DELETE'); closeAdminModal(); refreshData(); }, null, 'Так, видалити'); }
 
             async function loadLocations() {
                 showLoader(true);
                 const locs = await apiFetch('locations');
                 const list = document.getElementById('items-list');
                 if (!locs) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                const isOwner = ['owner', 'boss', 'super', 'developer'].includes(currentAdmin.role);
-                list.innerHTML = `<div class="admin-toolbar"><h3>Локації</h3>${isOwner ? `<button class="btn btn--primary btn--sm" onclick="openLocationModal()">+ Додати</button>` : ''}</div><div id="locs-grid" class="admin-grid"></div>`;
+                const role = currentAdmin.role;
+                const isOwner = ['owner', 'boss', 'super'].includes(role);
+                const isDeveloper = role === 'developer';
+                list.innerHTML = `<div class="admin-toolbar"><h3>Локації</h3>${(isOwner && !isDeveloper) ? `<button class="btn btn--primary btn--sm" onclick="openLocationModal()">+ Додати</button>` : ''}</div><div id="locs-grid" class="admin-grid"></div>`;
                 locs.forEach(l => {
                     const div = document.createElement('div'); div.className = 'location-card';
                     div.style.cursor = 'pointer';
@@ -711,7 +818,9 @@
 
             function openLocationDetail(l) {
                 const modal = document.getElementById('admin-modal');
-                const isOwner = ['owner', 'boss', 'super', 'developer'].includes(currentAdmin.role);
+                const role = currentAdmin.role;
+                const isOwner = ['owner', 'boss', 'super'].includes(role);
+                const isDeveloper = role === 'developer';
                 modal.innerHTML = `
                     <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>Деталі локації</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
@@ -731,7 +840,7 @@
                             </div>
                         </div>
                         <div class="admin-modal__footer" style="justify-content: space-between; margin-top:2rem;">
-                                ${isOwner ? `
+                                ${(isOwner && !isDeveloper) ? `
                                 <button class="btn btn--danger btn--sm" onclick="deleteLocation('${l.id}')"><i class="fas fa-trash"></i> Видалити</button>
                                 <button class="btn btn--outline btn--sm" onclick='openLocationModal(${JSON.stringify(l).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i> Редагувати</button>
                                 ` : ''}
@@ -755,7 +864,7 @@
                                 <div class="admin-field"><label>Атмосфера / Опис</label><textarea name="description" rows="4" placeholder="Короткий опис закладу..." style="min-height:100px;">${l?.description || l?.atmosphere || ''}</textarea></div>
                                 <div class="admin-field"><label>Фото</label>
                                     <div style="display:flex; align-items:center; gap:2rem;">
-                                        <img id="loc-img-preview" src="https://images.unsplash.com/photo-1567880905822-56f8e06fe630?q=80&w=735&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" style="width:200px; aspect-ratio:16/9; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
+                                        <img id="loc-img-preview" src="${window.fixImageUrl(l?.image_url || 'https://images.unsplash.com/photo-1567880905822-56f8e06fe630?q=80&w=735&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')}" style="width:200px; aspect-ratio:16/9; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
                                         <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="loc-file-input" style="display:none;"></label>
                                         <input type="hidden" name="image_url" id="loc-image-url" value="${l?.image_url || ''}">
                                     </div>
@@ -767,18 +876,22 @@
                 modal.classList.add('admin-modal--active');
                 const fileInput = document.getElementById('loc-file-input');
                 fileInput.onchange = async () => { if (fileInput.files[0]) { const url = await uploadImage(fileInput.files[0]); if (url) { document.getElementById('loc-image-url').value = url; document.getElementById('loc-img-preview').src = window.fixImageUrl(url); } } };
+                // Set initial image preview if editing
+                if (l?.image_url) document.getElementById('loc-img-preview').src = window.fixImageUrl(l.image_url);
             }
 
             async function saveLocation(id) { const res = await apiFetch(id ? `locations/${id}` : 'locations', 'POST', Object.fromEntries(new FormData(document.getElementById('loc-form')).entries())); if (res) { closeAdminModal(); refreshData(); } }
-            async function deleteLocation(id) { niceConfirm('Видалення', 'Видалити цю локацію?', async () => { await apiFetch(`locations/${id}`, 'DELETE'); closeAdminModal(); refreshData(); }); }
+            async function deleteLocation(id) { niceConfirm('Видалення', 'Видалити цю локацію?', async () => { await apiFetch(`locations/${id}`, 'DELETE'); closeAdminModal(); refreshData(); }, null, 'Так, видалити'); }
 
             async function loadSocials() {
                 showLoader(true);
                 const socials = await apiFetch('socials');
                 const list = document.getElementById('items-list');
                 if (!socials) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                const isOwner = ['owner', 'boss', 'super', 'developer'].includes(currentAdmin.role);
-                list.innerHTML = `<div class="admin-toolbar"><h3>Контакти</h3>${isOwner ? `<button class="btn btn--primary btn--sm" onclick="openSocialModal()">+ Додати</button>` : ''}</div><div id="socials-list"></div>`;
+                const role = currentAdmin.role;
+                const isOwner = ['owner', 'boss', 'super'].includes(role);
+                const isDeveloper = role === 'developer';
+                list.innerHTML = `<div class="admin-toolbar"><h3>Контакти</h3>${(isOwner && !isDeveloper) ? `<button class="btn btn--primary btn--sm" onclick="openSocialModal()">+ Додати</button>` : ''}</div><div id="socials-list"></div>`;
                 
                 const SOCIAL_ICONS = {
                     instagram: 'fab fa-instagram',
@@ -815,7 +928,7 @@
                     
                     const div = document.createElement('div'); div.className = 'order-item';
                     div.innerHTML = `<div class="order-info"><div style="font-weight:700;"><i class="${icon}" style="width:24px; color:var(--color-coffee);"></i> ${s.name}</div><div style="font-size:0.9rem; opacity:0.7;">${displayUrl}</div></div>
-                        ${isOwner ? `<div class="order-actions"><button class="btn btn--outline btn--sm" onclick='openSocialModal(${JSON.stringify(s).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button></div>` : ''}`;
+                        ${(isOwner && !isDeveloper) ? `<div class="order-actions"><button class="btn btn--outline btn--sm" onclick='openSocialModal(${JSON.stringify(s).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button></div>` : ''}`;
                     document.getElementById('socials-list').appendChild(div);
                 });
                 showLoader(false);
@@ -826,19 +939,21 @@
                 modal.innerHTML = `<div class="admin-modal__panel" style="max-width:400px;"><div class="admin-modal__header"><h3>${s ? 'Редагувати' : 'Додати'} контакт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="social-form" onkeyup="if(event.key==='Enter') saveSocial('${s?.id || ''}')"><div class="admin-field"><label>Назва</label><input name="name" value="${s?.name || ''}" placeholder="Наприклад: Instagram" required></div><div class="admin-field" style="margin-top:1rem;"><label>Дані (URL / Тел / Email)</label><input name="url" value="${s?.url || ''}" placeholder="https://instagram.com/medelin..." required></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveSocial('${s?.id || ''}')">Зберегти</button></div></div>`;
                 modal.classList.add('admin-modal--active');
             }
-            async function saveSocial(id) { await apiFetch(id ? `socials/${id}` : 'socials', 'POST', Object.fromEntries(new FormData(document.getElementById('social-form')).entries())); closeAdminModal(); refreshData(); }
-            async function deleteSocial(id) { niceConfirm('Видалення', 'Видалити цей контакт?', async () => { await apiFetch(`socials/${id}`, 'DELETE'); refreshData(); }); }
+            async function saveSocial(id) { await apiFetch(id ? `socials/${id}` : 'socials', 'POST', Object.fromEntries(new FormData(document.getElementById('social-form')).entries())); if (res) { closeAdminModal(); refreshData(); }}
+            async function deleteSocial(id) { niceConfirm('Видалення', 'Видалити цей контакт?', async () => { await apiFetch(`socials/${id}`, 'DELETE'); refreshData(); }, null, 'Так, видалити'); }
 
             async function loadStats() {
                 showLoader(true);
                 const stats = await apiFetch('stats');
                 const list = document.getElementById('items-list');
                 if (!stats) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                const isOwner = ['owner', 'boss', 'super', 'developer'].includes(currentAdmin.role);
+                const role = currentAdmin.role;
+                const isOwner = ['owner', 'boss', 'super'].includes(role);
+                const isDeveloper = role === 'developer';
                 list.innerHTML = `
                     <div class="admin-toolbar">
                         <h3>Статистика</h3>
-                        ${isOwner ? `<button class="btn btn--danger btn--sm" onclick="resetStats()">Скинути статистику</button>` : ''}
+                        ${(isOwner && !isDeveloper) ? `<button class="btn btn--danger btn--sm" onclick="resetStats()">Скинути статистику</button>` : ''}
                     </div>
                     <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                         <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none; padding:1.5rem;">
@@ -881,7 +996,7 @@
                     const res = await apiFetch('stats/reset', 'POST');
                     if (res) refreshData();
                     showLoader(false);
-                });
+                }, null, 'Так, скинути', 'Скасувати');
             }
 
             async function loadTeam() {
@@ -889,14 +1004,14 @@
                 const team = await apiFetch('team');
                 const list = document.getElementById('items-list');
                 if (!team) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                const isDev = currentAdmin.role === 'developer';
-                const isOwner = ['owner', 'boss', 'super', 'developer'].includes(currentAdmin.role);
-                
-                list.innerHTML = `<div class="admin-toolbar"><h3>Персонал</h3>${(isDev || isOwner) ? `<button class="btn btn--primary btn--sm" onclick='openTeamModal()'>+ Додати</button>` : ''}</div><div id="team-list"></div>`;
+                const role = currentAdmin.role;
+                const isOwner = ['owner', 'boss', 'super'].includes(role);
+                const isDeveloper = role === 'developer';
+                list.innerHTML = `<div class="admin-toolbar"><h3>Персонал</h3>${(isOwner || isDeveloper) ? `<button class="btn btn--primary btn--sm" onclick='openTeamModal()'>+ Додати</button>` : ''}</div><div id="team-list"></div>`;
                 
                 team.forEach(t => { 
                     const div = document.createElement('div'); div.className = 'order-item'; 
-                    const canDelete = isOwner; // Developer cannot delete
+                    const canDelete = isOwner; // Only owner can delete
 
                     div.innerHTML = `<div class="order-info">
                             <div style="font-weight:800; color:var(--color-dark-brown);">${t.display_name}</div>
@@ -915,7 +1030,8 @@
 
             function openTeamModal() {
                 const modal = document.getElementById('admin-modal');
-                const isDev = currentAdmin.role === 'developer';
+                const role = currentAdmin.role;
+                const isDeveloper = role === 'developer';
                 modal.innerHTML = `<div class="admin-modal__panel" style="max-width:500px;"><div class="admin-modal__header"><h3>Додати персонал</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
                     <p style="font-size:0.85rem; color:var(--color-text-muted); margin-bottom:1.5rem;">Введіть ID, @username або номер телефону. Дані підтягнуться з бази бота.</p>
                     <form id="team-form" onkeyup="if(event.key==='Enter') saveTeam()">
@@ -923,7 +1039,7 @@
                         <div class="admin-field" style="margin-top:1rem;"><label>Ім'я в команді</label><input name="display_name" placeholder="Наприклад: Олександр" required></div>
                         <div class="admin-field" style="margin-top:1rem;"><label>Роль</label>
                             <select name="role">
-                                ${isDev ? '<option value="owner">Власник</option>' : `
+                                ${isDeveloper ? '<option value="owner">Власник</option>' : `
                                 <option value="admin">Адмін</option>
                                 <option value="owner">Власник</option>
                                 `}
@@ -943,7 +1059,7 @@
                 showLoader(false);
                 if (res) { closeAdminModal(); refreshData(); } 
             }
-            async function deleteTeam(id) { niceConfirm('Видалення', 'Видалити цього співробітника?', async () => { await apiFetch(`team/${id}`, 'DELETE'); refreshData(); }); }
+            async function deleteTeam(id) { niceConfirm('Видалення', 'Видалити цього співробітника?', async () => { await apiFetch(`team/${id}`, 'DELETE'); refreshData(); }, null, 'Так, видалити'); }
 
             function closeAdminModal() { document.getElementById('admin-modal').classList.remove('admin-modal--active'); }
 
