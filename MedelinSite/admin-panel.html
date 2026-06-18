@@ -169,8 +169,10 @@
             .admin-field input, .admin-field select, .admin-field textarea {
                 width: 100%; padding: 1rem 1.2rem; border: 2px solid var(--color-coffee-soft);
                 border-radius: 15px; font-family: var(--font-main); font-size: 0.95rem; outline: none; background: white; transition: all 0.3s;
+                resize: none;
             }
             .admin-field input:focus { border-color: var(--color-coffee); box-shadow: 0 0 0 4px var(--color-coffee-soft); }
+            textarea { resize: none !important; }
 
             .admin-modal { position: fixed; inset: 0; background: rgba(60, 47, 47, 0.6); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(8px); }
             .admin-modal--active { display: flex; }
@@ -470,7 +472,10 @@
                 const list = document.getElementById('items-list');
                 if (!orders || orders.length === 0) { list.innerHTML = '<p style="text-align:center; padding:2rem;">Немає нових замовлень</p>'; showLoader(false); return; }
                 list.innerHTML = '';
-                const isDev = currentAdmin.role === 'developer';
+                const isOwner = currentAdmin.role === 'owner';
+                const isAdmin = currentAdmin.role === 'admin';
+                const canManage = isOwner || isAdmin;
+                
                 orders.forEach(o => {
                     const div = document.createElement('div'); div.className = 'order-item';
                     const date = o.created_at ? new Date(o.created_at).toLocaleString('uk-UA') : '—';
@@ -482,8 +487,10 @@
                             <div class="order-items">${o.cart || ''}${o.wishes ? `<br><br><b>Побажання:</b> ${o.wishes}` : ''}</div>
                         </div>
                         <div class="order-actions">
+                            ${canManage ? `
                             <button class="btn btn--success btn--sm" onclick="confirmOrder('${o.order_id}')">Підтвердити</button>
                             <button class="btn btn--danger btn--sm" onclick="rejectOrder('${o.order_id}')">Відхилити</button>
+                            ` : ''}
                         </div>`;
                     list.appendChild(div);
                 });
@@ -498,7 +505,10 @@
                 const orders = await apiFetch('active-orders');
                 const list = document.getElementById('items-list');
                 list.innerHTML = orders?.length ? '' : '<p style="text-align:center; padding:2rem;">Немає активних замовлень</p>';
-                const isDev = currentAdmin.role === 'developer';
+                const isOwner = currentAdmin.role === 'owner';
+                const isAdmin = currentAdmin.role === 'admin';
+                const canManage = isOwner || isAdmin;
+
                 orders?.forEach(o => {
                     const div = document.createElement('div'); div.className = 'order-item';
                     const num = o.order_number && o.order_number !== '—' ? o.order_number : '—';
@@ -509,7 +519,7 @@
                             <div class="order-items">${o.cart || ''}</div>
                         </div>
                         <div class="order-actions">
-                            <button class="btn btn--success btn--sm" onclick="completeOrder('${o.order_id}')">Завершити</button>
+                            ${canManage ? `<button class="btn btn--success btn--sm" onclick="completeOrder('${o.order_id}')">Завершити</button>` : ''}
                         </div>`;
                     list.appendChild(div);
                 });
@@ -523,8 +533,8 @@
                 const beans = await apiFetch('beans');
                 const list = document.getElementById('items-list');
                 if (!beans) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                const isDev = currentAdmin.role === 'developer';
-                list.innerHTML = `<div class="admin-toolbar"><h3>Зерно</h3><button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати</button></div><div id="beans-grid" class="admin-grid"></div>`;
+                const isOwner = currentAdmin.role === 'owner';
+                list.innerHTML = `<div class="admin-toolbar"><h3>Зерно</h3>${isOwner ? `<button class="btn btn--primary btn--sm" onclick="openBeanModal()">+ Додати</button>` : ''}</div><div id="beans-grid" class="admin-grid"></div>`;
                 beans.forEach(b => {
                     const div = document.createElement('div'); div.className = 'bean-card';
                     div.style.cursor = 'pointer';
@@ -541,7 +551,7 @@
 
             function openBeanDetail(b) {
                 const modal = document.getElementById('admin-modal');
-                const isDev = currentAdmin.role === 'developer';
+                const isOwner = currentAdmin.role === 'owner';
                 const isSpecialty = (b.category === 'specialty') || (parseFloat(b.quality_score || b.cup_score || 0) >= 80);
                 
                 modal.innerHTML = `
@@ -572,8 +582,10 @@
                             </div>
                         </div>
                         <div class="admin-modal__footer" style="justify-content: space-between; margin-top:3rem;">
+                                ${isOwner ? `
                                 <button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')"><i class="fas fa-trash"></i> Видалити</button>
                                 <button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i> Редагувати</button>
+                                ` : ''}
                         </div>
                     </div>`;
                 modal.classList.add('admin-modal--active');
@@ -631,8 +643,8 @@
                 const locs = await apiFetch('locations');
                 const list = document.getElementById('items-list');
                 if (!locs) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                const isDev = currentAdmin.role === 'developer';
-                list.innerHTML = `<div class="admin-toolbar"><h3>Локації</h3><button class="btn btn--primary btn--sm" onclick="openLocationModal()">+ Додати</button></div><div id="locs-grid" class="admin-grid"></div>`;
+                const isOwner = currentAdmin.role === 'owner';
+                list.innerHTML = `<div class="admin-toolbar"><h3>Локації</h3>${isOwner ? `<button class="btn btn--primary btn--sm" onclick="openLocationModal()">+ Додати</button>` : ''}</div><div id="locs-grid" class="admin-grid"></div>`;
                 locs.forEach(l => {
                     const div = document.createElement('div'); div.className = 'location-card';
                     div.style.cursor = 'pointer';
@@ -650,7 +662,7 @@
 
             function openLocationDetail(l) {
                 const modal = document.getElementById('admin-modal');
-                const isDev = currentAdmin.role === 'developer';
+                const isOwner = currentAdmin.role === 'owner';
                 modal.innerHTML = `
                     <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>Деталі локації</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
@@ -670,8 +682,10 @@
                             </div>
                         </div>
                         <div class="admin-modal__footer" style="justify-content: space-between; margin-top:2rem;">
+                                ${isOwner ? `
                                 <button class="btn btn--danger btn--sm" onclick="deleteLocation('${l.id}')"><i class="fas fa-trash"></i> Видалити</button>
                                 <button class="btn btn--outline btn--sm" onclick='openLocationModal(${JSON.stringify(l).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i> Редагувати</button>
+                                ` : ''}
                         </div>
                     </div>`;
                 modal.classList.add('admin-modal--active');
@@ -714,8 +728,8 @@
                 const socials = await apiFetch('socials');
                 const list = document.getElementById('items-list');
                 if (!socials) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
-                const isDev = currentAdmin.role === 'developer';
-                list.innerHTML = `<div class="admin-toolbar"><h3>Контакти</h3>${!isDev ? `<button class="btn btn--primary btn--sm" onclick="openSocialModal()">+ Додати</button>` : ''}</div><div id="socials-list"></div>`;
+                const isOwner = currentAdmin.role === 'owner';
+                list.innerHTML = `<div class="admin-toolbar"><h3>Контакти</h3>${isOwner ? `<button class="btn btn--primary btn--sm" onclick="openSocialModal()">+ Додати</button>` : ''}</div><div id="socials-list"></div>`;
                 
                 const SOCIAL_ICONS = {
                     instagram: 'fab fa-instagram',
@@ -750,7 +764,7 @@
                     
                     const div = document.createElement('div'); div.className = 'order-item';
                     div.innerHTML = `<div class="order-info"><div style="font-weight:700;"><i class="${icon}" style="width:24px; color:var(--color-coffee);"></i> ${s.name}</div><div style="font-size:0.9rem; opacity:0.7;">${s.url}</div></div>
-                        ${!isDev ? `<div class="order-actions"><button class="btn btn--outline btn--sm" onclick='openSocialModal(${JSON.stringify(s).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button></div>` : ''}`;
+                        ${isOwner ? `<div class="order-actions"><button class="btn btn--outline btn--sm" onclick='openSocialModal(${JSON.stringify(s).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button></div>` : ''}`;
                     document.getElementById('socials-list').appendChild(div);
                 });
                 showLoader(false);
@@ -769,10 +783,11 @@
                 const stats = await apiFetch('stats');
                 const list = document.getElementById('items-list');
                 if (!stats) { list.innerHTML = 'Немає доступу'; showLoader(false); return; }
+                const isOwner = currentAdmin.role === 'owner';
                 list.innerHTML = `
                     <div class="admin-toolbar">
                         <h3>Статистика</h3>
-                        <button class="btn btn--danger btn--sm" onclick="resetStats()">Скинути статистику</button>
+                        ${isOwner ? `<button class="btn btn--danger btn--sm" onclick="resetStats()">Скинути статистику</button>` : ''}
                     </div>
                     <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                         <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none; padding:1.5rem;">
@@ -830,7 +845,7 @@
                 
                 team.forEach(t => { 
                     const div = document.createElement('div'); div.className = 'order-item'; 
-                    const canDelete = isDev || isOwner;
+                    const canDelete = isOwner; // Developer cannot delete
 
                     div.innerHTML = `<div class="order-info">
                             <div style="font-weight:800; color:var(--color-dark-brown);">${t.display_name}</div>
@@ -849,6 +864,7 @@
 
             function openTeamModal() {
                 const modal = document.getElementById('admin-modal');
+                const isDev = currentAdmin.role === 'developer';
                 modal.innerHTML = `<div class="admin-modal__panel" style="max-width:500px;"><div class="admin-modal__header"><h3>Додати персонал</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
                     <p style="font-size:0.85rem; color:var(--color-text-muted); margin-bottom:1.5rem;">Введіть ID або @username. Дані підтягнуться з бази бота.</p>
                     <form id="team-form" onkeyup="if(event.key==='Enter') saveTeam()">
@@ -856,8 +872,10 @@
                         <div class="admin-field" style="margin-top:1rem;"><label>Ім'я в команді</label><input name="display_name" placeholder="Наприклад: Олександр" required></div>
                         <div class="admin-field" style="margin-top:1rem;"><label>Роль</label>
                             <select name="role">
+                                ${isDev ? '<option value="owner">Власник</option>' : `
                                 <option value="admin">Адмін</option>
                                 <option value="owner">Власник</option>
+                                `}
                             </select>
                         </div>
                     </form><div class="admin-modal__footer"><button onclick="saveTeam()" class="btn btn--primary btn--block">Зберегти</button></div></div>`;
