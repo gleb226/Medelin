@@ -507,13 +507,9 @@ async def reject_order(order_id: str, admin: dict = Depends(get_current_admin)):
         raise HTTPException(status_code=403, detail='Недостатньо прав (тільки Власник або Адмін)')
         
     order = await orders_db.get_order_by_id(order_id)
-    if order and order.get('is_paid') and order.get('payment_id'):
-        from app.common.bot_instance import bot
-        from app.utils.payment_refunds import refund_telegram_payment
-        user_id = order.get('user_id')
-        payment_id = order.get('payment_id')
-        provider_payment_id = order.get('provider_payment_id')
-        success, err = await refund_telegram_payment(bot, user_id, payment_id, provider_payment_id)
+    if order and order.get('is_paid'):
+        from app.utils.payment_refunds import process_refund
+        success, err = await process_refund(order_id)
         if success:
             await orders_db.set_refund_status(order_id, 'refunded')
         else:

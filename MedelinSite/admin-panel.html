@@ -210,19 +210,17 @@
             }
 
             @media (max-width: 768px) {
-                .header { margin-bottom: 2rem; flex-direction: column; align-items: flex-start; gap: 1rem; }
-                .header__actions { width: 100%; justify-content: space-between; }
                 .header__title { font-size: 1.8rem; }
-                .order-item { flex-direction: column; align-items: stretch; gap: 1rem; padding: 1.5rem 0; }
-                .order-actions { justify-content: flex-start; width: 100%; }
-                .order-actions .btn { flex: 1; }
-                .admin-toolbar { flex-direction: column; align-items: flex-start; gap: 1rem; }
-                .admin-toolbar .btn { width: 100%; }
+                .order-actions { flex-wrap: wrap; gap: 0.5rem; }
+                .order-actions .btn { flex: 0 1 auto; width: auto; }
+                .admin-toolbar .btn { width: auto; margin-top: 0.5rem; }
                 .admin-toolbar h3 { font-size: 1.5rem; }
-                .admin-modal__panel { border-radius: 20px; padding: 1.5rem; }
+                .admin-modal__panel { border-radius: 20px; padding: 1.5rem; margin: 1rem; width: auto; max-width: 100%; overflow-y: auto; max-height: 90vh; }
                 .admin-modal__title { font-size: 1.6rem; }
-                .admin-modal__header { margin-bottom: 1.5rem; }
+                .admin-modal__header { margin-bottom: 1.5rem; flex-wrap: wrap; }
                 .admin-grid { grid-template-columns: 1fr; }
+                .order-info { word-break: break-word; overflow-wrap: break-word; }
+                .order-items { overflow-x: auto; }
             }
         </style>
     </head>
@@ -522,14 +520,14 @@
                     if (o.order_type === 'beans_delivery') {
                         const branch = o.delivery_branch_id ? `Відділення №${o.delivery_branch_id}` : '';
                         const dt = o.delivery_type === 'branch' ? 'Відділення' : (o.delivery_type === 'courier' ? "Кур'єр" : (branch ? 'Відділення' : "Кур'єр"));
-                        let adr = `🚚 ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch}: ${o.delivery_address || ''}`;
+                        let adr = `<i class="fas fa-truck"></i> ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch}: ${o.delivery_address || ''}`;
                         deliveryInfo = adr.replace(', :', ':').replace(' ,', ',');
                     } else if (o.order_type === 'beans_booking' && o.location_name) {
-                        deliveryInfo = `📍 Самовивіз: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-map-marker-alt"></i> Самовивіз: ${o.location_name}`;
                     } else if (o.order_type === 'takeaway' && o.location_name) {
-                        deliveryInfo = `🚶 З собою: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-walking"></i> З собою: ${o.location_name}`;
                     } else if (o.order_type === 'in_house' && o.location_name) {
-                        deliveryInfo = `☕️ В залі: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-coffee"></i> В залі: ${o.location_name}`;
                     } else {
                         deliveryInfo = o.delivery_info || '—';
                     }
@@ -544,17 +542,17 @@
                     
                     div.innerHTML = `
                         <div class="order-info">
-                            <div class="order-title">📦 ЗАМОВЛЕННЯ #${num} (${o.status === 'new' ? 'НОВЕ' : 'АКТИВНЕ'})</div>
+                            <div class="order-title"><i class="fas fa-box"></i> ЗАМОВЛЕННЯ #${num} (${o.status === 'new' ? 'НОВЕ' : 'АКТИВНЕ'})</div>
                             <div class="order-meta">
-                                👤 ${o.fullname || o.username || '—'} <br>
-                                📞 ${o.phone || '—'} <br>
-                                ${deliveryInfo ? `🚚 ${deliveryInfo}` : ''} <br>
-                                💰 Сума: ${o.total_amount || o.total || 0} ₴ <br>
-                                💳 Оплата: ${o.payment_mode || '—'} (Оплачено: ${o.is_paid ? 'Так' : 'Ні'})
+                                <i class="fas fa-user"></i> ${o.fullname || o.username || '—'} <br>
+                                <i class="fas fa-phone"></i> ${o.phone || '—'} <br>
+                                ${deliveryInfo ? deliveryInfo : ''} <br>
+                                <i class="fas fa-money-bill-wave"></i> Сума: ${o.total_amount || o.total || 0} ₴ <br>
+                                <i class="fas fa-credit-card"></i> Оплата: ${o.payment_mode || '—'} (Оплачено: ${o.is_paid ? 'Так' : 'Ні'})
                             </div>
                             <div class="order-items">
-                                <b>🛒 Товари:</b><br>${cartItems || 'Немає товарів'}
-                                ${o.wishes ? `<br><br><b>📝 ПОБАЖАННЯ:</b> ${o.wishes}` : ''}
+                                <b><i class="fas fa-shopping-cart"></i> Товари:</b><br>${cartItems || 'Немає товарів'}
+                                ${o.wishes ? `<br><br><b><i class="fas fa-sticky-note"></i> ПОБАЖАННЯ:</b> ${o.wishes}` : ''}
                             </div>
                         </div>
                         <div class="order-actions">
@@ -592,14 +590,14 @@
                     if (o.order_type === 'beans_delivery') {
                         const branch = o.delivery_branch_id ? `Відділення №${o.delivery_branch_id}` : '';
                         const dt = o.delivery_type === 'branch' ? 'Відділення' : (o.delivery_type === 'courier' ? "Кур'єр" : (branch ? 'Відділення' : "Кур'єр"));
-                        let adr = `🚚 ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch}: ${o.delivery_address || ''}`;
+                        let adr = `<i class="fas fa-truck"></i> ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch}: ${o.delivery_address || ''}`;
                         deliveryInfo = adr.replace(', :', ':').replace(' ,', ',');
                     } else if (o.order_type === 'beans_booking' && o.location_name) {
-                        deliveryInfo = `📍 Самовивіз: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-map-marker-alt"></i> Самовивіз: ${o.location_name}`;
                     } else if (o.order_type === 'takeaway' && o.location_name) {
-                        deliveryInfo = `🚶 З собою: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-walking"></i> З собою: ${o.location_name}`;
                     } else if (o.order_type === 'in_house' && o.location_name) {
-                        deliveryInfo = `☕️ В залі: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-coffee"></i> В залі: ${o.location_name}`;
                     } else {
                         deliveryInfo = o.delivery_info || '—';
                     }
@@ -614,17 +612,17 @@
 
                     div.innerHTML = `
                         <div class="order-info">
-                            <div class="order-title">📦 ЗАМОВЛЕННЯ #${num} (АКТИВНЕ)</div>
+                            <div class="order-title"><i class="fas fa-box"></i> ЗАМОВЛЕННЯ #${num} (АКТИВНЕ)</div>
                             <div class="order-meta">
-                                👤 ${o.fullname || o.username || '—'} <br>
-                                📞 ${o.phone || '—'} <br>
-                                ${deliveryInfo ? `🚚 ${deliveryInfo}` : ''} <br>
-                                💰 Сума: ${o.total_amount || o.total || 0} ₴ <br>
-                                💳 Оплата: ${o.payment_mode || '—'} (Оплачено: ${o.is_paid ? 'Так' : 'Ні'})
+                                <i class="fas fa-user"></i> ${o.fullname || o.username || '—'} <br>
+                                <i class="fas fa-phone"></i> ${o.phone || '—'} <br>
+                                ${deliveryInfo ? deliveryInfo : ''} <br>
+                                <i class="fas fa-money-bill-wave"></i> Сума: ${o.total_amount || o.total || 0} ₴ <br>
+                                <i class="fas fa-credit-card"></i> Оплата: ${o.payment_mode || '—'} (Оплачено: ${o.is_paid ? 'Так' : 'Ні'})
                             </div>
                             <div class="order-items">
-                                <b>🛒 Товари:</b><br>${cartItems || 'Немає товарів'}
-                                ${o.wishes ? `<br><br><b>📝 ПОБАЖАННЯ:</b> ${o.wishes}` : ''}
+                                <b><i class="fas fa-shopping-cart"></i> Товари:</b><br>${cartItems || 'Немає товарів'}
+                                ${o.wishes ? `<br><br><b><i class="fas fa-sticky-note"></i> ПОБАЖАННЯ:</b> ${o.wishes}` : ''}
                             </div>
                         </div>
                         <div class="order-actions">

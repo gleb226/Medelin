@@ -27,7 +27,7 @@
 }
 
 /* ── Show on tablet/mobile ── */
-@media (max-width: 992px) {
+@media (max-width: 1024px) {
 
     /* Wrapper — fixed top-right */
     .mobile-menu {

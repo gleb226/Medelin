@@ -1,20 +1,22 @@
-
 from __future__ import annotations
 
 import logging
+from liqpay import LiqPay
+from app.common.config import LIQPAY_PUBLIC_KEY, LIQPAY_PRIVATE_KEY
 
-from aiogram import Bot
-
-from aiogram.exceptions import TelegramBadRequest
-
-async def refund_telegram_payment(bot: Bot, user_id: int, telegram_payment_charge_id: str, provider_payment_charge_id: str | None=None) -> tuple[bool, str | None]:
-    if not telegram_payment_charge_id:
-        return (False, 'missing telegram_payment_charge_id')
+async def process_refund(order_id: str) -> tuple[bool, str | None]:
+    if not LIQPAY_PUBLIC_KEY or not LIQPAY_PRIVATE_KEY:
+        return (False, 'LiqPay keys not configured')
     try:
-        await bot.refund_star_payment(user_id=user_id, telegram_payment_charge_id=telegram_payment_charge_id)
-        return (True, None)
-    except TelegramBadRequest as e:
-        logging.warning(f'Manual refund required for charge_id: {telegram_payment_charge_id}. Error: {e}')
-        return (False, f'Automatic refund not supported for fiat. Please refund via provider dashboard. ({e})')
+        liqpay = LiqPay(LIQPAY_PUBLIC_KEY, LIQPAY_PRIVATE_KEY)
+        res = liqpay.api("request", {
+            "action": "refund",
+            "version": "3",
+            "order_id": str(order_id)
+        })
+        if res.get('result') == 'ok' or res.get('status') in ('reversed', 'wait_refund'):
+            return (True, None)
+        return (False, res.get('err_description') or str(res))
     except Exception as e:
+        logging.exception('Refund error')
         return (False, str(e))

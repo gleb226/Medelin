@@ -43,7 +43,7 @@
 /* ================================================================
    3. TABLETS PORTRAIT ≤ 992px
    ================================================================ */
-@media (max-width: 992px) {
+@media (max-width: 1024px) {
 
     /* ── Header: transparent strip, burger handles navigation ── */
     .header {
