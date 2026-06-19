@@ -1239,9 +1239,10 @@
     }
 
     .bean-full-view__container {
-        grid-template-columns: minmax(300px, 0.88fr) minmax(0, 1fr) !important;
-        gap: 1.5rem !important;
-        align-items: start !important;
+        --bean-tablet-detail-height: clamp(590px, 74vh, 720px);
+        grid-template-columns: minmax(340px, 1.12fr) minmax(0, 0.88fr) !important;
+        gap: 1.1rem !important;
+        align-items: stretch !important;
     }
 
     .bean-full-view__left-col {
@@ -1250,11 +1251,12 @@
 
     .bean-full-view__right-col {
         min-width: 0 !important;
+        height: var(--bean-tablet-detail-height) !important;
     }
 
     .bean-full-view__image {
-        height: min(70vh, 680px) !important;
-        min-height: 560px !important;
+        height: var(--bean-tablet-detail-height) !important;
+        min-height: 0 !important;
         border-radius: 28px !important;
         object-fit: cover !important;
         margin-bottom: 0 !important;
@@ -1271,30 +1273,46 @@
     }
 
     .bean-full-view__description {
-        font-size: 1rem !important;
-        line-height: 1.55 !important;
-        margin-bottom: 1.2rem !important;
+        font-size: 0.98rem !important;
+        line-height: 1.5 !important;
+        margin-bottom: 1rem !important;
     }
 
     .bean-full-view__primary-stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 1rem !important;
-        padding: 1.35rem !important;
+        flex: 1 1 auto !important;
+        grid-template-columns: 1fr !important;
+        grid-auto-rows: minmax(0, 1fr) !important;
+        align-content: stretch !important;
+        gap: 0.65rem !important;
+        padding: 1rem !important;
         border-radius: 22px !important;
+        overflow-y: auto !important;
+        scrollbar-width: none !important;
+    }
+
+    .bean-full-view__primary-stats::-webkit-scrollbar {
+        display: none !important;
     }
 
     .bean-full-view__stat-item--span-2 {
-        grid-column: span 2 !important;
+        grid-column: span 1 !important;
+    }
+
+    .bean-full-view__stat-item {
+        justify-content: center !important;
+        min-height: 0 !important;
+        padding: 0.45rem 0 !important;
     }
 
     .bean-full-view__stat-label {
-        font-size: 0.68rem !important;
+        font-size: 0.64rem !important;
         line-height: 1.2 !important;
+        margin-bottom: 0.25rem !important;
     }
 
     .bean-full-view__stat-value {
-        font-size: 0.98rem !important;
-        line-height: 1.35 !important;
+        font-size: 0.92rem !important;
+        line-height: 1.28 !important;
     }
 
     .bean-detail-sticky-bar {
