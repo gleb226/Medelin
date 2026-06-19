@@ -198,7 +198,7 @@ class AdminDatabase:
         db = await get_db()
         await db.admin_auth_requests.update_one(
             {'user_id': int(user_id)},
-            {'$set': {'code': code, 'confirmed': False, 'created_at': datetime.utcnow()}},
+            {'$set': {'code': code, 'confirmed': False, 'rejected': False, 'created_at': datetime.utcnow()}},
             upsert=True
         )
 
@@ -206,7 +206,14 @@ class AdminDatabase:
         db = await get_db()
         await db.admin_auth_requests.update_one(
             {'user_id': int(user_id)},
-            {'$set': {'confirmed': True}}
+            {'$set': {'confirmed': True, 'rejected': False}}
+        )
+
+    async def reject_auth_request(self, user_id: int):
+        db = await get_db()
+        await db.admin_auth_requests.update_one(
+            {'user_id': int(user_id)},
+            {'$set': {'confirmed': False, 'rejected': True}}
         )
 
     async def get_auth_request(self, user_id: int):

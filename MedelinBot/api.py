@@ -83,6 +83,9 @@ import secrets
 async def verify_admin_login(user_id: int):
     try:
         req = await admin_db.get_auth_request(user_id)
+        if req and req.get('rejected'):
+            await admin_db.delete_auth_request(user_id)
+            return {'status': 'rejected', 'message': 'Запит на вхід відхилено'}
         if req and req.get('confirmed'):
             # Create session token
             token = secrets.token_hex(32)
@@ -429,13 +432,16 @@ async def admin_login(req: LoginRequest):
     
     # Success: reset attempts
     login_attempts[ident] = {'count': 0, 'lockout_until': 0}
+    code = secrets.token_hex(16)
+    await admin_db.create_auth_request(admin['user_id'], code)
     
     # Send confirmation to bot
     from app.common.bot_instance import bot
     msg = f"🔐 <b>ЗАПИТ НА ВХІД В АДМІН-ПАНЕЛЬ</b>\n\n👤 <b>{admin['display_name']}</b> (@{admin.get('username', '—')})\n\nПідтвердіть вхід:"
     try:
-        await bot.send_message(admin['user_id'], msg, reply_markup=akb.get_admin_auth_kb(admin['user_id']), parse_mode='HTML')
+        await bot.send_message(admin['user_id'], msg, reply_markup=akb.get_admin_auth_kb(admin['user_id'], code), parse_mode='HTML')
     except Exception as e:
+        await admin_db.delete_auth_request(admin['user_id'])
         logger.error(f"Failed to send auth msg: {e}")
         raise HTTPException(status_code=500, detail='Не вдалося надіслати підтвердження в бот. Перевірте, чи бот не заблокований.')
     

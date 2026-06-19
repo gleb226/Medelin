@@ -1797,9 +1797,13 @@ async def bean_flow_input(message: Message, state: FSMContext, bot: Bot):
 
 @admin_router.callback_query(F.data.startswith('admin_auth_confirm_'))
 async def confirm_admin_login(callback: CallbackQuery, bot: Bot):
-    uid = int(callback.data.replace('admin_auth_confirm_', ''))
-    code = f"LOGIN_{uid}_{int(time.time())}"
-    await admin_db.create_auth_request(uid, code)
+    payload = callback.data.replace('admin_auth_confirm_', '', 1)
+    uid_raw, _, code = payload.partition('_')
+    uid = int(uid_raw)
+    req = await admin_db.get_auth_request(uid)
+    if not req or req.get('rejected') or (code and req.get('code') != code):
+        await callback.answer('Запит на вхід вже неактуальний.', show_alert=True)
+        return
     await admin_db.confirm_auth_request(uid)
     try:
         await bot.send_message(uid, f"✅ <b>ВХІД ПІДТВЕРДЖЕНО!</b>\n\nТепер ви можете повернутися до браузера.", parse_mode='HTML')
@@ -1810,7 +1814,14 @@ async def confirm_admin_login(callback: CallbackQuery, bot: Bot):
 
 @admin_router.callback_query(F.data.startswith('admin_auth_reject_'))
 async def reject_admin_login(callback: CallbackQuery, bot: Bot):
-    uid = int(callback.data.replace('admin_auth_reject_', ''))
+    payload = callback.data.replace('admin_auth_reject_', '', 1)
+    uid_raw, _, code = payload.partition('_')
+    uid = int(uid_raw)
+    req = await admin_db.get_auth_request(uid)
+    if not req or (code and req.get('code') != code):
+        await callback.answer('Запит на вхід вже неактуальний.', show_alert=True)
+        return
+    await admin_db.reject_auth_request(uid)
     try:
         await bot.send_message(uid, "❌ <b>ВХІД ВІДХИЛЕНО.</b>", parse_mode='HTML')
         await callback.answer('Відхилено.')

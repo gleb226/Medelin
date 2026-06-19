@@ -250,7 +250,7 @@
                 </div>
                 <div id="verify-state">
                     <h2 style="font-family:var(--font-accent); font-size: 2rem; margin-bottom: 1rem;">Очікування...</h2>
-                    <p style="color: var(--color-text-muted); line-height: 1.6; padding: 0 1rem;">Ми надіслали повідомлення в Telegram.<br>Будь ласка, натисніть <b>"ПІДТВЕРДИТИ"</b>.<br><br><small style="color:var(--color-danger);">Якщо ви нічого не отримали, натисніть <b>/start</b> у боті та спробуйте ще раз.</small></p>
+                    <p style="color: var(--color-text-muted); line-height: 1.6; padding: 0 1rem;">Ми надіслали повідомлення в Telegram.<br>Будь ласка, підтвердьте або відхиліть вхід у боті.</p>
                     <div class="verify-pulse"><i class="fab fa-telegram-plane" style="font-size:2.5rem; color:var(--color-coffee);"></i></div>
                     <button class="btn btn--outline" onclick="resetLogin()">Скасувати</button>
                 </div>
@@ -430,6 +430,10 @@
                         const resp = await fetch(`/api/admin/verify?user_id=${userId}`);
                         const data = await resp.json();
                         if (data.status === 'ok') { clearInterval(verifyInterval); finishLogin(data.token, data.admin); }
+                        if (data.status === 'rejected') {
+                            resetLogin();
+                            niceAlert('Вхід відхилено', data.message || 'Запит на вхід було відхилено в Telegram.');
+                        }
                     } catch (e) {}
                 }, 2000);
             }
@@ -708,7 +712,7 @@
                                     <div class="info-block"><b>Висота:</b> ${b.altitude || '—'}</div>
                                     <div class="info-block"><b>Метод обробки:</b> ${b.processing || '—'}</div>
                                     ${isSpecialty ? `
-                                    <div class="info-block"><b>Оцінка якості (SCA):</b> ${b.quality_score || b.cup_score || '—'}</div>
+                                    <div class="info-block"><b>Оцінка якості:</b> ${b.quality_score || b.cup_score || '—'}</div>
                                     <div class="info-block"><b>Запас:</b> ${b.stock_packs || 0} пачок (≈ ${(b.stock_packs || 0) * 0.25} кг)</div>
                                     ` : ''}
                                 </div>
@@ -792,7 +796,7 @@
                                 <div class="admin-field"><label>Різновид</label><input name="variety" value="${b?.variety || ''}" placeholder="Heirloom / Bourbon"></div>
                                 <div class="admin-field"><label>Висота</label><input name="altitude" value="${b?.altitude || ''}" placeholder="1800-2100 м"></div>
                                 <div class="admin-field"><label>Метод обробки</label><input name="processing" value="${b?.processing || ''}" placeholder="Natural / Washed"></div>
-                                <div class="admin-field" id="quality-score-field" style="display: ${b?.category === 'specialty' ? 'block' : 'none'}"><label>Оцінка якості (SCA)</label><input name="quality_score" value="${b?.quality_score || b?.cup_score || ''}" placeholder="87"></div>
+                                <div class="admin-field" id="quality-score-field" style="display: ${b?.category === 'specialty' ? 'block' : 'none'}"><label>Оцінка якості</label><input name="quality_score" value="${b?.quality_score || b?.cup_score || ''}" placeholder="87"></div>
                             </div>
                             <div class="admin-field" style="margin-top:1.5rem;"><label>Дескриптори</label><input name="descriptors" value="${b?.descriptors || b?.taste || ''}" placeholder="Жасмин, персик, бергамот"></div>
                             <div class="admin-field" style="margin-top:1.5rem;"><label>Опис</label><textarea name="description" rows="4" placeholder="Детальний опис для покупця...">${b?.description || ''}</textarea></div>

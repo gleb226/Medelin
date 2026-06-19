@@ -155,8 +155,9 @@ def get_active_finish_kb(order_id, role='admin'):
         [InlineKeyboardButton(text='✅ ЗАВЕРШИТИ', callback_data=f'finish_order_{order_id}')]
     ])
 
-def get_admin_auth_kb(user_id):
+def get_admin_auth_kb(user_id, code=None):
+    suffix = f'{user_id}_{code}' if code else str(user_id)
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='✅ ПІДТВЕРДИТИ ВХІД', callback_data=f'admin_auth_confirm_{user_id}')],
-        [InlineKeyboardButton(text='❌ ВІДХИЛИТИ', callback_data=f'admin_auth_reject_{user_id}')]
+        [InlineKeyboardButton(text='✅ ПІДТВЕРДИТИ ВХІД', callback_data=f'admin_auth_confirm_{suffix}')],
+        [InlineKeyboardButton(text='❌ ВІДХИЛИТИ', callback_data=f'admin_auth_reject_{suffix}')]
     ])
