@@ -1,0 +1,763 @@
+﻿diff --git a/MedelinSite/assets/css/responsive.css b/MedelinSite/assets/css/responsive.css
+index c0edc70..1310a1a 100644
+--- a/MedelinSite/assets/css/responsive.css
++++ b/MedelinSite/assets/css/responsive.css
+@@ -41,7 +41,8 @@
+ }
+ 
+ /* ================================================================
+-   3. TABLETS PORTRAIT тЙд 992px
++   3. ALL TABLETS + MOBILE тЙд 1024px
++   (burger menu, modals full-screen, etc.)
+    ================================================================ */
+ @media (max-width: 1024px) {
+ 
+@@ -71,7 +72,7 @@
+         padding-top: 80px;
+     }
+ 
+-    /* тФАтФА Cart modal тФАтФА */
++    /* тФАтФА Cart modal list padding тФАтФА */
+     .cart-modal__list {
+         padding: 0 1.5rem 1.25rem;
+     }
+@@ -84,30 +85,11 @@
+         padding: 1.25rem 1.5rem 1.75rem !important;
+     }
+ 
+-    /* тФАтФА Contact page тФАтФА */
++    /* тФАтФА Contact page base тФАтФА */
+     .contact {
+         padding: 2rem 1.5rem 3rem;
+     }
+ 
+-    .contact-split {
+-        flex-direction: column !important;
+-        gap: 2rem !important;
+-        margin-top: 2rem !important;
+-    }
+-
+-    .contact-split__social {
+-        order: 1 !important;
+-        width: 100% !important;
+-    }
+-
+-    .contact-split__map {
+-        order: 2 !important;
+-        width: 100% !important;
+-        min-height: 300px !important;
+-        height: 320px !important;
+-        border-radius: 20px !important;
+-    }
+-
+     .contact-card {
+         padding: 1.5rem !important;
+         gap: 1.2rem !important;
+@@ -138,23 +120,12 @@
+         grid-template-columns: repeat(2, 1fr);
+     }
+ 
+-    /* тФАтФА Footer тФАтФА */
+-    .footer__content {
+-        grid-template-columns: 1fr 1fr;
+-        gap: 2.5rem;
+-    }
+-
+     /* тФАтФА Menu categories тФАтФА */
+-    .menu__categories {
+-        grid-template-columns: repeat(2, 1fr);
+-        gap: 2rem;
+-    }
+-
+     .category {
+         padding: 2rem 1.5rem;
+     }
+ 
+-    /* тФАтФА Modals full-screen on tablet тФАтФА */
++    /* тФАтФА Modals: full-screen on ALL тЙд 1024px тФАтФА */
+     .checkout-modal,
+     .cart-modal__content,
+     .booking-modal__content {
+@@ -197,12 +168,50 @@
+     }
+ }
+ 
++/* ================================================================
++   3b. PHONES ONLY тЙд 767px тАФ contact split stacked, footer 2-col
++   (These override the tablet row layout set in section 9 above)
++   ================================================================ */
++@media (max-width: 767px) {
++
++    .contact-split {
++        flex-direction: column !important;
++        gap: 2rem !important;
++        margin-top: 2rem !important;
++    }
++
++    .contact-split__social {
++        order: 1 !important;
++        width: 100% !important;
++    }
++
++    .contact-split__map {
++        order: 2 !important;
++        width: 100% !important;
++        min-height: 300px !important;
++        height: 320px !important;
++        border-radius: 20px !important;
++    }
++
++    /* тФАтФА Footer тФАтФА */
++    .footer__content {
++        grid-template-columns: 1fr 1fr;
++        gap: 2rem;
++    }
++
++    /* тФАтФА Menu categories тФАтФА */
++    .menu__categories {
++        grid-template-columns: 1fr;
++        gap: 2rem;
++    }
++}
++
+ /* 900px bean breakpoint now handled by 1024px rule in style.css */
+ 
+ /* ================================================================
+-   4. LARGE PHONES / PHABLETS тЙд 768px
++   4. LARGE PHONES / PHABLETS тЙд 767px
+    ================================================================ */
+-@media (max-width: 768px) {
++@media (max-width: 767px) {
+ 
+     /* тФАтФА Base тФАтФА */
+     html, body {
+@@ -875,23 +884,593 @@
+ }
+ 
+ /* ================================================================
+-   9. TABLET LANDSCAPE 769тАУ1024px
++   9. TABLET тАФ 768px to 1024px (both portrait and landscape)
++   ================================================================ */
++@media (min-width: 768px) and (max-width: 1024px) {
++
++    /* тФАтФА Root adjustments тФАтФА */
++    :root {
++        --gutter-x: 1.75rem;
++    }
++
++    /* тФАтФА Hero тФАтФА */
++    .hero {
++        height: 68vh;
++        min-height: 460px;
++        max-height: 680px;
++        padding: 0 2rem;
++    }
++
++    .hero__title {
++        font-size: clamp(2.4rem, 5.5vw, 3.6rem);
++    }
++
++    .hero__subtitle {
++        font-size: clamp(1.05rem, 2.2vw, 1.4rem);
++        margin-bottom: 1.5rem;
++    }
++
++    /* тФАтФА Section title тФАтФА */
++    .section-title {
++        font-size: clamp(1.8rem, 4vw, 2.6rem);
++    }
++
++    /* тФАтФА Product card images тАФ keep portrait ratio for coffee packs тФАтФА */
++    .product-card__image {
++        height: 320px;
++    }
++
++    .product-card__image--bean {
++        /* Coffee bean packaging is vertical/portrait тАФ do NOT flatten to 16:9 */
++        height: 400px;
++    }
++
++    .product-card__image--location {
++        height: 230px;
++    }
++
++    .product-card__content {
++        padding: 1.25rem;
++    }
++
++    .product-card__title {
++        font-size: 1.2rem;
++    }
++
++    /* тФАтФА Buttons тАФ comfortable touch targets тФАтФА */
++    .btn {
++        min-height: 52px;
++        padding: 1rem 1.75rem;
++        font-size: 1rem;
++    }
++
++    /* тФАтФА Promo cards тФАтФА */
++    .promo-card__content {
++        padding: 2.2rem 1.75rem;
++    }
++
++    .promo-card__title {
++        font-size: clamp(1.5rem, 3.5vw, 2rem);
++    }
++
++    /* тФАтФА Footer 2x2 grid тФАтФА */
++    .footer__content {
++        grid-template-columns: 1fr 1fr;
++        gap: 2.5rem 3rem;
++    }
++
++    /* тФАтФА Menu categories тФАтФА */
++    .menu__categories {
++        grid-template-columns: repeat(2, 1fr);
++        gap: 2rem;
++    }
++
++    /* тФАтФА Contact page тФАтФА */
++    .contact-split {
++        flex-direction: row !important;
++        gap: 2rem !important;
++        margin-top: 2rem !important;
++    }
++
++    .contact-split__social {
++        flex: 1 !important;
++        order: unset !important;
++        width: auto !important;
++    }
++
++    .contact-split__map {
++        flex: 1 !important;
++        order: unset !important;
++        width: auto !important;
++        min-height: 380px !important;
++        height: 380px !important;
++    }
++
++    /* тФАтФА Cart modal: side panel on tablet тФАтФА */
++    .cart-modal__content {
++        max-width: 420px !important;
++        border-radius: 0 !important;
++        right: 0;
++        left: auto;
++    }
++
++    .cart-modal__list li {
++        padding: 1.1rem 1.25rem;
++    }
++
++    /* тФАтФА Booking section тФАтФА */
++    .booking-hero {
++        padding: 4rem 2rem;
++    }
++
++    .booking-hero__card {
++        max-width: 600px;
++        padding: 2.5rem 2rem;
++    }
++
++    /* тФАтФА Sidebar toggle тФАтФА */
++    .sidebar-toggle {
++        display: flex !important;
++    }
++}
++
++/* ================================================================
++   9a. TABLET PORTRAIT тАФ 768px to 1024px, portrait orientation
+    ================================================================ */
+-@media (min-width: 769px) and (max-width: 1024px) {
++@media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
++
++    /* тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА
++       BASE
++    тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА */
++    html, body {
++        overflow-x: hidden !important;
++    }
++
++    :root {
++        --gutter-x: 2rem;
++        --space-xxl: 3.5rem;
++        --space-xl: 2.5rem;
++    }
++
++    /* тФАтФА Main padding (below burger button) тФАтФА */
++    .main--pt-header {
++        padding-top: 100px !important;
++    }
++
++    /* тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА
++       HERO тАФ impactful, proportional
++    тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА */
++    .hero {
++        height: 58vh !important;
++        min-height: 420px !important;
++        max-height: 560px !important;
++        padding: 0 3rem !important;
++        display: flex !important;
++        align-items: center !important;
++        justify-content: center !important;
++    }
++
++    .hero__content {
++        max-width: 640px !important;
++        padding: 0 !important;
++    }
++
++    .hero__title {
++        font-size: clamp(2.6rem, 5.5vw, 3.8rem) !important;
++        line-height: 1.08 !important;
++        margin-bottom: 1rem !important;
++    }
++
++    .hero__subtitle {
++        font-size: clamp(1.05rem, 2.2vw, 1.35rem) !important;
++        line-height: 1.6 !important;
++        margin-bottom: 1.75rem !important;
++    }
++
++    .hero__decoration {
++        gap: 1.25rem !important;
++        margin-bottom: 2rem !important;
++    }
++
++    /* тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА
++       SECTION CONTAINERS тАФ consistent padding
++    тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА */
++    .menu,
++    .contact,
++    .products {
++        padding: 3.5rem 2.5rem !important;
++    }
++
++    .promo {
++        padding: 1.25rem 2rem !important;
++    }
++
++    .about-summary {
++        padding: 4rem 2.5rem !important;
++    }
++
++    /* тФАтФА Section title тФАтФА */
++    .section-title {
++        font-size: clamp(2rem, 4.5vw, 2.8rem) !important;
++        margin-bottom: 2rem !important;
++    }
++
++    /* тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА
++       PROMO CARDS тАФ single column, image on top
++    тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА */
++    .promo-card {
++        grid-template-columns: 1fr !important;
++        min-height: auto !important;
++        border-radius: 24px !important;
++        overflow: hidden !important;
++    }
++
++    .promo-card__image {
++        height: 340px !important;
++        width: 100% !important;
++        order: -1 !important;
++    }
++
++    /* override reverse тАФ image always on top in portrait */
++    .promo-card--reverse .promo-card__image,
++    .promo-card--stack-image-first .promo-card__image {
++        order: -1 !important;
++    }
++
++    .promo-card__content {
++        padding: 2.5rem 2.5rem !important;
++        align-items: flex-start !important;
++        text-align: left !important;
++    }
++
++    .promo-card__title {
++        font-size: clamp(1.7rem, 4vw, 2.4rem) !important;
++        line-height: 1.15 !important;
++    }
++
++    .promo-card__text {
++        font-size: 1.05rem !important;
++        line-height: 1.75 !important;
++        margin-bottom: 1.75rem !important;
++    }
++
++    /* тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА
++       ABOUT SECTION
++    тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА */
++    .about-summary__text {
++        font-size: 1.1rem !important;
++        line-height: 1.8 !important;
++    }
+ 
++    /* тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА
++       PRODUCTS GRID тАФ 2 clean columns
++    тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА */
+     .products-grid,
++    #coffee-root .products-grid {
++        grid-template-columns: repeat(2, 1fr) !important;
++        gap: 1.75rem !important;
++        padding: 1.5rem 0 !important;
++    }
++
+     #locations-grid {
+-        grid-template-columns: repeat(2, 1fr);
++        grid-template-columns: repeat(2, 1fr) !important;
++        gap: 1.5rem !important;
++        padding: 1.5rem 0 !important;
++    }
++
++    /* тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА
++       PRODUCT CARD IMAGES тАФ portrait ratio for coffee
++    тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА */
++    .product-card__image {
++        height: 280px !important;
++        margin: 10px 10px 0 !important;
++        width: calc(100% - 20px) !important;
++        border-radius: 16px !important;
++    }
++
++    .product-card__image--bean {
++        height: 380px !important;
++    }
++
++    .product-card__image--location {
++        height: 210px !important;
++    }
++
++    .product-card__content {
++        padding: 1.1rem 1.25rem 1.35rem !important;
++    }
++
++    .product-card__title {
++        font-size: 1.2rem !important;
++    }
++
++    /* тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА
++       BEAN DETAIL PAGE тАФ stacked vertical
++    тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА */
++    .bean-full-view__container {
++        grid-template-columns: 1fr !important;
++        gap: 1.75rem !important;
++        align-items: stretch !important;
++    }
++
++    .bean-full-view__image {
++        height: 500px !important;
++        max-height: 62vw !important;
++        min-height: 320px !important;
++        width: 100% !important;
++        object-fit: cover !important;
++        object-position: center top !important;
++        border-radius: 28px !important;
++    }
++
++    .bean-full-view__title {
++        font-size: clamp(2rem, 4.2vw, 2.6rem) !important;
++        margin-bottom: 0.8rem !important;
++    }
++
++    .bean-full-view__description {
++        font-size: 1.05rem !important;
++        line-height: 1.7 !important;
++        margin-bottom: 1.75rem !important;
++    }
++
++    .bean-full-view__primary-stats {
++        grid-template-columns: 1fr 1fr !important;
++        padding: 1.75rem !important;
++        gap: 1.25rem !important;
++        border-radius: 20px !important;
++    }
++
++    .bean-full-view__stat-item--span-2 {
++        grid-column: span 2 !important;
++    }
++
++    /* Show sticky bar тАФ hide inline price card */
++    .bean-full-view .bean-full-view__price-card {
++        display: none !important;
++    }
++
++    .bean-detail-sticky-bar {
++        display: flex !important;
++    }
++
++    #bean-detail-section {
++        padding-bottom: 110px !important;
++    }
++
++    #bean-detail-section > .container > .btn {
++        margin-top: 0.5rem !important;
++        margin-bottom: 1rem !important;
++        font-size: 0.95rem !important;
++        padding: 0.7rem 1.75rem !important;
++        min-height: auto !important;
++        width: auto !important;
++        display: inline-flex !important;
++    }
++
++    /* тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА
++       CART + CHECKOUT MODALS тАФ full screen portrait
++    тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА */
++    .checkout-modal,
++    .cart-modal__content,
++    .booking-modal__content {
++        width: 100% !important;
++        max-width: 100% !important;
++        right: auto !important;
++        left: 0 !important;
++    }
++
++    #cart-modal-container .cart-modal__body {
++        padding: 1.5rem !important;
++        padding-bottom: 200px !important;
++    }
++
++    #cart-modal-container .cart-modal__list {
++        padding: 0 !important;
++        gap: 14px !important;
++    }
++
++    .cart-modal__list li {
++        padding: 1.25rem 1.5rem !important;
++        border-radius: 20px !important;
++    }
++
++    .checkout-modal__title,
++    .cart-modal__title {
++        padding: 70px 2rem 20px !important;
++        font-size: 2rem !important;
++        text-align: center !important;
++    }
++
++    /* тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА
++       FOOTER тАФ 2 ├Ч 2 grid in portrait
++    тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА */
++    .footer__content {
++        grid-template-columns: 1fr 1fr !important;
++        gap: 2.5rem 3rem !important;
++        padding: 0 2rem !important;
++    }
++
++    .footer__title {
++        font-size: 1.2rem !important;
++    }
++
++    .footer__text,
++    .footer__link {
++        font-size: 0.95rem !important;
++    }
++
++    /* тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА
++       CONTACT PAGE тАФ stacked in portrait
++    тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА */
++    .contact {
++        padding: 3.5rem 2.5rem !important;
++    }
++
++    .contact-split {
++        flex-direction: column !important;
++        gap: 2rem !important;
+     }
+ 
++    .contact-split__social {
++        width: 100% !important;
++        order: 1 !important;
++    }
++
++    .contact-split__map {
++        width: 100% !important;
++        min-height: 340px !important;
++        height: 340px !important;
++        order: 2 !important;
++        border-radius: 20px !important;
++    }
++
++    .contact-social-icons {
++        grid-template-columns: repeat(2, 1fr) !important;
++        gap: 1.25rem !important;
++    }
++
++    .contact-card {
++        padding: 1.75rem !important;
++    }
++
++    .social-icon {
++        height: 100px !important;
++    }
++
++    /* тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА
++       MENU CATEGORIES тАФ 2 columns in portrait
++    тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА */
+     .menu__categories {
++        grid-template-columns: repeat(2, 1fr) !important;
++        gap: 2rem !important;
++    }
++
++    .menu-item__image {
++        height: 260px !important;
++    }
++
++    /* тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА
++       BUTTONS тАФ comfortable touch targets
++    тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА */
++    .btn {
++        min-height: 56px !important;
++        padding: 1rem 2rem !important;
++        font-size: 1.05rem !important;
++    }
++
++    /* тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА
++       BOOKING HERO
++    тФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФАтФА */
++    .booking-hero {
++        padding: 4rem 2.5rem !important;
++    }
++
++    .booking-hero__card {
++        padding: 2.5rem 2rem !important;
++        max-width: 100% !important;
++        border-radius: 24px !important;
++    }
++
++    .booking-hero__title {
++        font-size: 2rem !important;
++        line-height: 1.25 !important;
++    }
++
++    .booking-hero__text {
++        font-size: 1.05rem !important;
++        margin-bottom: 2rem !important;
++    }
++
++    .btn--booking {
++        font-size: 1.15rem !important;
++        padding: 1.1rem 2.5rem !important;
++        width: auto !important;
++        min-height: 58px !important;
++    }
++
++}
++
++/* ================================================================
++   9b. TABLET LANDSCAPE тАФ 768px to 1024px, landscape orientation
++   ================================================================ */
++@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
++
++
++
++    /* тФАтФА Products: 3 columns in landscape тФАтФА */
++    .products-grid,
++    #coffee-root .products-grid {
++        grid-template-columns: repeat(3, 1fr);
++        gap: 1.5rem;
++        padding: 1.5rem 0;
++    }
++
++    #locations-grid {
+         grid-template-columns: repeat(2, 1fr);
++        gap: 1.5rem;
+     }
+ 
+-    .sidebar-toggle {
++    /* тФАтФА Bean card in landscape: slightly shorter but still portrait-ish тФАтФА */
++    .product-card__image--bean {
++        height: 310px;
++    }
++
++    /* тФАтФА Promo cards: side by side in landscape тФАтФА */
++    .promo-card {
++        grid-template-columns: 1fr 1fr;
++    }
++
++    .promo-card__image {
++        height: 280px;
++    }
++
++    /* тФАтФА Bean detail: side by side in landscape тФАтФА */
++    .bean-full-view__container {
++        grid-template-columns: 0.9fr 1.1fr !important;
++        gap: 2.5rem !important;
++        align-items: stretch !important;
++    }
++
++    .bean-full-view__image {
++        /* In landscape, image fills left column, still taller than wide */
++        height: 100% !important;
++        min-height: 380px !important;
++        max-height: 540px !important;
++        object-fit: cover !important;
++        object-position: center top !important;
++        border-radius: 28px !important;
++    }
++
++    /* Show inline price card in landscape тАФ hide sticky bar */
++    .bean-full-view .bean-full-view__price-card {
+         display: flex !important;
+     }
+ 
++    .bean-detail-sticky-bar {
++        display: none !important;
++    }
++
++    .bean-full-view__title {
++        font-size: clamp(1.6rem, 3vw, 2.2rem);
++    }
++
++    .bean-full-view__primary-stats {
++        grid-template-columns: 1fr 1fr;
++        padding: 1.5rem;
++        gap: 1rem;
++    }
++
++    .bean-full-view__description {
++        font-size: 0.95rem;
++        margin-bottom: 1.5rem;
++    }
++
++    /* тФАтФА Hero landscape тАФ taller for full visual тФАтФА */
++    .hero {
++        height: 85vh;
++        min-height: 400px;
++    }
+ }
+ 
+ /* ================================================================
+@@ -930,7 +1509,7 @@
+     display: none;
+ }
+ 
+-@media (max-width: 768px), (max-width: 1024px) and (orientation: portrait) {
++@media (max-width: 767px), (max-width: 1024px) and (orientation: portrait) {
+ 
+     /* Hide the inline price card on mobile тАФ use sticky bar instead */
+     .bean-full-view .bean-full-view__price-card {
+@@ -944,7 +1523,7 @@
+         bottom: 0;
+         left: 0;
+         right: 0;
+-        z-index: 900;
++        z-index: 9990;
+         background: var(--color-dark-brown);
+         padding: 1rem 1.25rem calc(1rem + env(safe-area-inset-bottom, 0px));
+         align-items: center;
+@@ -1060,12 +1639,7 @@
+     }
+ }
+ 
+-@media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+-    .bean-full-view__image {
+-        height: 500px !important;
+-        border-radius: 30px !important;
+-    }
+-}
++/* Portrait tablet bean layout now handled in section 9a above */
+ 
+ @media (max-width: 480px) {
+     .bean-detail-sticky-bar {
