@@ -1240,8 +1240,8 @@
 
     .bean-full-view__container {
         --bean-tablet-detail-height: clamp(590px, 74vh, 720px);
-        grid-template-columns: minmax(340px, 1.12fr) minmax(0, 0.88fr) !important;
-        gap: 1.1rem !important;
+        grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr) !important;
+        gap: 0.9rem !important;
         align-items: stretch !important;
     }
 
