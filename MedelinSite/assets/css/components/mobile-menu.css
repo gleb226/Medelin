@@ -371,3 +371,14 @@
         margin-top: 1.5rem;
     }
 }
+
+@media (min-width: 769px) and (max-width: 1200px) and (orientation: landscape) {
+    .mobile-menu {
+        display: none !important;
+    }
+
+    .mobile-menu__toggle,
+    .mobile-menu__panel {
+        display: none !important;
+    }
+}

@@ -1097,6 +1097,213 @@
 }
 
 /* ================================================================
+   11b. TABLET ORIENTATION FIXES
+   ================================================================ */
+
+@media (min-width: 769px) and (max-width: 1200px) and (orientation: landscape) {
+    :root {
+        --container-width: 1120px;
+        --gutter-x: 1.5rem;
+    }
+
+    .header {
+        background-color: var(--color-dark-brown) !important;
+        box-shadow: var(--shadow-md) !important;
+        padding: 1rem 0 !important;
+        pointer-events: auto !important;
+    }
+
+    .header__container {
+        pointer-events: auto !important;
+        padding: 0 var(--gutter-x) !important;
+    }
+
+    .header__logo {
+        display: block !important;
+    }
+
+    .nav {
+        display: flex !important;
+    }
+
+    .main--pt-header {
+        padding-top: 100px !important;
+    }
+
+    .products-grid,
+    #coffee-root .products-grid,
+    #commercial-root.products-grid,
+    #specialty-espresso-root.products-grid,
+    #specialty-filter-root.products-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 1.6rem !important;
+    }
+
+    .coffee-category-section .container {
+        max-width: 1120px !important;
+        padding: 0 1.5rem !important;
+    }
+
+    #bean-detail-section > .container {
+        max-width: 1120px !important;
+        padding: 0 1.5rem !important;
+    }
+
+    .bean-full-view {
+        padding: 1.5rem 0 0 !important;
+    }
+
+    .bean-full-view__container {
+        grid-template-columns: minmax(380px, 1.05fr) minmax(360px, 1fr) !important;
+        gap: clamp(2rem, 4vw, 3.5rem) !important;
+        align-items: stretch !important;
+    }
+
+    .bean-full-view__image {
+        height: clamp(500px, 64vh, 620px) !important;
+        border-radius: 30px !important;
+        aspect-ratio: auto !important;
+    }
+
+    .bean-full-view__price-card {
+        display: flex !important;
+        position: static !important;
+    }
+
+    .bean-detail-sticky-bar {
+        display: none !important;
+    }
+
+    #bean-detail-section {
+        padding-bottom: 0 !important;
+    }
+
+    .bean-full-view__title {
+        font-size: clamp(2.4rem, 4vw, 3.3rem) !important;
+    }
+
+    .bean-full-view__primary-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        padding: 2rem !important;
+        gap: 1.25rem !important;
+    }
+
+    .bean-full-view__stat-item--span-2 {
+        grid-column: span 2 !important;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+    :root {
+        --gutter-x: 1.25rem;
+    }
+
+    .main--pt-header {
+        padding-top: 80px !important;
+    }
+
+    .coffee-category-section {
+        padding: 3rem 0 !important;
+    }
+
+    .coffee-category-section .container {
+        max-width: 920px !important;
+        padding: 0 1.25rem !important;
+    }
+
+    .products-grid,
+    #coffee-root .products-grid,
+    #commercial-root.products-grid,
+    #specialty-espresso-root.products-grid,
+    #specialty-filter-root.products-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 1.4rem !important;
+    }
+
+    #bean-detail-section {
+        padding-bottom: 112px !important;
+    }
+
+    #bean-detail-section > .container {
+        max-width: 100% !important;
+        padding: 0 1.25rem !important;
+    }
+
+    #bean-detail-section > .container > .btn {
+        margin-top: 0.25rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    .bean-full-view {
+        padding: 0.5rem 0 0 !important;
+    }
+
+    .bean-full-view__container {
+        grid-template-columns: minmax(300px, 0.88fr) minmax(0, 1fr) !important;
+        gap: 1.5rem !important;
+        align-items: start !important;
+    }
+
+    .bean-full-view__left-col {
+        min-width: 0 !important;
+    }
+
+    .bean-full-view__right-col {
+        min-width: 0 !important;
+    }
+
+    .bean-full-view__image {
+        height: min(70vh, 680px) !important;
+        min-height: 560px !important;
+        border-radius: 28px !important;
+        object-fit: cover !important;
+        margin-bottom: 0 !important;
+    }
+
+    .bean-full-view__price-card {
+        display: none !important;
+    }
+
+    .bean-full-view__title {
+        font-size: clamp(2rem, 4.8vw, 2.8rem) !important;
+        line-height: 1.08 !important;
+        margin-bottom: 0.8rem !important;
+    }
+
+    .bean-full-view__description {
+        font-size: 1rem !important;
+        line-height: 1.55 !important;
+        margin-bottom: 1.2rem !important;
+    }
+
+    .bean-full-view__primary-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 1rem !important;
+        padding: 1.35rem !important;
+        border-radius: 22px !important;
+    }
+
+    .bean-full-view__stat-item--span-2 {
+        grid-column: span 2 !important;
+    }
+
+    .bean-full-view__stat-label {
+        font-size: 0.68rem !important;
+        line-height: 1.2 !important;
+    }
+
+    .bean-full-view__stat-value {
+        font-size: 0.98rem !important;
+        line-height: 1.35 !important;
+    }
+
+    .bean-detail-sticky-bar {
+        z-index: 2500 !important;
+        padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
+    }
+}
+
+/* ================================================================
    12. SIDEBAR TOGGLE (admin etc)
    ================================================================ */
 @media (max-width: 1024px) {

@@ -221,12 +221,12 @@ function openBeanDetail(item, pushState = true) {
                         ${item.roast ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Обсмаження</label><p class="bean-full-view__stat-value">${item.roast}</p></div>` : ''}
                         ${!isCommercial && score ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Оцінка якості</label><p class="bean-full-view__stat-value">${score}</p></div>` : ''}
                         ${item.harvest ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Врожай</label><p class="bean-full-view__stat-value">${item.harvest}</p></div>` : ''}
+                        ${item.processing ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Метод обробки</label><p class="bean-full-view__stat-value">${item.processing}</p></div>` : ''}
                         
                         ${item.descriptors || item.taste ? `<div class="bean-full-view__stat-item bean-full-view__stat-item--span-2"><label class="bean-full-view__stat-label">Дескриптори</label><p class="bean-full-view__stat-value bean-full-view__stat-value--large">${item.descriptors || item.taste}</p></div>` : ''}
                         
                         ${item.variety ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Різновид</label><p class="bean-full-view__stat-value">${item.variety}</p></div>` : ''}
                         ${item.altitude ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Висота</label><p class="bean-full-view__stat-value">${item.altitude}</p></div>` : ''}
-                        ${item.processing ? `<div class="bean-full-view__stat-item bean-full-view__stat-item--span-2"><label class="bean-full-view__stat-label">Метод обробки</label><p class="bean-full-view__stat-value">${item.processing}</p></div>` : ''}
                     </div>
 
                     <div style="display:none;">
