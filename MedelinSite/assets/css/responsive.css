@@ -1316,7 +1316,7 @@
     }
 
     .bean-detail-sticky-bar {
-        z-index: 2500 !important;
+        z-index: 900 !important;
         padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
     }
 }

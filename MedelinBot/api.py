@@ -578,18 +578,22 @@ async def complete_order(order_id: str, admin: dict = Depends(get_current_admin)
         order = await active_orders_db.get_active_order_by_id(order_id)
 
     if order:
+        original_order_id = order.get('order_id', order_id)
         await sales_db.add_sale(
-            order_id=order.get('order_id', order_id),
+            order_id=original_order_id,
             user_id=order.get('user_id'),
             fullname=order.get('fullname'),
             items=order.get('cart'),
             total=order.get('total', 0),
             location_id=order.get('location_id')
         )
+        await orders_db.update_status(original_order_id, 'completed')
         
         # Bot Sync: update message if mapping exists
         from app.utils.admin_notifications import update_order_notifications
-        await update_order_notifications(order.get('order_id', order_id), 'completed')
+        await update_order_notifications(original_order_id, 'completed')
+    else:
+        raise HTTPException(status_code=404, detail='Active order not found')
     
     await active_orders_db.remove_order(order_id)
     return {'status': 'ok'}

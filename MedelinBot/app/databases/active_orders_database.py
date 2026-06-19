@@ -72,7 +72,16 @@ class ActiveOrdersDatabase:
 
         db = await get_db()
 
-        await db.active_orders.delete_one({'_id': ObjectId(str(active_id))})
+        key = str(active_id)
+        query = {'order_id': key}
+
+        try:
+            query = {'$or': [{'_id': ObjectId(key)}, {'order_id': key}]}
+        except Exception:
+            pass
+
+        result = await db.active_orders.delete_many(query)
+        return int(result.deleted_count or 0)
 
     async def delete_active_order(self, order_id):
         db = await get_db()

@@ -211,16 +211,17 @@
     /* ── Individual links ── */
     .mobile-menu__link {
         font-family: var(--font-accent);
-        font-size: clamp(1.6rem, 6vw, 2.4rem);
+        font-size: clamp(1.45rem, 5.4vw, 2.2rem);
         font-weight: 800;
         color: rgba(243, 233, 220, 0.7);
         text-transform: uppercase;
-        letter-spacing: 3px;
+        letter-spacing: 1.5px;
         text-decoration: none;
         padding: 0.8rem 2rem;
         border-radius: 100px;
         width: 100%;
         text-align: center;
+        white-space: nowrap;
         position: relative;
         overflow: hidden;
 
@@ -327,9 +328,9 @@
     }
 
     .mobile-menu__link {
-        font-size: 1.5rem;
-        letter-spacing: 2px;
-        padding: 0.7rem 1.5rem;
+        font-size: 1.25rem;
+        letter-spacing: 1px;
+        padding: 0.7rem 1rem;
     }
 
     .mobile-menu__logo {
