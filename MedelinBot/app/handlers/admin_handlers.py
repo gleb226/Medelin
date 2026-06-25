@@ -790,10 +790,10 @@ async def show_new_orders(message: Message):
             if 'вул.' in di: type_label = "Кур'єр"
             else: type_label = "Відділення"
 
-        pay_mode = o.get('payment_mode', '—')
-        if pay_mode == 'pay_now': pay_label = "ОПЛАЧЕНО" if o.get('status') == 'paid' else "КАРТКА (Очікується)"
-        elif pay_mode == 'pay_at_checkout': pay_label = "Накладний платіж" if order_type in ('nova_poshta', 'beans_delivery') else "НА КАСІ"
-        else: pay_label = pay_mode
+        if o.get('status') == 'paid' or o.get('is_paid'): pay_label = "ОПЛАЧЕНО"
+        elif o.get('payment_mode') == 'pay_now': pay_label = "НЕ ОПЛАЧЕНО (Очікується)"
+        elif order_type in ('nova_poshta', 'beans_delivery'): pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
+        else: pay_label = "НА КАСІ"
 
         msg = f"📦 <b>ЗАМОВЛЕННЯ #{order_num}</b> ({status_label})\n\n"
         msg += f"👤 <b>{o.get('fullname')}</b>\n"
@@ -839,10 +839,10 @@ async def show_active_orders(message: Message):
             if 'вул.' in di: type_label = "Кур'єр"
             else: type_label = "Відділення"
 
-        pay_mode = full_o.get('payment_mode', '—')
-        if pay_mode == 'pay_now': pay_label = "ОПЛАЧЕНО" if full_o.get('status') == 'paid' else "КАРТКА"
-        elif pay_mode == 'pay_at_checkout': pay_label = "Накладний платіж" if order_type in ('nova_poshta', 'beans_delivery') else "НА КАСІ"
-        else: pay_label = pay_mode
+        if full_o.get('status') == 'paid' or full_o.get('is_paid'): pay_label = "ОПЛАЧЕНО"
+        elif full_o.get('payment_mode') == 'pay_now': pay_label = "НЕ ОПЛАЧЕНО (Очікується)"
+        elif order_type in ('nova_poshta', 'beans_delivery'): pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
+        else: pay_label = "НА КАСІ"
 
         msg = f"📦 <b>АКТИВНЕ #{order_num}</b>\n\n"
         msg += f"👤 <b>{full_o.get('fullname')}</b>\n"
@@ -881,7 +881,12 @@ async def view_order_details(message: Message, bot: Bot):
     msg += f"📞 Телефон: <code>{order.get('phone')}</code>\n"
     msg += f"🚚 Куди: <b>{type_label} {order.get('delivery_info', '')}</b>\n"
     msg += f"💰 Сума: <b>{order.get('total_amount')} ₴</b>\n"
-    msg += f"💳 Оплата: <b>{order.get('payment_mode')}</b>\n\n"
+    if order.get('status') == 'paid' or order.get('is_paid'): pay_label = "ОПЛАЧЕНО"
+    elif order.get('payment_mode') == 'pay_now': pay_label = "НЕ ОПЛАЧЕНО (Очікується)"
+    elif order_type in ('nova_poshta', 'beans_delivery'): pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
+    else: pay_label = "НА КАСІ"
+
+    msg += f"💳 Оплата: <b>{pay_label}</b>\n\n"
     msg += f"🛒 <b>СКЛАД:</b>\n{order.get('cart')}\n\n"
     msg += f"📝 ПОБАЖАННЯ: <b>{order.get('wishes') or '—'}</b>"
     
