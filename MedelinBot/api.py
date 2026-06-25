@@ -406,7 +406,7 @@ async def admin_login(req: LoginRequest):
             login_attempts[ident] = attempt_data
             raise HTTPException(status_code=429, detail='Забагато спроб. Вхід заблоковано на 10 хв.')
         login_attempts[ident] = attempt_data
-        raise HTTPException(status_code=401, detail=f'Невірний пароль. Залишилось спроб: {5 - attempt_data["count"]}')
+        raise HTTPException(status_code=403, detail=f'Невірний пароль. Залишилось спроб: {5 - attempt_data["count"]}')
     
     admin = await admin_db.find_admin_by_identifier(req.identifier)
     if not admin:

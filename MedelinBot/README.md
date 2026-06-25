@@ -499,14 +499,7 @@ PUT /api/users/{user_id}
 GET /api/users/{user_id}/bonus
 ```
 
-#### Меню
 
-```http
-GET /api/menu
-GET /api/menu/categories
-GET /api/menu/products/{id}
-GET /api/menu/search?q={query}
-```
 
 #### Замовлення
 
