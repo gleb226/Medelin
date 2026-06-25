@@ -188,6 +188,15 @@ async def send_beans_invoice(user, chat_id, state, bot):
         payment_mode='pay_now', total_amount=total
     )
 
+    if is_new:
+        delivery_info = f"{data.get('np_city_name', '')}, {data.get('np_warehouse', '')}" if order_type == 'beans_delivery' else "Самовивіз"
+        msg = f"☕️ <b>НОВЕ ЗАМОВЛЕННЯ ЗЕРЕН</b>\n\n👤 {user.full_name}\n📞 <code>{data.get('phone', '—')}</code>\n🚚 Куди: <b>{delivery_info}</b>"
+        msg += f"\n📦 Сорт: <b>{data['bean_name']}</b>\n💳 Оплата: <b>НАКЛАДНИЙ ПЛАТІЖ</b>"
+        msg += f"\n\n🛒 {data['bean_name']}"
+        from app.utils.admin_notifications import send_admin_notification
+        await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(rid), location_id=data.get('location_id'), order_id=rid)
+
+
     payment_url = f"{WEB_APP_URL}/index.html?order_id={rid}"
     kb_pay = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='💳 ПЕРЕЙТИ ДО ОПЛАТИ', url=payment_url)],
@@ -202,7 +211,7 @@ async def process_beans_final(user, chat_id, state, bot):
     order_type = 'beans_delivery' if data.get('delivery_type') == 'nova_poshta' else 'beans_booking'
     
     delivery_info = f"{data.get('np_city_name', '')}, {data.get('np_warehouse', '')}" if order_type == 'beans_delivery' else "Самовивіз"
-    pay_label = "ОПЛАЧЕНО" if data.get('payment_method') == 'card' else "Накладний платіж"
+    pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
     
     rid, is_new = await orders_db.add_order(
         user_id=user.id, username=user.username, fullname=user.full_name, phone=data.get('phone', '—'), 

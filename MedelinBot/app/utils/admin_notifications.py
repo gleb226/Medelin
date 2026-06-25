@@ -68,9 +68,7 @@ async def update_order_notifications(order_id: str, status: str) -> None:
                 delivery_info = f"Стіл #{order.get('table_number', '—')}"
             
             if order.get('status') == 'paid' or order.get('is_paid'): pay_label = "ОПЛАЧЕНО"
-            elif order.get('payment_mode') == 'pay_now': pay_label = "НЕ ОПЛАЧЕНО (Очікується)"
-            elif order_type in ('nova_poshta', 'beans_delivery'): pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
-            else: pay_label = "НА КАСІ"
+            else: pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
 
             new_text = f"📦 <b>ЗАМОВЛЕННЯ #{order_num}</b> ({status_label})\n\n"
             new_text += f"👤 {order.get('fullname')}\n"

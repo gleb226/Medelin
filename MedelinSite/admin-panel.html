@@ -558,7 +558,7 @@
                         deliveryInfo = o.delivery_info ? `<i class="fas fa-info-circle" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.delivery_info}` : '—';
                     }
 
-                    let paymentStr = o.is_paid ? 'ОПЛАЧЕНО' : (o.payment_mode === 'pay_now' ? 'НЕ ОПЛАЧЕНО (Очікується)' : ((o.order_type === 'nova_poshta' || o.order_type === 'beans_delivery') ? 'НАКЛАДНИЙ ПЛАТІЖ' : 'НА КАСІ'));
+                    let paymentStr = o.is_paid ? 'ОПЛАЧЕНО' : 'НАКЛАДНИЙ ПЛАТІЖ';
                     
                     // Construct cart items
                     let cartItems = '';
@@ -630,7 +630,7 @@
                         deliveryInfo = o.delivery_info ? `<i class="fas fa-info-circle" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.delivery_info}` : '—';
                     }
 
-                    let paymentStr = o.is_paid ? 'ОПЛАЧЕНО' : (o.payment_mode === 'pay_now' ? 'НЕ ОПЛАЧЕНО (Очікується)' : ((o.order_type === 'nova_poshta' || o.order_type === 'beans_delivery') ? 'НАКЛАДНИЙ ПЛАТІЖ' : 'НА КАСІ'));
+                    let paymentStr = o.is_paid ? 'ОПЛАЧЕНО' : 'НАКЛАДНИЙ ПЛАТІЖ';
                     
                     // Construct cart items
                     let cartItems = '';

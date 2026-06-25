@@ -275,14 +275,15 @@ async def process_checkout(req: CheckoutRequest):
         if payment_mode == 'pay_at_checkout' or data.get('payment_method') == 'cash':
             return {'status': 'ok', 'manual': True, 'order_id': oid, 'order_number': order_num, 'duplicate': True}
 
+    pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
+    
+    msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ #{order_num}</b>\n\n👤 {user.get("name")}\n📞 <code>{phone}</code>\n🚚 Куди: <b>{type_label} {delivery_info}</b>'
+    msg += f'\n💰 <b>{total} грн</b>\n💳 Оплата: <b>{pay_label}</b>\n\n🛒 {items_text}'
+    msg += f'\n\n📝 ПОБАЖАННЯ: <b>{wishes_str}</b>'
+    
+    await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, user_id or -1), location_id=loc_id, order_id=oid)
+
     if payment_mode == 'pay_at_checkout' or data.get('payment_method') == 'cash':
-        pay_label = "Накладний платіж" if order_type == 'nova_poshta' else "ПІСЛЯПЛАТА"
-        
-        msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ #{order_num}</b>\n\n👤 {user.get("name")}\n📞 <code>{phone}</code>\n🚚 Куди: <b>{type_label} {delivery_info}</b>'
-        msg += f'\n💰 <b>{total} грн</b>\n💳 Оплата: <b>{pay_label}</b>\n\n🛒 {items_text}'
-        msg += f'\n\n📝 ПОБАЖАННЯ: <b>{wishes_str}</b>'
-        
-        await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, user_id or -1), location_id=loc_id, order_id=oid)
         return {'status': 'ok', 'manual': True, 'order_id': oid, 'order_number': order_num}
 
     # LiqPay Integration
@@ -324,27 +325,8 @@ async def liqpay_callback(request: Request):
             if order and order.get('status') != 'paid':
                 await orders_db.update_status(oid, 'paid')
                 
-                type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі', 'nova_poshta': 'Доставка', 'beans_delivery': 'Доставка', 'beans_booking': 'Самовивіз' }
-                order_type = order.get('order_type')
-                
-                type_label = type_map.get(order_type, order_type)
-                if order_type == 'nova_poshta' or order_type == 'beans_delivery':
-                    # Determine if it's courier or branch from delivery_info
-                    di = order.get('delivery_info', '')
-                    if 'вул.' in di: type_label = "Кур'єр"
-                    else: type_label = "Відділення"
-                
-                delivery_info = order.get('delivery_info') or ""
-                if not delivery_info and order_type == 'in_house':
-                    delivery_info = f"Стіл #{order.get('table_number')}"
-                
-                order_num = order.get('order_number', 0)
-
-                msg = f'💰 <b>ОПЛАЧЕНО ЗАМОВЛЕННЯ #{order_num}</b>\n\n👤 {order.get("fullname")}\n📞 <code>{order.get("phone")}</code>\n🚚 Куди: <b>{type_label} {delivery_info}</b>'
-                msg += f'\n💰 <b>{order.get("total_amount")} грн</b>\n💳 Оплата: <b>ОПЛАЧЕНО</b>\n\n🛒 {order.get("cart")}'
-                msg += f'\n\n📝 ПОБАЖАННЯ: <b>{order.get("wishes") or "—"}</b>'
-                
-                await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, order.get('user_id') or -1), location_id=order.get('location_id'), order_id=oid)
+                from app.utils.admin_notifications import update_order_notifications
+                await update_order_notifications(oid, 'paid')
         return {'status': 'ok'}
     except Exception as e:
         logger.error(f"LiqPay callback error: {e}")

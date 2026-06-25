@@ -791,9 +791,7 @@ async def show_new_orders(message: Message):
             else: type_label = "Відділення"
 
         if o.get('status') == 'paid' or o.get('is_paid'): pay_label = "ОПЛАЧЕНО"
-        elif o.get('payment_mode') == 'pay_now': pay_label = "НЕ ОПЛАЧЕНО (Очікується)"
-        elif order_type in ('nova_poshta', 'beans_delivery'): pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
-        else: pay_label = "НА КАСІ"
+        else: pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
 
         msg = f"📦 <b>ЗАМОВЛЕННЯ #{order_num}</b> ({status_label})\n\n"
         msg += f"👤 <b>{o.get('fullname')}</b>\n"
@@ -840,9 +838,7 @@ async def show_active_orders(message: Message):
             else: type_label = "Відділення"
 
         if full_o.get('status') == 'paid' or full_o.get('is_paid'): pay_label = "ОПЛАЧЕНО"
-        elif full_o.get('payment_mode') == 'pay_now': pay_label = "НЕ ОПЛАЧЕНО (Очікується)"
-        elif order_type in ('nova_poshta', 'beans_delivery'): pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
-        else: pay_label = "НА КАСІ"
+        else: pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
 
         msg = f"📦 <b>АКТИВНЕ #{order_num}</b>\n\n"
         msg += f"👤 <b>{full_o.get('fullname')}</b>\n"
@@ -882,9 +878,7 @@ async def view_order_details(message: Message, bot: Bot):
     msg += f"🚚 Куди: <b>{type_label} {order.get('delivery_info', '')}</b>\n"
     msg += f"💰 Сума: <b>{order.get('total_amount')} ₴</b>\n"
     if order.get('status') == 'paid' or order.get('is_paid'): pay_label = "ОПЛАЧЕНО"
-    elif order.get('payment_mode') == 'pay_now': pay_label = "НЕ ОПЛАЧЕНО (Очікується)"
-    elif order_type in ('nova_poshta', 'beans_delivery'): pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
-    else: pay_label = "НА КАСІ"
+    else: pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
 
     msg += f"💳 Оплата: <b>{pay_label}</b>\n\n"
     msg += f"🛒 <b>СКЛАД:</b>\n{order.get('cart')}\n\n"
