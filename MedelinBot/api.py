@@ -531,7 +531,7 @@ async def get_active_orders(admin: dict = Depends(get_current_admin)):
         
         orig_order = await orders_db.get_order_by_id(o['order_id'])
         if orig_order:
-            for key in ['order_number', 'phone', 'delivery_info', 'wishes', 'is_paid', 'payment_id', 'delivery_type', 'delivery_city', 'delivery_state', 'delivery_branch_id', 'delivery_address', 'fullname', 'username']:
+            for key in ['order_number', 'phone', 'delivery_info', 'wishes', 'status', 'is_paid', 'payment_id', 'delivery_type', 'delivery_city', 'delivery_state', 'delivery_branch_id', 'delivery_address', 'fullname', 'username']:
                 if key in orig_order and orig_order[key] is not None:
                     o[key] = orig_order[key]
         

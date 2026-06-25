@@ -45,8 +45,11 @@ async def update_order_notifications(order_id: str, status: str) -> None:
     if not order: return
     
     order_num = order.get('order_number', '—')
-    status_label = "✅ ПІДТВЕРДЖЕНО" if status == 'confirmed' else "❌ ВІДХИЛЕНО"
-    if status == 'completed': status_label = "🏁 ЗАВЕРШЕНО"
+    if status == 'confirmed': status_label = "✅ ПІДТВЕРДЖЕНО"
+    elif status == 'completed': status_label = "🏁 ЗАВЕРШЕНО"
+    elif status == 'paid': status_label = "💳 ОПЛАЧЕНО"
+    elif status == 'new': status_label = "🆕 НОВЕ"
+    else: status_label = "❌ ВІДХИЛЕНО"
     
     # Find all messages sent for this order
     cursor = db.order_notifications.find({'order_id': str(order_id)})
@@ -71,11 +74,13 @@ async def update_order_notifications(order_id: str, status: str) -> None:
             else: pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
 
             new_text = f"📦 <b>ЗАМОВЛЕННЯ #{order_num}</b> ({status_label})\n\n"
-            new_text += f"👤 {order.get('fullname')}\n"
+            new_text += f"👤 <b>{order.get('fullname')}</b>\n"
             new_text += f"📞 <code>{order.get('phone')}</code>\n"
-            new_text += f"🚚 {type_label}: <b>{delivery_info}</b>\n"
-            new_text += f"💰 <b>{order.get('total_amount', order.get('total', 0))} грн</b> ({pay_label})\n\n"
-            new_text += f"🛒 {order.get('cart')}"
+            new_text += f"🚚 Куди: <b>{type_label} {delivery_info}</b>\n"
+            new_text += f"💰 Сума: <b>{order.get('total_amount', order.get('total', 0))} ₴</b>\n"
+            new_text += f"💳 Оплата: <b>{pay_label}</b>\n\n"
+            new_text += f"🛒 <b>СКЛАД:</b>\n{order.get('cart')}\n\n"
+            new_text += f"📝 ПОБАЖАННЯ: <b>{order.get('wishes') or '—'}</b>"
             
             kb = None
             if status == 'confirmed':
