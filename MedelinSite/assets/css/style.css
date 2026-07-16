@@ -3855,8 +3855,8 @@ textarea, input { resize: none !important; }
 
 .beans-page-header {
     max-width: 1200px;
-    margin: 1.2rem auto 2rem;
-    padding: 0 1.5rem;
+    margin: 1.2rem auto 0;
+    padding: 0 1.5rem 4rem;
     position: relative;
     display: flex;
     align-items: center;
@@ -3881,7 +3881,7 @@ textarea, input { resize: none !important; }
     position: absolute;
     left: 1.5rem;
     top: 50%;
-    transform: translateY(-50%);
+    transform: translateY(calc(-50% + 4px));
     z-index: 50;
     margin: 0;
     padding: 0;
