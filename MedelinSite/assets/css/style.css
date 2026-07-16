@@ -3859,7 +3859,7 @@ textarea, input { resize: none !important; }
     padding: 0 1.5rem;
     position: relative;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
 }
 
@@ -3867,7 +3867,8 @@ textarea, input { resize: none !important; }
 .coffee-filters-container {
     position: absolute;
     left: 1.5rem;
-    top: 0;
+    top: 50%;
+    transform: translateY(-50%);
     z-index: 50;
     margin: 0;
     padding: 0;
