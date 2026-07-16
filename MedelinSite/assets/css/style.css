@@ -3863,6 +3863,19 @@ textarea, input { resize: none !important; }
     justify-content: center;
 }
 
+/* Виносимо декоративну лінію з потоку, щоб вона не збільшувала висоту h1
+   і кнопка фільтру вирівнювалась точно по тексту заголовку */
+.beans-page-header .section-title {
+    margin-bottom: 0;
+}
+
+.beans-page-header .section-title::after {
+    position: absolute;
+    bottom: -1.8rem;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
 /* --- Coffee Filters --- */
 .coffee-filters-container {
     position: absolute;
