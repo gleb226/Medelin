@@ -3856,7 +3856,7 @@ textarea, input { resize: none !important; }
 .beans-page-header {
     max-width: 1200px;
     margin: 1.2rem auto 0;
-    padding: 0 1.5rem 4rem;
+    padding: 0 1.5rem 1.5rem;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -3890,7 +3890,7 @@ textarea, input { resize: none !important; }
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 0;
+    margin-bottom: 0.5rem;
 }
 
 .filter-toggle-btn:hover {
