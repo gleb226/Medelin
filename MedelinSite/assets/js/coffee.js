@@ -1,3 +1,5 @@
+let currentFilterType = 'all'; // all, premium, specialty
+let currentFilterRoast = 'all'; // all, espresso, filter
 let allCoffeeData = [];
 let lastScrollPosition = 0;
 
@@ -135,10 +137,91 @@ function renderCoffeeData(coffeeData) {
         }
     });
 
-    // Hide sections if empty
-    if (!commercialRoot.children.length && commercialSection) commercialSection.style.display = 'none';
-    if (!specialtyEspressoRoot.children.length && specialtyEspressoSection) specialtyEspressoSection.style.display = 'none';
-    if (!specialtyFilterRoot.children.length && specialtyFilterSection) specialtyFilterSection.style.display = 'none';
+    // Apply filters and hide empty sections
+    applyCoffeeFilters();
+}
+
+function initCoffeeFilters() {
+    const toggleBtn = document.getElementById('filter-toggle-btn');
+    const panel = document.getElementById('coffee-filters-panel');
+    const typeBtns = document.querySelectorAll('[data-filter-type]');
+    const roastBtns = document.querySelectorAll('[data-filter-roast]');
+    const roastGroup = document.getElementById('roast-filter-group');
+
+    if (toggleBtn && panel) {
+        toggleBtn.addEventListener('click', () => {
+            panel.classList.toggle('active');
+            toggleBtn.classList.toggle('active');
+        });
+    }
+
+    typeBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            typeBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFilterType = btn.getAttribute('data-filter-type');
+            
+            if (currentFilterType === 'specialty') {
+                if (roastGroup) roastGroup.style.display = 'flex';
+            } else {
+                if (roastGroup) roastGroup.style.display = 'none';
+                // Reset roast filter when switching away from specialty
+                currentFilterRoast = 'all';
+                roastBtns.forEach(b => {
+                    b.classList.remove('active');
+                    if(b.getAttribute('data-filter-roast') === 'all') {
+                        b.classList.add('active');
+                    }
+                });
+            }
+            
+            applyCoffeeFilters();
+        });
+    });
+
+    roastBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            roastBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFilterRoast = btn.getAttribute('data-filter-roast');
+            applyCoffeeFilters();
+        });
+    });
+}
+
+function applyCoffeeFilters() {
+    const commercialSection = document.getElementById('commercial-section');
+    const specialtyEspressoSection = document.getElementById('specialty-espresso-section');
+    const specialtyFilterSection = document.getElementById('specialty-filter-section');
+
+    const commercialRoot = document.getElementById('commercial-root');
+    const specialtyEspressoRoot = document.getElementById('specialty-espresso-root');
+    const specialtyFilterRoot = document.getElementById('specialty-filter-root');
+
+    let showCommercial = false;
+    let showSpecialtyEspresso = false;
+    let showSpecialtyFilter = false;
+
+    if (currentFilterType === 'all') {
+        showCommercial = true;
+        showSpecialtyEspresso = true;
+        showSpecialtyFilter = true;
+    } else if (currentFilterType === 'premium') {
+        showCommercial = true;
+    } else if (currentFilterType === 'specialty') {
+        if (currentFilterRoast === 'all') {
+            showSpecialtyEspresso = true;
+            showSpecialtyFilter = true;
+        } else if (currentFilterRoast === 'espresso') {
+            showSpecialtyEspresso = true;
+        } else if (currentFilterRoast === 'filter') {
+            showSpecialtyFilter = true;
+        }
+    }
+
+    if (commercialSection) commercialSection.style.display = (showCommercial && commercialRoot && commercialRoot.children.length > 0) ? '' : 'none';
+    if (specialtyEspressoSection) specialtyEspressoSection.style.display = (showSpecialtyEspresso && specialtyEspressoRoot && specialtyEspressoRoot.children.length > 0) ? '' : 'none';
+    if (specialtyFilterSection) specialtyFilterSection.style.display = (showSpecialtyFilter && specialtyFilterRoot && specialtyFilterRoot.children.length > 0) ? '' : 'none';
 }
 
 function checkUrlForBean() {
@@ -303,7 +386,11 @@ window.addEventListener('popstate', () => {
 });
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', fetchCoffee);
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchCoffee();
+        initCoffeeFilters();
+    });
 } else {
     fetchCoffee();
+    initCoffeeFilters();
 }
