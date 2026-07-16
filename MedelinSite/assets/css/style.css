@@ -3860,7 +3860,7 @@ textarea, input { resize: none !important; }
     padding: 0 1.5rem;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
 }
 
 .filter-toggle-btn {
@@ -3900,8 +3900,8 @@ textarea, input { resize: none !important; }
     display: none;
     flex-direction: column;
     gap: 1.5rem;
-    width: 100%;
-    max-width: 600px;
+    width: fit-content;
+    max-width: 100%;
     animation: fadeIn 0.3s ease;
 }
 
