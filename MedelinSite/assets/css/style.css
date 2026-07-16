@@ -3857,16 +3857,14 @@ textarea, input { resize: none !important; }
     max-width: 1200px;
     margin: 1.2rem auto 0;
     padding: 0 1.5rem 4rem;
-    position: relative;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
 }
 
-/* Виносимо декоративну лінію з потоку, щоб вона не збільшувала висоту h1
-   і кнопка фільтру вирівнювалась точно по тексту заголовку */
+/* Скидаємо margin-bottom бо відступ тепер на beans-page-header */
 .beans-page-header .section-title {
-    margin-bottom: 0;
+    margin-bottom: 1.5rem;
 }
 
 .beans-page-header .section-title::after {
@@ -3878,10 +3876,9 @@ textarea, input { resize: none !important; }
 
 /* --- Coffee Filters --- */
 .coffee-filters-container {
-    position: absolute;
-    left: 1.5rem;
-    top: 50%;
-    transform: translateY(calc(-50% + 4px));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     z-index: 50;
     margin: 0;
     padding: 0;
@@ -3889,7 +3886,7 @@ textarea, input { resize: none !important; }
 
 .filter-toggle-btn {
     border-radius: 50px;
-    padding: 0.8rem 2.2rem;
+    padding: 0.8rem 3.5rem;
     font-size: 1.05rem;
     font-weight: 700;
     background-color: var(--color-white);
