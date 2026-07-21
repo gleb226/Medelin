@@ -82,6 +82,8 @@ function renderCoffeeData(coffeeData) {
         displayName = displayName.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
 
         let stockLabel = '';
+        const qScore = (item.quality_score || '').trim();
+        const isCommercial = !qScore || qScore === '—' || qScore === '-' || qScore === '0';
 
         art.innerHTML = `
             <div class="product-card__image product-card__image--bean js-dyn-style-1" >
