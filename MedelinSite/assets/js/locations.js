@@ -49,10 +49,10 @@ function renderLocations(locations) {
         article.onclick = () => window.openPopup(locId);
 
         article.innerHTML = `
-            <div class="product-card__image product-card__image--location js-dyn-style-10" ></div>
+            <div class="product-card__image product-card__image--location" style="background-image: url('${window.fixImageUrl(loc.image_url)}')"></div>
             <div class="product-card__content">
                 <h3 class="product-card__title">${loc.name}</h3>
-                <p class="js-dyn-style-11">${loc.address}</p>
+                <p style="font-size: 0.9rem; color: var(--color-muted);">${loc.address}</p>
             </div>
         `;
         gridRoot.appendChild(article);
@@ -81,7 +81,7 @@ function renderLocations(locations) {
                     <div class="amenities-tags">
                         ${Array.isArray(loc.amenities) ? loc.amenities.map((a) => `<span class="tag">${a}</span>`).join('') : ''}
                     </div>
-                    <a href="${loc.google_maps_url}" target="_blank" class="btn btn--full-width"><i class="fas fa-route js-dyn-style-12" ></i> Прокласти маршрут</a>
+                    <a href="${loc.google_maps_url}" target="_blank" class="btn btn--full-width"><i class="fas fa-route" style="margin-right:8px;"></i> Прокласти маршрут</a>
                 </div>
             </div>
         `;
@@ -105,10 +105,10 @@ function addMarkerToMap(loc, locId) {
 
     const popupHtml = `
         <div class="map-popup">
-            <div class="map-popup__header js-dyn-style-13" ></div>
+            <div class="map-popup__header" style="background-image: url('${window.fixImageUrl(loc.image_url)}');"></div>
             <div class="map-popup__body">
                 <h4 class="map-popup__title">${loc.name}</h4>
-                <p class="map-popup__address"><span><i class="fas fa-map-marker-alt js-dyn-style-14" ></i></span> ${loc.address}</p>
+                <p class="map-popup__address"><span><i class="fas fa-map-marker-alt" style="margin-right:5px;"></i></span> ${loc.address}</p>
                 <div class="map-popup__footer">
                     <a href="${loc.google_maps_url}" target="_blank" class="btn-map-route">Маршрут</a>
                 </div>

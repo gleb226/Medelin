@@ -50,6 +50,7 @@ function renderCoffeeData(coffeeData) {
         return;
     }
 
+    
     const commercialSection = document.getElementById('commercial-section');
     const specialtyEspressoSection = document.getElementById('specialty-espresso-section');
     const specialtyFilterSection = document.getElementById('specialty-filter-section');
@@ -59,6 +60,7 @@ function renderCoffeeData(coffeeData) {
     const colorSpecialtyFilter = '#FFEFE0';
     const colorWhite = '#ffffff';
 
+    
     if (commercialSection) {
         commercialSection.style.backgroundColor = colorCommercial;
         commercialSection.style.backgroundImage = `linear-gradient(to bottom, ${colorWhite} 0%, ${colorCommercial} 80px)`;
@@ -78,7 +80,7 @@ function renderCoffeeData(coffeeData) {
         const art = document.createElement('article');
         art.className = 'product-card';
         let displayName = item.name.replace(/Blend Mixed/gi, '').trim();
-
+        
         displayName = displayName.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
 
         let stockLabel = '';
@@ -86,16 +88,16 @@ function renderCoffeeData(coffeeData) {
         const isCommercial = !qScore || qScore === '—' || qScore === '-' || qScore === '0';
 
         art.innerHTML = `
-            <div class="product-card__image product-card__image--bean js-dyn-style-1" >
+            <div class="product-card__image product-card__image--bean" style="background-image: url('${window.fixImageUrl(item.image_url) || defImg}');">
                 ${stockLabel}
             </div>
             <div class="product-card__content">
                 <h3 class="product-card__title">${displayName}</h3>
-
-                <div class="product-card__info-brief js-dyn-style-2" >
-                    ${item.processing ? `<div class="js-dyn-style-3"><strong>Обробка:</strong> ${item.processing}</div>` : ''}
-                    ${item.descriptors || item.taste ? `<div class="js-dyn-style-4"><strong>Дескриптори:</strong> ${item.descriptors || item.taste}</div>` : ''}
-                    ${item.roast ? `<div class="js-dyn-style-5"><strong>Обсмаження:</strong> ${item.roast}</div>` : ''}
+                
+                <div class="product-card__info-brief" style="margin-bottom: 1.5rem; font-size: 0.9rem; color: #6b4f3a;">
+                    ${item.processing ? `<div style="margin-bottom: 4px;"><strong>Обробка:</strong> ${item.processing}</div>` : ''}
+                    ${item.descriptors || item.taste ? `<div style="margin-bottom: 4px;"><strong>Дескриптори:</strong> ${item.descriptors || item.taste}</div>` : ''}
+                    ${item.roast ? `<div style="margin-bottom: 4px;"><strong>Обсмаження:</strong> ${item.roast}</div>` : ''}
                     ${!isCommercial && item.quality_score ? `<div><strong>Оцінка якості:</strong> ${item.quality_score}</div>` : ''}
                 </div>
 
@@ -105,12 +107,13 @@ function renderCoffeeData(coffeeData) {
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
-                <div class="js-dyn-style-6">
+                <div style="display:none;">
                     <input type="radio" name="bean_weight_hidden_${item.id || item._id}" value="250" data-price="${item.price_250}" checked>
                 </div>
             </div>`;
         art.onclick = () => openBeanDetail(item);
 
+        
         const roast = (item.roast || '').toLowerCase();
 
         if (isCommercial) {
@@ -124,6 +127,7 @@ function renderCoffeeData(coffeeData) {
         }
     });
 
+    
     applyCoffeeFilters();
 }
 
@@ -146,12 +150,12 @@ function initCoffeeFilters() {
             typeBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentFilterType = btn.getAttribute('data-filter-type');
-
+            
             if (currentFilterType === 'specialty') {
                 if (roastGroup) roastGroup.style.display = 'flex';
             } else {
                 if (roastGroup) roastGroup.style.display = 'none';
-
+                
                 currentFilterRoast = 'all';
                 roastBtns.forEach(b => {
                     b.classList.remove('active');
@@ -160,7 +164,7 @@ function initCoffeeFilters() {
                     }
                 });
             }
-
+            
             applyCoffeeFilters();
         });
     });
@@ -226,6 +230,7 @@ function openBeanDetail(item, pushState = true) {
 
     if (!gridSection || !detailSection || !detailContent) return;
 
+    
     lastScrollPosition = window.scrollY;
 
     if (pushState) {
@@ -237,6 +242,7 @@ function openBeanDetail(item, pushState = true) {
     let displayName = item.name.replace(/Blend Mixed/gi, '').trim();
     const score = item.quality_score || item.cup_score;
 
+    
     const qScore = (item.quality_score || '').trim();
     const roast = (item.roast || '').toLowerCase();
     const isCommercial = !qScore || qScore === '—' || qScore === '-' || qScore === '0';
@@ -247,7 +253,8 @@ function openBeanDetail(item, pushState = true) {
         else if (roast.includes('filter')) detailBgColor = '#FFEFE0';
         else detailBgColor = '#FFF4D1'; 
     }
-
+    
+    
     const mainElement = document.querySelector('main');
     if (mainElement) {
         mainElement.style.backgroundColor = detailBgColor;
@@ -263,7 +270,7 @@ function openBeanDetail(item, pushState = true) {
             <div class="bean-full-view__container">
                 <div class="bean-full-view__left-col">
                     <img src="${window.fixImageUrl(item.image_url) || defImg}" alt="${displayName}" class="bean-full-view__image">
-
+                    
                     <div class="bean-full-view__price-card">
                         <div>
                             <span class="bean-full-view__price-label">Ціна</span>
@@ -282,20 +289,20 @@ function openBeanDetail(item, pushState = true) {
                 <div class="bean-full-view__right-col">
                     <h1 class="bean-full-view__title">${displayName}</h1>
                     <p class="bean-full-view__description">${item.description || 'Преміальна свіжообсмажена кава Medelin, створена для справжніх поціновувачів.'}</p>
-
+                    
                     <div class="bean-full-view__primary-stats">
                         ${item.roast ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Обсмаження</label><p class="bean-full-view__stat-value">${item.roast}</p></div>` : ''}
                         ${!isCommercial && score ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Оцінка якості</label><p class="bean-full-view__stat-value">${score}</p></div>` : ''}
                         ${item.harvest ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Врожай</label><p class="bean-full-view__stat-value">${item.harvest}</p></div>` : ''}
                         ${item.processing ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Метод обробки</label><p class="bean-full-view__stat-value">${item.processing}</p></div>` : ''}
-
+                        
                         ${item.descriptors || item.taste ? `<div class="bean-full-view__stat-item bean-full-view__stat-item--span-2"><label class="bean-full-view__stat-label">Дескриптори</label><p class="bean-full-view__stat-value bean-full-view__stat-value--large">${item.descriptors || item.taste}</p></div>` : ''}
-
+                        
                         ${item.variety ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Різновид</label><p class="bean-full-view__stat-value">${item.variety}</p></div>` : ''}
                         ${item.altitude ? `<div class="bean-full-view__stat-item"><label class="bean-full-view__stat-label">Висота</label><p class="bean-full-view__stat-value">${item.altitude}</p></div>` : ''}
                     </div>
 
-                    <div class="js-dyn-style-7">
+                    <div style="display:none;">
                         <input type="radio" name="bean_weight_${item.id || item._id}" value="250" data-price="${item.price_250}" checked>
                     </div>
                 </div>
@@ -303,6 +310,7 @@ function openBeanDetail(item, pushState = true) {
         </div>
     `;
 
+    
     const existingBar = document.getElementById('bean-sticky-bar');
     if (existingBar) existingBar.remove();
 
@@ -314,14 +322,14 @@ function openBeanDetail(item, pushState = true) {
     stickyBar.innerHTML = `
         <div class="bean-detail-sticky-bar__price">
             <span class="bean-detail-sticky-bar__label">Ціна</span>
-            <span class="bean-detail-sticky-bar__value">${item.price_250} ₴ <small class="js-dyn-style-8">/ 250г</small></span>
+            <span class="bean-detail-sticky-bar__value">${item.price_250} ₴ <small style="font-size:0.65em;opacity:0.7;font-weight:600">/ 250г</small></span>
         </div>
         <button class="bean-detail-sticky-bar__btn" type="button"
             onclick="event.stopPropagation(); if(typeof window.addBeanToCart === 'function') window.addBeanToCart('${beanId}', '${beanName}', 'bean_weight_sticky_${beanId}');">
             <i class="fas fa-shopping-basket"></i>
             У кошик
         </button>
-        <div class="js-dyn-style-9">
+        <div style="display:none;">
             <input type="radio" name="bean_weight_sticky_${beanId}" value="250" data-price="${item.price_250}" checked>
         </div>
     `;
@@ -336,13 +344,14 @@ window.closeBeanDetail = function() {
     const gridSection = document.getElementById('beans-grid-section');
     const detailSection = document.getElementById('bean-detail-section');
     const mainElement = document.querySelector('main');
-
+    
     if (mainElement) mainElement.style.backgroundColor = '';
     document.body.style.backgroundColor = '';
 
+    
     const stickyBar = document.getElementById('bean-sticky-bar');
     if (stickyBar) stickyBar.remove();
-
+    
     if (!gridSection || !detailSection) return;
 
     const url = new URL(window.location);
@@ -351,7 +360,8 @@ window.closeBeanDetail = function() {
 
     gridSection.style.display = 'block';
     detailSection.style.display = 'none';
-
+    
+    
     window.scrollTo({ top: lastScrollPosition, behavior: 'instant' });
 };
 
