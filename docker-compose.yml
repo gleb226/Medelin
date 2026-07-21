@@ -1,0 +1,33 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: medelin_mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  # Unified app (Nginx + API + Bot) — matches Render container layout
+  app:
+    build: .
+    container_name: medelin_app
+    restart: always
+    env_file:
+      - ./MedelinBot/.env
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/medelin
+      - MONGO_DB_NAME=medelin
+      - WEB_APP_URL=http://localhost
+    volumes:
+      - ./MedelinBot/app/databases:/app/app/databases
+      - ./MedelinSite/cache:/usr/share/nginx/html/cache
+      - ./MedelinSite/assets/images/uploads:/usr/share/nginx/html/assets/images/uploads
+    ports:
+      - "80:80"
+    depends_on:
+      - mongo
+
+volumes:
+  mongo_data:
+

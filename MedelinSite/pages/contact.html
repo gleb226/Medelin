@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="uk">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="description"
+            content="Контакти Medelin Coffee в Ужгороді: адреси локацій, карта, графік роботи та соціальні мережі."
+        />
+        <meta name="robots" content="index, follow" />
+        <meta name="theme-color" content="#ffffff" />
+        <link rel="canonical" href="https://medelin.onrender.com/pages/contact.html" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Контакти - Medelin Coffee" />
+        <meta
+            property="og:description"
+            content="Контакти Medelin Coffee в Ужгороді: адреси локацій, карта, графік роботи та соціальні мережі."
+        />
+        <meta property="og:url" content="https://medelin.onrender.com/pages/contact.html" />
+        <meta property="og:site_name" content="Medelin Coffee (Меделін)" />
+        <meta property="og:locale" content="uk_UA" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Контакти - Medelin Coffee" />
+        <meta
+            name="twitter:description"
+            content="Контакти Medelin Coffee в Ужгороді: адреси локацій, карта, графік роботи та соціальні мережі."
+        />
+        <title>Контакти - Medelin Coffee</title>
+        <link
+            rel="icon"
+            href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ50BUE2d30GBASKRdrCoBgrFBfvjFTiAKCYA&s"
+            type="image/png"
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&family=Oswald:wght@400;500;600;700&family=Jost:wght@300;400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+
+        <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+            integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+            crossorigin=""
+        />
+        <script
+            src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""
+        ></script>
+
+        <link rel="stylesheet" href="../assets/css/style.css?v=3.0" />
+        <link rel="stylesheet" href="../assets/css/responsive.css?v=3.0" />
+        <link rel="stylesheet" href="../assets/css/components/mobile-menu.css?v=3.0" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    </head>
+    <body>
+        <header class="header">
+            <div class="header__container">
+                <a href="../index.html" class="header__logo">Medelin</a>
+                <nav class="nav">
+                    <ul class="nav__list">
+                        <li class="nav__item"><a href="../index.html" class="nav__link">Головна</a></li>
+                        <li class="nav__item"><a href="beans.html" class="nav__link">Кава в зернах</a></li>
+                        <li class="nav__item"><a href="contact.html" class="nav__link nav__link--active">Наші заклади</a></li>
+                    </ul>
+
+                </nav>
+                <div class="mobile-menu" data-mobile-menu>
+                    <button class="mobile-menu__toggle" type="button" aria-expanded="false" aria-controls="mobileMenuPanel"
+                            data-mobile-menu-toggle>
+                        <span class="mobile-menu__icon-line"></span>
+                        <span class="mobile-menu__icon-line"></span>
+                        <span class="mobile-menu__icon-line"></span>
+                        <span class="accessibility-hidden">Меню</span>
+                    </button>
+                    <nav class="mobile-menu__panel" id="mobileMenuPanel" data-mobile-menu-panel aria-label="Навігація">
+                        <div class="mobile-menu__inner">
+                            <a href="../index.html" class="mobile-menu__logo">Medelin</a>
+                            <div class="mobile-menu__divider"></div>
+                            <div class="mobile-menu__links">
+                                <a href="../index.html" class="mobile-menu__link">Головна</a>
+                                <a href="beans.html" class="mobile-menu__link">Кава в зернах</a>
+                                <a href="contact.html" class="mobile-menu__link mobile-menu__link--active">Наші заклади</a>
+                            </div>
+                            <div class="mobile-menu__footer">Ужгород · З любов'ю до кави</div>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <main class="main main--pt-header">
+            <section class="contact">
+                <h1 class="section-title section-title--mb-5 section-title--mt-medium">Наші заклади</h1>
+                <div id="locations-grid" class="products-grid">
+                    <div class="loading">Завантаження локацій...</div>
+                </div>
+
+                <div class="contact-split">
+                    <div class="contact-split__social">
+                        <div class="contact__social">
+                            <h4 class="contact__location-name">Зв'яжіться з нами</h4>
+                            <div id="socials-list" class="contact-card contact-card--full-height contact-card--centered">
+
+                                <div class="loading">Завантаження...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="contact-split__map">
+                        <div id="map"></div>
+                    </div>
+                </div>
+            </section>
+
+            <div id="cart-modal-container"></div>
+            <div id="checkout-modal-container"></div>
+        </main>
+
+        <div id="popups-container"></div>
+
+        <footer class="footer">
+            <div class="footer__content">
+                <div class="footer__section">
+                    <h3 class="footer__title">Medelin Coffee</h3>
+                    <p class="footer__text">Найкраща кава в Ужгороді</p>
+                    <p class="footer__text">Смак, якість, атмосфера</p>
+                </div>
+
+                <div class="footer__section">
+                    <h3 class="footer__title">Години роботи</h3>
+                    <p class="footer__text">Понеділок–Неділя</p>
+                    <p class="footer__text">08:00–20:00</p>
+                </div>
+                <div class="footer__section">
+                    <h3 class="footer__title">Соцмережі</h3>
+                    <div id="footer-socials">
+                        <a
+                            href="https://www.instagram.com/medelin_com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="footer__link"
+                            >Instagram</a
+                        >
+                        <a
+                            href="https://www.facebook.com/medelin.uzh/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="footer__link"
+                            >Facebook</a
+                        >
+                    </div>
+                </div>
+            </div>
+            <div class="footer__bottom">
+                <p class="footer__copyright">© 2026 Medelin Coffee. Усі права захищені.</p>
+                <p class="footer__copyright">Сайт створено <strong>Глєбом</strong> — веброзробником з Ужгорода.</p>
+            </div>
+        </footer>
+
+        <script src="../assets/js/components/mobile-menu.js?v=3.0" defer></script>
+        <script src="../assets/js/main.js?v=3.0" defer></script>
+        <script src="../assets/js/locations.js?v=3.0" defer></script>
+    </body>
+</html>
