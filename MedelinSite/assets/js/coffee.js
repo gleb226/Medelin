@@ -83,19 +83,7 @@ function renderCoffeeData(coffeeData) {
         // Remove ANY emojis from name
         displayName = displayName.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
 
-        // Stock logic for specialty
-        const qScore = (item.quality_score || '').trim();
-        const isCommercial = !qScore || qScore === '—' || qScore === '-' || qScore === '0';
-        const packs = (item.stock_packs !== undefined && item.stock_packs !== null) ? parseInt(item.stock_packs) : 999;
-        
-        if (!isCommercial && (packs <= 0 || isNaN(packs))) {
-            return; // Hide out-of-stock specialty
-        }
-
         let stockLabel = '';
-        if (!isCommercial && packs <= 5) {
-            stockLabel = `<div class="stock-badge"><i class="fas fa-hourglass-half"></i> Лишилося: ${packs}</div>`;
-        }
 
         art.innerHTML = `
             <div class="product-card__image product-card__image--bean" style="background-image: url('${window.fixImageUrl(item.image_url) || defImg}');">

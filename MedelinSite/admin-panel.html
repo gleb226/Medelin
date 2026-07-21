@@ -713,7 +713,6 @@
                                     <div class="info-block"><b>Метод обробки:</b> ${b.processing || '—'}</div>
                                     ${isSpecialty ? `
                                     <div class="info-block"><b>Оцінка якості:</b> ${b.quality_score || b.cup_score || '—'}</div>
-                                    <div class="info-block"><b>Запас:</b> ${b.stock_packs || 0} пачок (≈ ${(b.stock_packs || 0) * 0.25} кг)</div>
                                     ` : ''}
                                 </div>
                                 <div style="margin-top:1rem; padding:1.2rem; background:var(--color-cream); border-radius:15px;">
@@ -732,44 +731,13 @@
                                     <button class="btn btn--outline btn--sm" onclick='openBeanModal(${JSON.stringify(b).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i> Редагувати</button>
                                     ` : ''}
                                 </div>
-                                ${isSpecialty && (isOwner && !isDeveloper) ? `
-                                <button class="btn btn--success btn--sm" onclick="openRestockModal('${b.id}', '${b.name.replace(/'/g, "'")}')"><i class="fas fa-plus"></i> Поповнити запас</button>
-                                ` : ''}
+
                         </div>
                     </div>`;
                 modal.classList.add('admin-modal--active');
             }
 
-            function openRestockModal(bid, name) {
-                const modal = document.getElementById('admin-modal');
-                const oldContent = modal.innerHTML; // Store current modal content to restore it on cancel if needed
-                modal.innerHTML = `
-                    <div class="admin-modal__panel" style="max-width:400px;">
-                        <div class="admin-modal__header"><h3>Поповнити запас</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal();">${'X'}</button></div>
-                        <p style="margin-bottom:1.5rem;"><b>${name}</b></p>
-                        <div class="admin-field">
-                            <label>Кількість пачок або КГ</label>
-                            <input type="text" id="restock-amount" placeholder="Наприклад: 10 або 2.5 кг" required onkeyup="if(event.key==='Enter') saveRestock('${bid}')">
-                            <p class="hint-text">1 кг автоматично конвертується в 4 пачки</p>
-                        </div>
-                        <div class="admin-modal__footer">
-                            <button class="btn btn--primary btn--block" onclick="saveRestock('${bid}')">Додати</button>
-                        </div>
-                    </div>`;
-            }
 
-            async function saveRestock(bid) {
-                const amount = document.getElementById('restock-amount').value;
-                if (!amount) return;
-                showLoader(true);
-                const res = await apiFetch(`beans/${bid}/restock`, 'POST', { amount });
-                showLoader(false);
-                if (res) {
-                    closeAdminModal();
-                    refreshData();
-                    niceConfirm('Успіх', `Запас оновлено! Додано ${res.added} пачок. Загалом: ${res.total}`, () => {}, null, 'ОК', '', 'btn--success');
-                }
-            }
 
             async function uploadImage(file) {
                 const formData = new FormData(); formData.append('file', file);
