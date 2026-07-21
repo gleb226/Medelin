@@ -2,7 +2,7 @@
 
 # 🌐 MedelinSite
 
-**Публічний вебсайт Medelin Coffee Roasters — каталог кави, замовлення, локації**
+**The public website of Medelin Coffee Roasters — coffee catalogue, orders, locations**
 
 [![Live](https://img.shields.io/badge/🌐_Live-medelin.onrender.com-6F4E37?style=for-the-badge)](https://medelin.onrender.com)
 [![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/HTML)
@@ -12,105 +12,105 @@
 
 <br/>
 
-> *Красивий, швидкий, адаптивний сайт без жодного фреймворку. Чистий HTML, BEM-CSS та Vanilla JS — і цього більш ніж достатньо.*
+> *A beautiful, fast, responsive website with no framework. Pure HTML, BEM-CSS, and Vanilla JS — and that's more than enough.*
 
 </div>
 
 ---
 
-## 📋 Зміст
+## 📋 Table of Contents
 
-- [Сторінки](#-сторінки)
-- [Структура файлів](#-структура-файлів)
-- [Дизайн-система](#-дизайн-система)
-- [Компоненти та логіка](#-компоненти-та-логіка)
-- [API-інтеграція](#-api-інтеграція)
-- [Система замовлень](#-система-замовлень)
-- [SEO та продуктивність](#-seo-та-продуктивність)
-- [Адаптивний дизайн](#-адаптивний-дизайн)
-- [Адмін-панель](#-адмін-панель)
+- [Pages](#-pages)
+- [File Structure](#-file-structure)
+- [Design System](#-design-system)
+- [Components & Logic](#-components--logic)
+- [API Integration](#-api-integration)
+- [Order System](#-order-system)
+- [SEO & Performance](#-seo--performance)
+- [Responsive Design](#-responsive-design)
+- [Admin Panel](#-admin-panel)
 
 ---
 
-## 📄 Сторінки
+## 📄 Pages
 
-| URL | Файл | Призначення |
+| URL | File | Purpose |
 |---|---|---|
-| `/` | `index.html` | Головна: лендінг, секції про нас, локації |
-| `/pages/beans.html` | `pages/beans.html` | Каталог кави в зернах з кошиком |
-| `/pages/contact.html` | `pages/contact.html` | Наші кав'ярні та контакти |
-| `/404.html` | `404.html` | Кастомна сторінка помилки 404 |
-| `/admin-panel` | `admin-panel.html` | Захищена панель адміністратора |
+| `/` | `index.html` | Home: landing, about us sections, locations |
+| `/pages/beans.html` | `pages/beans.html` | Coffee beans catalogue with shopping cart |
+| `/pages/contact.html` | `pages/contact.html` | Our cafés and contact information |
+| `/404.html` | `404.html` | Custom 404 error page |
+| `/admin-panel` | `admin-panel.html` | Protected admin panel |
 
 ---
 
-## 📁 Структура файлів
+## 📁 File Structure
 
 ```
 MedelinSite/
 │
-├── 📄 index.html              # Головна сторінка
-├── 📄 404.html                # Сторінка "Не знайдено"
-├── 📄 admin-panel.html        # Адмін-панель (захищена)
-├── 📄 robots.txt              # Директиви для пошукових роботів
-├── 📄 sitemap.xml             # XML-карта сайту для SEO
+├── 📄 index.html              # Home page
+├── 📄 404.html                # "Not Found" page
+├── 📄 admin-panel.html        # Admin panel (protected)
+├── 📄 robots.txt              # Search engine directives
+├── 📄 sitemap.xml             # XML sitemap for SEO
 │
 ├── 📂 pages/
-│   ├── beans.html             # Каталог кавових зерен
-│   └── contact.html           # Локації та контакти
+│   ├── beans.html             # Coffee beans catalogue
+│   └── contact.html           # Locations and contacts
 │
 └── 📂 assets/
     ├── 📂 css/
-    │   ├── style.css          # Головні стилі (BEM-блоки)
-    │   ├── responsive.css     # Медіа-запити та адаптивність
+    │   ├── style.css          # Main styles (BEM blocks)
+    │   ├── responsive.css     # Media queries and responsiveness
     │   ├── 📂 components/
-    │   │   └── mobile-menu.css    # Мобільне меню
+    │   │   └── mobile-menu.css    # Mobile menu
     │   ├── 📂 pages/
-    │   │   ├── 404.css            # Стилі сторінки 404
-    │   │   ├── beans.css          # Стилі сторінки кави
-    │   │   └── admin-panel.css    # Стилі адмін-панелі
+    │   │   ├── 404.css            # 404 page styles
+    │   │   ├── beans.css          # Coffee page styles
+    │   │   └── admin-panel.css    # Admin panel styles
     │   └── 📂 blocks/
-    │       └── ...                # BEM-блоки (окремі компоненти)
+    │       └── ...                # BEM blocks (individual components)
     │
     └── 📂 js/
-        ├── main.js            # Головна логіка (кошик, оплата, NP, анімації)
-        ├── coffee.js          # Каталог кави та детальний перегляд
-        ├── locations.js       # Карта Leaflet та карточки локацій
+        ├── main.js            # Core logic (cart, payment, Nova Poshta, animations)
+        ├── coffee.js          # Coffee catalogue and detail view
+        ├── locations.js       # Leaflet map and location cards
         └── 📂 components/
-            └── mobile-menu.js # Логіка мобільного меню
+            └── mobile-menu.js # Mobile menu logic
 ```
 
 ---
 
-## 🎨 Дизайн-система
+## 🎨 Design System
 
-### Кольорова палітра
+### Color Palette
 
 ```css
---color-coffee:       #6F4E37  /* Основний — кавовий коричневий */
---color-coffee-dark:  #4A3728  /* Темний акцент */
---color-coffee-light: #8B6347  /* Світлий акцент */
---color-cream:        #FDF6EC  /* Кремовий фон */
---color-warm-white:   #FAFAF8  /* Теплий білий */
---color-muted:        #9E8A7A  /* Приглушений текст */
---color-text:         #2C1810  /* Основний текст */
+--color-coffee:       #6F4E37  /* Primary — coffee brown */
+--color-coffee-dark:  #4A3728  /* Dark accent */
+--color-coffee-light: #8B6347  /* Light accent */
+--color-cream:        #FDF6EC  /* Cream background */
+--color-warm-white:   #FAFAF8  /* Warm white */
+--color-muted:        #9E8A7A  /* Muted text */
+--color-text:         #2C1810  /* Main text */
 ```
 
-### Типографіка
+### Typography
 
-| Шрифт | Ваги | Застосування |
+| Font | Weights | Usage |
 |---|---|---|
-| **Montserrat** | 400–800 | Заголовки, акцентний текст |
-| **Manrope** | 300–800 | Основний текст, описи |
-| **Oswald** | 400–700 | Великі дисплейні заголовки |
-| **Jost** | 300–700 | Кнопки, теги, мітки |
+| **Montserrat** | 400–800 | Headings, accent text |
+| **Manrope** | 300–800 | Body text, descriptions |
+| **Oswald** | 400–700 | Large display headings |
+| **Jost** | 300–700 | Buttons, tags, labels |
 
-### BEM-методологія
+### BEM Methodology
 
-Всі стилі дотримуються суворої BEM-архітектури:
+All styles follow strict BEM architecture:
 
 ```html
-<!-- Приклад: картка товару -->
+<!-- Example: product card -->
 <article class="product-card">
   <div class="product-card__image product-card__image--bean"></div>
   <div class="product-card__content">
@@ -124,166 +124,166 @@ MedelinSite/
 ```
 
 ```
-.block {}                  ← Блок (незалежний компонент)
-.block__element {}         ← Елемент (частина блоку)
-.block--modifier {}        ← Модифікатор (варіація стану)
+.block {}                  ← Block (independent component)
+.block__element {}         ← Element (part of a block)
+.block--modifier {}        ← Modifier (state variation)
 ```
 
 ---
 
-## ⚡ Компоненти та логіка
+## ⚡ Components & Logic
 
-### `main.js` — Серце сайту
+### `main.js` — The Heart of the Site
 
-Центральний JavaScript-файл відповідає за:
+The central JavaScript file is responsible for:
 
-**1. Завантаження даних із API**
+**1. Loading data from the API**
 ```javascript
-// Стале-while-revalidate кешування
-// Спочатку показує кешовані дані, паралельно оновлює з API
+// Stale-while-revalidate caching
+// Shows cached data first, then updates from the API in parallel
 const data = cache.get(key) || await fetch(endpoint);
 ```
 
-**2. Кошик покупок**
-- Персистентність через `localStorage`
-- Підтримка різних вагових варіацій (250г)
-- Анімований лічильник з badge
-- Модальне вікно кошика з повним управлінням
+**2. Shopping Cart**
+- Persistence via `localStorage`
+- Support for different weight variations (250g)
+- Animated counter with badge
+- Cart modal with full management
 
-**3. Оформлення замовлення**
-- Крок 1: Вибір способу отримання (самовивіз / кур'єр / Нова Пошта)
-- Крок 2: Заповнення контактних даних
-- Крок 3: Вибір способу оплати та підтвердження
+**3. Checkout Flow**
+- Step 1: Select delivery method (pickup / courier / Nova Poshta)
+- Step 2: Fill in contact details
+- Step 3: Select payment method and confirm
 
-**4. Інтеграція з Новою Поштою**
-- Пошук міст у реальному часі
-- Пошук відділень та поштоматів
-- Автозаповнення з API Нової Пошти
+**4. Nova Poshta Integration**
+- Real-time city search
+- Branch and parcel locker search
+- Auto-complete from the Nova Poshta API
 
-**5. Онлайн-оплата LiqPay**
-- Генерація форми оплати
-- Callback після успішної оплати
-- Автоматичне оновлення статусу замовлення
+**5. LiqPay Online Payment**
+- Payment form generation
+- Callback after successful payment
+- Automatic order status update
 
-**6. Polling статусу замовлення**
+**6. Order Status Polling**
 ```javascript
-// Кожні 15 секунд перевіряє статус останніх 3 замовлень
+// Checks the status of the last 3 orders every 15 seconds
 setInterval(pollStatuses, 15000);
 ```
 
 ---
 
-### `coffee.js` — Каталог кави
+### `coffee.js` — Coffee Catalogue
 
 ```
-Завантаження 27+ позицій кави з API
+Load 27+ coffee items from the API
      │
      ▼
-Категоризація за quality_score:
-     ├── Комерційна (немає score або score = 0)
-     ├── Спешелті Еспресо (score є, roast = espresso)
-     └── Спешелті Фільтр (score є, roast = filter)
+Categorise by quality_score:
+     ├── Commercial (no score or score = 0)
+     ├── Specialty Espresso (score present, roast = espresso)
+     └── Specialty Filter (score present, roast = filter)
      │
      ▼
-Рендеринг у 3 секції з різними кольоровими темами:
-     ├── 🟢 Комерційна (#D5DEDA - сіро-зелений)
-     ├── 🟡 Спешелті Еспресо (#FFF4D1 - тепло-жовтий)
-     └── 🟠 Спешелті Фільтр (#FFEFE0 - персиковий)
+Render in 3 sections with different colour themes:
+     ├── 🟢 Commercial (#D5DEDA - grey-green)
+     ├── 🟡 Specialty Espresso (#FFF4D1 - warm yellow)
+     └── 🟠 Specialty Filter (#FFEFE0 - peach)
      │
      ▼
-Фільтрація (тип + ступінь обсмаження)
+Filtering (type + roast level)
      │
      ▼
-Детальна картка при кліці (з history.pushState)
+Detail card on click (with history.pushState)
 ```
 
-**Детальна картка зерна містить:**
-- Повна назва та опис
-- Фотографія зерна
-- Технічні параметри: обсмаження, процесинг, врожай, висота, різновид
-- Дескриптори смаку
-- Оцінка якості (SCA Score) — тільки для спешелті
-- Кнопка "Додати в кошик" + мобільна sticky-панель
+**The bean detail card includes:**
+- Full name and description
+- Bean photo
+- Technical parameters: roast, processing, harvest, altitude, variety
+- Flavour descriptors
+- Quality score (SCA Score) — specialty only
+- "Add to Cart" button + mobile sticky panel
 
 ---
 
-### `locations.js` — Карта та локації
+### `locations.js` — Map & Locations
 
-- Рендеринг карточок локацій з фото та адресою
-- Інтерактивна карта **Leaflet.js** з маркерами
-- Спливаючі підказки (popup) при кліці на маркер
-- Модальні вікна з детальною інформацією: фото, опис, зручності, графік роботи
-- Кнопка "Прокласти маршрут" → Google Maps
-
----
-
-### Мобільне меню
-
-```
-Бургер-іконка (3 лінії)
-     │
-     ▼
-Анімована трансформація → Хрестик (CSS-анімація)
-     │
-     ▼
-Відкриття повноекранного меню з overlay
-     ├── Логотип
-     ├── Навігаційні посилання
-     └── Footer підказка
-```
+- Renders location cards with photos and addresses
+- Interactive **Leaflet.js** map with markers
+- Popups on marker click
+- Modals with detailed information: photos, description, amenities, opening hours
+- "Get Directions" button → Google Maps
 
 ---
 
-## 🔌 API-інтеграція
+### Mobile Menu
 
-Сайт спілкується з backend через REST API:
+```
+Burger icon (3 lines)
+     │
+     ▼
+Animated transform → Cross (CSS animation)
+     │
+     ▼
+Full-screen menu opens with overlay
+     ├── Logo
+     ├── Navigation links
+     └── Footer hint
+```
 
-| Endpoint | Метод | Опис |
+---
+
+## 🔌 API Integration
+
+The site communicates with the backend via REST API:
+
+| Endpoint | Method | Description |
 |---|---|---|
-| `/api/coffee` | GET | Весь каталог кавових зерен |
-| `/api/locations` | GET | Список локацій кав'ярень |
-| `/api/socials` | GET | Контакти та соціальні мережі |
-| `/api/orders` | POST | Створення нового замовлення |
-| `/api/orders/{id}` | GET | Деталі конкретного замовлення |
-| `/api/nova-poshta/cities` | GET | Пошук міст НП |
-| `/api/nova-poshta/warehouses` | GET | Пошук відділень НП |
-| `/api/liqpay/form` | POST | Генерація форми оплати |
-| `/api/client-error` | POST | Логування клієнтських помилок |
+| `/api/coffee` | GET | Full coffee beans catalogue |
+| `/api/locations` | GET | List of café locations |
+| `/api/socials` | GET | Contacts and social media |
+| `/api/orders` | POST | Create a new order |
+| `/api/orders/{id}` | GET | Details of a specific order |
+| `/api/nova-poshta/cities` | GET | Nova Poshta city search |
+| `/api/nova-poshta/warehouses` | GET | Nova Poshta branch search |
+| `/api/liqpay/form` | POST | Generate payment form |
+| `/api/client-error` | POST | Client-side error logging |
 
-**Кешування запитів:**
+**Request caching:**
 ```javascript
-// Запити кешуються з timestamp-параметром для примусового оновлення
+// Requests are cached with a timestamp parameter for forced refresh
 fetch(`/api/coffee?t=${Date.now()}`)
 ```
 
 ---
 
-## 🛒 Система замовлень
+## 🛒 Order System
 
-### Способи отримання
+### Delivery Methods
 
-| Спосіб | Деталі |
+| Method | Details |
 |---|---|
-| 🏠 **Самовивіз** | Вибір локації зі списку кав'ярень |
-| 🚗 **Кур'єр** | Введення адреси доставки вручну |
-| 📦 **Нова Пошта** | Пошук міста + відділення / поштомату |
-| 🪑 **У закладі** | Замовлення до столу (введення номера столу) |
+| 🏠 **Pickup** | Select a location from the list of cafés |
+| 🚗 **Courier** | Enter delivery address manually |
+| 📦 **Nova Poshta** | Search for city + branch / parcel locker |
+| 🪑 **In-venue** | Order to the table (enter table number) |
 
-### Способи оплати
+### Payment Methods
 
-| Спосіб | Опис |
+| Method | Description |
 |---|---|
-| 💳 **Карта (LiqPay)** | Онлайн-оплата, автопідтвердження замовлення |
-| 📱 **Apple Pay / Google Pay** | Через LiqPay |
-| 💵 **Готівка при отриманні** | Ручне підтвердження адміністратором |
+| 💳 **Card (LiqPay)** | Online payment, automatic order confirmation |
+| 📱 **Apple Pay / Google Pay** | Via LiqPay |
+| 💵 **Cash on delivery** | Manual confirmation by administrator |
 
 ---
 
-## 🔍 SEO та продуктивність
+## 🔍 SEO & Performance
 
-### Мета-теги (на кожній сторінці)
+### Meta Tags (on every page)
 ```html
-<title>Кава в зернах - Medelin Coffee</title>
+<title>Coffee Beans - Medelin Coffee</title>
 <meta name="description" content="...">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://medelin.onrender.com/...">
@@ -317,57 +317,59 @@ fetch(`/api/coffee?t=${Date.now()}`)
 ```
 User-agent: *
 Allow: /
-Disallow: /admin-panel     ← Захист адмін-панелі від індексації
+Disallow: /admin-panel     ← Protects the admin panel from indexing
 Sitemap: https://medelin.onrender.com/sitemap.xml
 ```
 
-### Продуктивність
-- **Gzip-стиснення** через Nginx для CSS, JS, HTML, JSON
-- **Кешування** статичних ресурсів (7 днів) через Cache-Control
-- **Preconnect** до Google Fonts для пришвидшення завантаження шрифтів
-- **Cache-busting** через `?v=3.0` параметр на CSS/JS файлах
-- **Stale-While-Revalidate** — миттєве відображення кешованих даних
+### Performance
+- **Gzip compression** via Nginx for CSS, JS, HTML, JSON
+- **Static asset caching** (7 days) via Cache-Control
+- **Preconnect** to Google Fonts for faster font loading
+- **Cache-busting** via `?v=3.0` parameter on CSS/JS files
+- **Stale-While-Revalidate** — instant display of cached data
 
 ---
 
-## 📱 Адаптивний дизайн
+## 📱 Responsive Design
 
-Сайт повністю адаптивний і тестований на:
+The site is fully responsive and tested on:
 
-| Пристрій | Ширина |
+| Device | Width |
 |---|---|
-| 📱 Мобільний (portrait) | < 480px |
-| 📱 Мобільний (landscape) | 480px – 768px |
-| 💻 Планшет | 768px – 1024px |
-| 🖥️ Десктоп | > 1024px |
+| 📱 Mobile (portrait) | < 480px |
+| 📱 Mobile (landscape) | 480px – 768px |
+| 💻 Tablet | 768px – 1024px |
+| 🖥️ Desktop | > 1024px |
 | 🖥️ Wide | > 1440px |
 
-**Особливості мобільного досвіду:**
-- Повноекранне бургер-меню
-- Sticky add-to-cart панель в картці зерна
-- Touch-friendly кнопки (мін. 44px)
-- Горизонтальний скролінг карток для планшетів
+**Mobile experience highlights:**
+- Full-screen burger menu
+- Sticky add-to-cart panel on the bean detail card
+- Touch-friendly buttons (min. 44px)
+- Horizontal card scrolling on tablets
 
 ---
 
-## 🔒 Адмін-панель
+## 🔒 Admin Panel
 
-Доступна за `/admin-panel` — захищена серверною логікою FastAPI (не просто JS-перевірка).
+Available at `/admin-panel` — protected by FastAPI server-side logic (not just a JS check).
 
-**Можливості:**
-- 📦 Управління каталогом кави (CRUD + фото)
-- 📋 Перегляд та управління замовленнями (активні / архів)
-- 📍 Управління локаціями (опис, фото, зручності, координати)
-- 👥 Управління командою (ролі: owner, admin, staff)
-- 🔗 Управління соцмережами та контактами
-- 📊 Статистика продажів
+**Features:**
+- 📦 Coffee catalogue management (CRUD + photos)
+- 📋 View and manage orders (active / archive)
+- 📍 Location management (description, photos, amenities, coordinates)
+- 👥 Team management (roles: owner, admin, staff)
+- 🔗 Social media and contact management
+- 📊 Sales statistics
 
 ---
 
 <div align="center">
 
-**🌐 [Відкрити сайт](https://medelin.onrender.com)** · **[⬆️ Загальний README](../README.md)**
+**🌐 [Open the site](https://medelin.onrender.com)** · **[⬆️ General README](../README.md)**
 
-☕ *Зроблено з любов'ю до кави та чистого коду*
+☕ *Made with love for coffee and clean code*
+
+© 2026 Medelin
 
 </div>
