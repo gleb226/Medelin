@@ -20,7 +20,6 @@ class LocationDatabase:
         res = await db.locations.insert_one({'name': name, 'address': address, 'schedule': schedule, 'google_maps_url': google_maps_url, 'coordinates': coordinates or {'lat': 0.0, 'lon': 0.0}, 'image_url': image_url or '', 'amenities': amenities or [], 'atmosphere': atmosphere or '', 'description': description or ''})
         inserted_id = str(res.inserted_id)
 
-
         from app.utils.data_cache import public_data_cache
 
         await public_data_cache.refresh_locations()

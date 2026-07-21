@@ -48,26 +48,23 @@ async def process_photo(message: Message, bot: Bot = None) -> str | None:
     try:
         file_bytes_io = io.BytesIO()
 
-        # Download file
         f = await target_bot.get_file(file_id)
         await target_bot.download_file(f.file_path, destination=file_bytes_io)
         file_bytes_io.seek(0)
-        
+
         file_bytes = file_bytes_io.getvalue()
         if not file_bytes:
             return ''
 
         uploads_dir = get_uploads_dir()
         stem = uuid.uuid4().hex[:10]
-        
+
         logger.info(f"Processing photo. Target directory: {uploads_dir}")
 
-        # Try to convert to WEBP for efficiency
         try:
             from PIL import Image
             img = Image.open(io.BytesIO(file_bytes))
 
-            # Handle orientation if present
             try:
                 from PIL import ImageOps
                 img = ImageOps.exif_transpose(img)
@@ -80,7 +77,7 @@ async def process_photo(message: Message, bot: Bot = None) -> str | None:
 
             filename = f'{stem}.webp'
             filepath = uploads_dir / filename
-            
+
             img.save(str(filepath), 'WEBP', quality=85, method=4)
             logger.info(f"Saved processed photo: {filepath}")
             return f'/uploads/{filename}'
@@ -88,7 +85,7 @@ async def process_photo(message: Message, bot: Bot = None) -> str | None:
             logger.warning(f"Pillow conversion failed, saving raw: {e}")
             renderable_exts = ('.jpg', '.jpeg', '.png', '.webp', '.gif')
             ext = original_ext if original_ext in renderable_exts else '.jpg'
-            
+
             filename = f'{stem}{ext}'
             filepath = uploads_dir / filename
             filepath.write_bytes(file_bytes)

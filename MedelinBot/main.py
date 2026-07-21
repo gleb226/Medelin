@@ -48,10 +48,9 @@ async def run():
     @asynccontextmanager
     async def merged_lifespan(app: FastAPI):
         logger.info("Starting Medelin system (Bot + API + Cache)...")
-        
-        # 1. Warm cache
+
         cache_task = asyncio.create_task(public_data_cache.warm_all(max_retries=3))
-        
+
         async def polling_with_retry():
             while True:
                 try:
@@ -67,12 +66,11 @@ async def run():
                     break
 
         polling_task = asyncio.create_task(polling_with_retry())
-        
-        # 3. Start Scheduler
+
         start_scheduler()
-        
+
         yield
-        
+
         logger.info("Shutting down Medelin system...")
         polling_task.cancel()
         cache_task.cancel()
@@ -82,7 +80,6 @@ async def run():
             pass
         await bot.session.close()
 
-    # Apply the merged lifespan to the FastAPI app
     fastapi_app.router.lifespan_context = merged_lifespan
 
     config = uvicorn.Config(fastapi_app, host="0.0.0.0", port=8000, log_level="info")

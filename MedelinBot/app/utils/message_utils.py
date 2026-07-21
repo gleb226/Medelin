@@ -8,8 +8,7 @@ import logging
 async def safe_edit_message(message: Message, text: str, reply_markup: InlineKeyboardMarkup=None, parse_mode: str='HTML', **kwargs):
     try:
         if message.photo:
-            # If it's a photo, we usually want to move to a text menu when "back" is pressed.
-            # Editing caption keeps the photo. To get rid of it, we delete and send new.
+
             try:
                 await message.delete()
             except:

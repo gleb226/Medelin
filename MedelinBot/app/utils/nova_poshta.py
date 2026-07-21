@@ -45,12 +45,11 @@ class NovaPoshtaClient:
         params = {"Limit": "100"}
         if search:
             params["FindByString"] = search
-        
-        # Try with SettlementRef first
+
         params["SettlementRef"] = city_ref
         res = await self.call("Address", "getWarehouses", params)
         if not res:
-            # Try with CityRef
+
             del params["SettlementRef"]
             params["CityRef"] = city_ref
             res = await self.call("Address", "getWarehouses", params)

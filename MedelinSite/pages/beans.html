@@ -9,14 +9,14 @@
         />
         <meta name="robots" content="index, follow" />
         <meta name="theme-color" content="#ffffff" />
-        <link rel="canonical" href="https://gleb226.github.io/MedelineSite/pages/beans.html" />
+        <link rel="canonical" href="https://medelin.onrender.com/pages/beans.html" />
         <meta property="og:type" content="website" />
         <meta property="og:title" content="Кава в зернах - Medelin Coffee" />
         <meta
             property="og:description"
             content="Замовляйте свіжообсмажену каву Medelin в зернах. Найкращі сорти арабіки для вашого дому та офісу."
         />
-        <meta property="og:url" content="https://gleb226.github.io/MedelineSite/pages/beans.html" />
+        <meta property="og:url" content="https://medelin.onrender.com/pages/beans.html" />
         <meta property="og:site_name" content="Medelin Coffee (Меделін)" />
         <meta property="og:locale" content="uk_UA" />
         <meta name="twitter:card" content="summary_large_image" />
@@ -40,7 +40,8 @@
         <link rel="stylesheet" href="../assets/css/style.css?v=3.0" />
         <link rel="stylesheet" href="../assets/css/responsive.css?v=3.0" />
         <link rel="stylesheet" href="../assets/css/components/mobile-menu.css?v=3.0" />
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+        <link rel="stylesheet" href="../assets/css/pages/beans.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     </head>
     <body>
         <header class="header">
@@ -80,9 +81,9 @@
 
         <main class="main main--pt-header">
             <div id="beans-page-content">
-                <section class="products" id="beans-grid-section" style="padding: 0; width: 100%; max-width: 100%; overflow-x: hidden;">
-                    <div class="beans-page-header">
-                        <h1 class="section-title section-title--mb-5" style="margin-top: 0;">Кава в зернах</h1>
+                <section class="products products--no-padding" id="beans-grid-section">
+                    <div class="products-header">
+                        <h1 class="section-title section-title--mb-5 section-title--no-margin-top">Кава в зернах</h1>
                         <div class="coffee-filters-container">
                             <button id="filter-toggle-btn" class="filter-toggle-btn">
                                 <i class="fas fa-sliders-h"></i> Фільтри
@@ -96,7 +97,7 @@
                                         <button class="filter-btn" data-filter-type="specialty">Спешелті</button>
                                     </div>
                                 </div>
-                                <div class="filter-group" id="roast-filter-group" style="display: none;">
+                                <div class="filter-group filter-group--hidden" id="roast-filter-group">
                                     <span class="filter-label">Обсмаження:</span>
                                     <div class="filter-options">
                                         <button class="filter-btn active" data-filter-roast="all">Всі</button>
@@ -107,32 +108,32 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <div id="commercial-section" class="coffee-category-section" style="padding: 2rem 0 4rem; width: 100vw; position: relative; left: 50%; right: 50%; margin-left: -50vw; margin-right: -50vw;">
-                        <div class="container" style="max-width: 1200px; margin: 0 auto;">
+
+                    <div id="commercial-section" class="coffee-category-section coffee-category-section--full-width">
+                        <div class="container container--large">
                             <div id="commercial-root" class="products-grid"></div>
                         </div>
                     </div>
 
-                    <div id="specialty-espresso-section" class="coffee-category-section" style="padding: 4rem 0; width: 100vw; position: relative; left: 50%; right: 50%; margin-left: -50vw; margin-right: -50vw;">
-                        <div class="container" style="max-width: 1200px; margin: 0 auto;">
+                    <div id="specialty-espresso-section" class="coffee-category-section coffee-category-section--full-width-xl">
+                        <div class="container container--large">
                             <div id="specialty-espresso-root" class="products-grid"></div>
                         </div>
                     </div>
 
-                    <div id="specialty-filter-section" class="coffee-category-section" style="padding: 4rem 0; width: 100vw; position: relative; left: 50%; right: 50%; margin-left: -50vw; margin-right: -50vw;">
-                        <div class="container" style="max-width: 1200px; margin: 0 auto;">
+                    <div id="specialty-filter-section" class="coffee-category-section coffee-category-section--full-width-xl">
+                        <div class="container container--large">
                             <div id="specialty-filter-root" class="products-grid"></div>
                         </div>
                     </div>
-                    
-                    <div id="coffee-root" style="display:none;"></div>
+
+                    <div id="coffee-root"></div>
                 </section>
 
-                <section class="bean-detail" id="bean-detail-section" style="display:none; padding: 0; min-height: 80vh;">
-                    <div class="container" style="max-width: 1000px; margin: 0 auto; padding: 0 1.5rem;">
-                        <button class="btn" onclick="closeBeanDetail()" style="margin-top: 0; margin-bottom: 1rem; border-radius: 50px; padding: 0.8rem 2.2rem; font-size: 1.05rem; font-weight: 700; background-color: #fcf8f5; color: var(--color-coffee); border: 1px solid rgba(111, 78, 55, 0.25); box-shadow: var(--shadow-sm);">
-                            <i class="fas fa-arrow-left" style="margin-right: 8px;"></i> Назад до списку
+                <section class="bean-detail" id="bean-detail-section">
+                    <div class="container container--medium">
+                        <button class="btn btn--back" onclick="closeBeanDetail()">
+                            <i class="fas fa-arrow-left"></i> Назад до списку
                         </button>
                         <div id="bean-detail-content"></div>
                     </div>

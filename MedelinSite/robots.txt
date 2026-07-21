@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /admin-panel
 
-Sitemap: https://gleb226.github.io/MedelineSite/sitemap.xml
+Sitemap: https://medelin.onrender.com/sitemap.xml

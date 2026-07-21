@@ -18,7 +18,7 @@ async def get_db() -> AsyncIOMotorDatabase:
     global _client, _db, _indexes_ready
     if not MONGO_URI:
         raise RuntimeError('MONGO_URI is not set in .env')
-    
+
     if _client is None:
         _client = AsyncIOMotorClient(
             MONGO_URI,
@@ -26,14 +26,14 @@ async def get_db() -> AsyncIOMotorDatabase:
             connectTimeoutMS=20000,
             retryWrites=True
         )
-    
+
     if _db is None:
         if _client is not None:
             _db = _client[MONGO_DB_NAME]
             if not _indexes_ready:
                 _indexes_ready = True
                 await ensure_indexes(_db)
-    
+
     return _db
 
 async def ensure_indexes(db: AsyncIOMotorDatabase):
@@ -78,24 +78,24 @@ async def _expand_mongodb_srv_uri_windows(srv_uri: str) -> str | None:
         parsed = urlparse(srv_uri)
         host = parsed.hostname
         loop = asyncio.get_event_loop()
-        
+
         srv_results = await loop.run_in_executor(None, _ps_resolve_srv_sync, host)
         if not srv_results: return None
-        
+
         hosts = ','.join([f'{h}:{p}' for h, p in srv_results])
         txt_record = await loop.run_in_executor(None, _ps_resolve_txt_sync, host)
-        
+
         query = dict(parse_qsl(parsed.query))
         if txt_record:
             for item in txt_record.split(','):
                 if '=' in item:
                     k, v = item.split('=', 1)
                     query.setdefault(k.strip(), v.strip())
-        
+
         auth_prefix = ''
         if parsed.username:
             auth_prefix = f'{parsed.username}:{parsed.password}@' if parsed.password else f'{parsed.username}@'
-        
+
         db_name = parsed.path.lstrip('/')
         path = f'/{db_name}' if db_name else ''
         return f'mongodb://{auth_prefix}{hosts}{path}?{urlencode(query)}'

@@ -1,0 +1,74 @@
+/* beans.css - BEM Styles for beans page */
+
+.products--no-padding {
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.section-title--no-margin-top {
+    margin-top: 0;
+}
+
+.filter-group--hidden {
+    display: none;
+}
+
+.coffee-category-section--full-width {
+    padding: 2rem 0 4rem;
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+}
+
+.coffee-category-section--full-width-xl {
+    padding: 4rem 0;
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+}
+
+.container--large {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.container--medium {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+#coffee-root {
+    display: none;
+}
+
+.bean-detail {
+    display: none;
+    padding: 0;
+    min-height: 80vh;
+}
+
+.btn--back {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    border-radius: 50px;
+    padding: 0.8rem 2.2rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    background-color: #fcf8f5;
+    color: var(--color-coffee);
+    border: 1px solid rgba(111, 78, 55, 0.25);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn--back .fas {
+    margin-right: 8px;
+}

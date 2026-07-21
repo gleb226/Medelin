@@ -38,8 +38,7 @@ class OrdersDatabase:
     async def add_order(self, user_id, username, fullname, phone, location_id, wishes, cart, date_time=None, order_type='order', payment_mode='cashier', total_amount=0, delivery_info='') -> tuple[str, bool]:
         db = await get_db()
         digits = normalize_phone(phone)
-        
-        # 1. Deduplication check: same phone/user, cart and total in last 30 seconds
+
         cutoff = datetime.utcnow() - timedelta(seconds=30)
         duplicate = await db.orders.find_one({
             '$or': [{'phone_digits': digits}, {'user_id': int(user_id) if user_id is not None else -1}],
@@ -47,11 +46,10 @@ class OrdersDatabase:
             'total_amount': total_amount,
             'created_at': {'$gte': cutoff}
         })
-        
+
         if duplicate:
             return str(duplicate['_id']), False
 
-        # 2. Proceed with insertion
         oid = ObjectId()
         order_num = await self.get_next_order_number()
         doc = {

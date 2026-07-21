@@ -66,11 +66,10 @@ class AdminDatabase:
 
     async def add_admin(self, user_id: int, username: str, display_name: str, added_by: int, role: str='admin', locations: list=None):
         db = await get_db()
-        
-        # Mapping old role names if any
+
         if role in ('boss', 'super'):
             role = 'owner'
-        
+
         if role not in ('owner', 'admin'):
             role = 'admin'
 
@@ -94,7 +93,7 @@ class AdminDatabase:
         if str(user_id) in DEVELOPER_IDS:
             return
         db = await get_db()
-        # Handle both int and string user_id
+
         try:
             uid = int(user_id)
             await db.admins.delete_one({'user_id': {'$in': [uid, str(uid)]}})
@@ -106,14 +105,12 @@ class AdminDatabase:
         targets = set()
 
         if notification_type == 'stock_alert':
-            # Stock alerts go to Owners (and Developers via send_admin_notification wrapper)
+
             rows = await db.admins.find({'role': 'owner', 'receive_notifications': True}, {'_id': 0, 'user_id': 1}).to_list(length=None)
             for r in rows:
                 targets.add(int(r['user_id']))
             return list(targets)
 
-        # Default: new_order notifications go to Admins
-        # Filter by shift/location if possible, but as per new rules, Admins see all New/Active
         rows = await db.admins.find({'role': 'admin', 'receive_notifications': True}, {'_id': 0, 'user_id': 1}).to_list(length=None)
         for r in rows:
             targets.add(int(r['user_id']))
@@ -161,32 +158,30 @@ class AdminDatabase:
     async def find_admin_by_identifier(self, identifier: str):
         db = await get_db()
         clean_id = str(identifier).strip().replace('@', '')
-        
-        # 1. Search in admins collection
+
         if identifier.isdigit():
             res = await db.admins.find_one({'user_id': int(identifier)}, projection_without_mongo_id())
             if res: return res
-            
+
         res = await db.admins.find_one({'username': {'$regex': f'^{re.escape(clean_id)}$', '$options': 'i'}}, projection_without_mongo_id())
         if res: return res
-        
+
         from app.utils.phone_utils import normalize_phone
         norm = normalize_phone(identifier)
         if norm and len(norm) >= 10:
             res = await db.admins.find_one({'$or': [{'phone_digits': norm}, {'phone': {'$regex': re.escape(norm)}}]}, projection_without_mongo_id())
             if res: return res
 
-        # 2. Search in users collection
         from app.databases.user_database import user_db
         user_info = None
-        
+
         if identifier.isdigit():
             user_info = await user_db.get_user_by_id(int(identifier))
         if not user_info and norm and len(norm) >= 10:
             user_info = await user_db.get_user_by_phone(norm)
         if not user_info:
             user_info = await user_db.get_user_by_username(clean_id)
-            
+
         if user_info:
             uid, name, uname, uphone = user_info
             role = 'developer' if str(uid) in DEVELOPER_IDS else 'user'
@@ -236,31 +231,29 @@ class AdminDatabase:
     async def verify_session(self, token: str):
         db = await get_db()
         now = datetime.utcnow()
-        # Search without expiry first to debug, then check expiry
+
         sess = await db.admin_sessions.find_one({'token': token})
-        
+
         if not sess:
-            # logger.error(f"Session not found for token: {token[:10]}...")
+
             return None
-        
-        # Check expiry (allow 24h for robustness if expires_at is missing or weird)
+
         expiry = sess.get('expires_at') or (sess['created_at'] + timedelta(hours=24))
         if now > expiry:
-            # logger.info(f"Session expired for token: {token[:10]}...")
+
             return None
-        
-        # Refresh session
+
         await db.admin_sessions.update_one(
             {'_id': sess['_id']},
-            {'$set': {'expires_at': now + timedelta(hours=24)}} # Extend to 24h
+            {'$set': {'expires_at': now + timedelta(hours=24)}} 
         )
-        
+
         user_id = sess['user_id']
         admin = await self.get_admin_by_id(user_id)
-        
+
         if not admin and str(user_id) in DEVELOPER_IDS:
             return {'user_id': int(user_id), 'display_name': 'Developer', 'role': 'developer'}
-            
+
         return admin
 
     async def get_all_admins(self) -> list:
