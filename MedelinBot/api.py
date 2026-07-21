@@ -33,7 +33,6 @@ from app.common.config import WEB_APP_URL, NP_API_KEY, DEVELOPER_IDS
 from app.utils.admin_notifications import send_admin_notification, send_developer_error
 import app.keyboards.admin_keyboards as akb
 
-# Налаштування логування
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -64,7 +63,6 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
-# Папка з сайтом
 from app.utils.paths import get_site_dir, get_uploads_dir
 _site_dir = get_site_dir()
 
@@ -87,11 +85,11 @@ async def verify_admin_login(user_id: int):
             await admin_db.delete_auth_request(user_id)
             return {'status': 'rejected', 'message': 'Запит на вхід відхилено'}
         if req and req.get('confirmed'):
-            # Create session token
+
             token = secrets.token_hex(32)
-            # Save session to DB
+
             await admin_db.create_session(user_id, token)
-            
+
             admin = await admin_db.get_admin_by_id(user_id)
             if not admin:
                 if str(user_id) in DEVELOPER_IDS:
@@ -100,7 +98,6 @@ async def verify_admin_login(user_id: int):
                     logger.error(f"Admin record not found for user_id: {user_id}")
                     return {'status': 'error', 'message': 'Запис адміністратора не знайдено'}
 
-            # Delete auth request
             await admin_db.delete_auth_request(user_id)
             logger.info(f"Login verified for user {user_id}. Token created.")
             return {
@@ -117,7 +114,6 @@ async def verify_admin_login(user_id: int):
         logger.error(f"Error in verify_admin_login: {e}", exc_info=True)
         return {'status': 'error', 'message': str(e)}
 
-# --- Моделі ---
 class CheckoutRequest(BaseModel):
     user_details: dict
     cart_menu: list
@@ -131,7 +127,7 @@ async def resolve_location(value: str | None):
     target = (value or '').strip()
     if not target: return None
     all_locs = await location_db.get_all_locations()
-    
+
     if target.isdigit():
         idx = int(target) - 1
         if 0 <= idx < len(all_locs): return all_locs[idx]
@@ -148,7 +144,7 @@ def parse_price(value):
 
 def build_cart_text(cart: list) -> tuple[int, str]:
     total = 0
-    # Group items by name
+
     grouped = {}
     for item in cart:
         name = item.get('name', 'Невідомий товар')
@@ -159,19 +155,18 @@ def build_cart_text(cart: list) -> tuple[int, str]:
             grouped[name]['price'] += price
         else:
             grouped[name] = {'qty': 1, 'price': price}
-    
+
     lines = []
     for name, data in grouped.items():
         if data['qty'] > 1:
             lines.append(f"- {name} x{data['qty']} ({data['price']} грн)")
         else:
             lines.append(f"- {name} ({data['price']} грн)")
-            
+
     return (total, '\n'.join(lines))
 
 from app.utils.nova_poshta import np_client
 
-# ... (around line 96)
 @app.get('/api/nova-poshta/cities')
 async def get_np_cities(search: str = Query('')):
     if len(search) < 2: return []
@@ -213,7 +208,7 @@ async def process_checkout(req: CheckoutRequest):
     data = req.dict()
     total, items_text = build_cart_text(data.get('cart_menu', []))
     if total <= 0: raise HTTPException(status_code=400, detail='Кошик порожній')
-    
+
     user = data.get('user_details', {})
     location = await resolve_location(user.get('location'))
     loc_id = str(location['_id']) if location else 'web'
@@ -222,13 +217,13 @@ async def process_checkout(req: CheckoutRequest):
     payment_mode = user.get('payment_mode') or 'pay_now'
     order_type = user.get('delivery_type') or ('takeaway' if user.get('type') == 'takeaway' else 'in_house')
     if order_type == 'nova_poshta': loc_id = 'NP'
-    
+
     comment = user.get('comment', '').strip()
     wishes_str = comment if comment else '—'
-    
+
     delivery_info = ""
     type_label = ""
-    
+
     if order_type == 'nova_poshta':
         np_city = (user.get('np_city_name') or '').strip()
         np_mode = user.get('np_delivery_mode')
@@ -246,7 +241,7 @@ async def process_checkout(req: CheckoutRequest):
         type_map = { 'takeaway': 'З собою', 'in_house': 'В закладі' }
         type_label = type_map.get(order_type, order_type)
         if order_type == 'in_house' and user.get('table_number'):
-            delivery_info = f"Стіл #{user.get('table_number')}"
+            delivery_info = f"Стіл {user.get('table_number')}"
         else:
             delivery_info = location['name'] if location else "Web"
 
@@ -276,25 +271,24 @@ async def process_checkout(req: CheckoutRequest):
             return {'status': 'ok', 'manual': True, 'order_id': oid, 'order_number': order_num, 'duplicate': True}
 
     pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
-    
-    msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ #{order_num}</b>\n\n👤 {user.get("name")}\n📞 <code>{phone}</code>\n🚚 Куди: <b>{type_label} {delivery_info}</b>'
+
+    msg = f'🆕 <b>НОВЕ ЗАМОВЛЕННЯ #{order_num}</b>\n\n👤 <b>{fullname}</b>\n📞 <code>{phone}</code>\n🚚 Куди: <b>{type_label} {delivery_info}</b>'
     msg += f'\n💰 <b>{total} грн</b>\n💳 Оплата: <b>{pay_label}</b>\n\n🛒 {items_text}'
     msg += f'\n\n📝 ПОБАЖАННЯ: <b>{wishes_str}</b>'
-    
+
     await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(oid, user_id or -1), location_id=loc_id, order_id=oid)
 
     if payment_mode == 'pay_at_checkout' or data.get('payment_method') == 'cash':
         return {'status': 'ok', 'manual': True, 'order_id': oid, 'order_number': order_num}
 
-    # LiqPay Integration
     from app.common.config import LIQPAY_PUBLIC_KEY, LIQPAY_PRIVATE_KEY
     if LIQPAY_PUBLIC_KEY and LIQPAY_PRIVATE_KEY:
         paytype_map = { 'card': 'card', 'applepay': 'apay', 'googlepay': 'gpay', 'privatpay': 'privat24' }
         paytypes = paytype_map.get(data.get('payment_method'), 'card')
-        
+
         liqpay_params = {
             "public_key": LIQPAY_PUBLIC_KEY, "version": "3", "action": "pay",
-            "amount": str(total), "currency": "UAH", "description": f"Замовлення #{order_num} в Medelin",
+            "amount": str(total), "currency": "UAH", "description": f"Замовлення #{order_num}",
             "order_id": str(oid), "result_url": f"{WEB_APP_URL}/index.html?payment=success",
             "server_url": f"{WEB_APP_URL}/api/liqpay-callback", "paytypes": paytypes
         }
@@ -313,18 +307,18 @@ async def liqpay_callback(request: Request):
         data_b64 = fd.get('data')
         signature = fd.get('signature')
         if not data_b64 or not signature: return {'status': 'error'}
-        
+
         from app.common.config import LIQPAY_PRIVATE_KEY
         sig_check = base64.b64encode(hashlib.sha1((LIQPAY_PRIVATE_KEY + data_b64 + LIQPAY_PRIVATE_KEY).encode()).digest()).decode()
         if sig_check != signature: return {'status': 'error'}
-        
+
         data = json.loads(base64.b64decode(data_b64).decode())
         if data.get('status') in ('success', 'wait_accept'):
             oid = data.get('order_id')
             order = await orders_db.get_order_by_id(oid)
             if order and order.get('status') != 'paid':
                 await orders_db.update_status(oid, 'paid')
-                
+
                 from app.utils.admin_notifications import update_order_notifications
                 await update_order_notifications(oid, 'paid')
         return {'status': 'ok'}
@@ -354,13 +348,12 @@ async def report_error(req: Request):
     try:
         data = await req.json()
         logger.error(f"CLIENT ERROR: {data}")
-        
-        # Escape for safe HTML
+
         src = html.escape(str(data.get('source') or 'Site'))
         path = html.escape(str(data.get('path') or 'N/A'))
         msg_text = html.escape(str(data.get('message') or 'Client error'))
         ctx = html.escape(str(data.get('context') or ''))
-        
+
         msg = f"🌐 <b>SITE CLIENT ERROR</b>\n\n<b>Source:</b> {src}\n<b>Path:</b> {path}\n\n<b>Message:</b>\n{msg_text}\n\n<b>Context:</b>\n{ctx}"
         await send_developer_error(msg)
         return {'status': 'ok'}
@@ -368,7 +361,6 @@ async def report_error(req: Request):
         logger.error(f"Failed to report error: {e}")
         return {'status': 'error'}
 
-# --- Admin API ---
 class LoginRequest(BaseModel):
     identifier: str
     password: str
@@ -383,41 +375,36 @@ async def get_current_admin(request: Request):
         raise HTTPException(status_code=401, detail='Сесія недійсна')
     return admin
 
-# --- Admin API Rate Limiting ---
-login_attempts = {} # {identifier: {'count': 0, 'lockout_until': timestamp}}
+login_attempts = {} 
 
 @app.post('/api/admin/login')
 async def admin_login(req: LoginRequest):
     now = time.time()
     ident = req.identifier.strip().lower()
-    
-    # Check lockout
+
     attempt_data = login_attempts.get(ident, {'count': 0, 'lockout_until': 0})
     if attempt_data['lockout_until'] > now:
         remaining = int(attempt_data['lockout_until'] - now)
         raise HTTPException(status_code=429, detail=f'Забагато спроб. Спробуйте через {remaining // 60 + 1} хв.')
 
-    # If password is correct (for security, use ADMIN_PANEL_PASSWORD from config)
     from app.common.config import ADMIN_PANEL_PASSWORD
     if req.password != ADMIN_PANEL_PASSWORD:
         attempt_data['count'] += 1
         if attempt_data['count'] >= 5:
-            attempt_data['lockout_until'] = now + 600 # 10 minutes
+            attempt_data['lockout_until'] = now + 600 
             login_attempts[ident] = attempt_data
             raise HTTPException(status_code=429, detail='Забагато спроб. Вхід заблоковано на 10 хв.')
         login_attempts[ident] = attempt_data
         raise HTTPException(status_code=403, detail=f'Невірний пароль. Залишилось спроб: {5 - attempt_data["count"]}')
-    
+
     admin = await admin_db.find_admin_by_identifier(req.identifier)
     if not admin:
         raise HTTPException(status_code=404, detail='Адміністратора не знайдено. Впевніться, що ви зареєстровані в боті.')
-    
-    # Success: reset attempts
+
     login_attempts[ident] = {'count': 0, 'lockout_until': 0}
     code = secrets.token_hex(16)
     await admin_db.create_auth_request(admin['user_id'], code)
-    
-    # Send confirmation to bot
+
     from app.common.bot_instance import bot
     msg = f"🔐 <b>ЗАПИТ НА ВХІД В АДМІН-ПАНЕЛЬ</b>\n\n👤 <b>{admin['display_name']}</b> (@{admin.get('username', '—')})\n\nПідтвердіть вхід:"
     try:
@@ -426,7 +413,7 @@ async def admin_login(req: LoginRequest):
         await admin_db.delete_auth_request(admin['user_id'])
         logger.error(f"Failed to send auth msg: {e}")
         raise HTTPException(status_code=500, detail='Не вдалося надіслати підтвердження в бот. Перевірте, чи бот не заблокований.')
-    
+
     return {'status': 'ok', 'user_id': admin['user_id']}
 
 @app.get('/api/admin/me')
@@ -435,13 +422,13 @@ async def get_admin_me(admin: dict = Depends(get_current_admin)):
 
 @app.get('/api/admin/new-orders')
 async def get_new_orders(admin: dict = Depends(get_current_admin)):
-    # Returns only orders with status 'new' or 'paid'
+
     locs = None
     if admin.get('role') not in ('owner', 'developer'):
         locs = list(admin.get('locations') or [])
         if not locs or 'web' not in locs: locs.append('web')
         if not locs or 'NP' not in locs: locs.append('NP')
-    
+
     if locs:
         orders = await orders_db.get_new_orders_by_locations(locs)
     else:
@@ -449,7 +436,7 @@ async def get_new_orders(admin: dict = Depends(get_current_admin)):
 
     for o in orders:
         o['order_id'] = str(o['_id'])
-        # Ensure order_number is strictly a number or fallback string for safety
+
         if 'order_number' not in o or not o['order_number']:
             o['order_number'] = '—'
         if 'created_at' in o and o['created_at']:
@@ -461,17 +448,15 @@ async def get_new_orders(admin: dict = Depends(get_current_admin)):
 async def confirm_order(order_id: str, admin: dict = Depends(get_current_admin)):
     if admin.get('role') not in ('owner', 'boss', 'super', 'admin', 'developer'):
         raise HTTPException(status_code=403, detail='Недостатньо прав (тільки Власник або Адмін)')
-        
+
     order = await orders_db.get_order_by_id(order_id)
     if not order: return {'status': 'error', 'message': 'Order not found'}
-    
+
     await orders_db.update_status(order_id, 'confirmed')
-    
-    # Bot Sync: Update messages for all admins
+
     from app.utils.admin_notifications import update_order_notifications
     await update_order_notifications(order_id, 'confirmed')
-    
-    # Also add to active_orders_db if not already there
+
     from app.databases.active_orders_database import active_orders_db
     existing_active = await active_orders_db.get_active_order_by_id(order_id)
     if not existing_active:
@@ -493,7 +478,7 @@ async def confirm_order(order_id: str, admin: dict = Depends(get_current_admin))
 async def reject_order(order_id: str, admin: dict = Depends(get_current_admin)):
     if admin.get('role') not in ('owner', 'boss', 'super', 'admin', 'developer'):
         raise HTTPException(status_code=403, detail='Недостатньо прав (тільки Власник або Адмін)')
-        
+
     order = await orders_db.get_order_by_id(order_id)
     if order and order.get('is_paid'):
         from app.utils.payment_refunds import process_refund
@@ -502,13 +487,12 @@ async def reject_order(order_id: str, admin: dict = Depends(get_current_admin)):
             await orders_db.set_refund_status(order_id, 'refunded')
         else:
             await orders_db.set_refund_status(order_id, f'failed: {err}')
-            
+
     await orders_db.update_status(order_id, 'rejected')
 
-    # Bot Sync
     from app.utils.admin_notifications import update_order_notifications
     await update_order_notifications(order_id, 'rejected')
-    
+
     return {'status': 'ok'}
 
 @app.get('/api/admin/active-orders')
@@ -519,27 +503,27 @@ async def get_active_orders(admin: dict = Depends(get_current_admin)):
         locs = list(admin.get('locations') or [])
         if not locs or 'web' not in locs: locs.append('web')
         if not locs or 'NP' not in locs: locs.append('NP')
-    
+
     orders = await active_orders_db.get_active_orders(locs)
     for o in orders:
         orig_oid = o.get('order_id')
         o['active_order_id'] = str(o['_id'])
         o['order_id'] = orig_oid if orig_oid else str(o['_id'])
-        
+
         if 'created_at' in o and o['created_at']:
             o['created_at'] = o['created_at'].isoformat()
-        
+
         orig_order = await orders_db.get_order_by_id(o['order_id'])
         if orig_order:
             for key in ['order_number', 'phone', 'delivery_info', 'wishes', 'status', 'is_paid', 'payment_id', 'delivery_type', 'delivery_city', 'delivery_state', 'delivery_branch_id', 'delivery_address', 'fullname', 'username']:
                 if key in orig_order and orig_order[key] is not None:
                     o[key] = orig_order[key]
-        
+
         if 'order_number' not in o or not o['order_number']:
             o['order_number'] = '—'
 
         del o['_id']
-        # Add location name
+
         if o.get('location_id') == 'NP': o['location_name'] = 'Нова Пошта'
         elif o.get('location_id') == 'web': o['location_name'] = 'Сайт'
         else:
@@ -553,10 +537,9 @@ async def complete_order(order_id: str, admin: dict = Depends(get_current_admin)
         raise HTTPException(status_code=403, detail='Недостатньо прав (тільки Власник або Адмін)')
     from app.databases.active_orders_database import active_orders_db
 
-    # On the web panel, order_id passed is actually the MongoDB _id string
     order = await active_orders_db.get_active_order_by_mongo_id(order_id)
     if not order:
-        # Fallback to order_id field just in case
+
         order = await active_orders_db.get_active_order_by_id(order_id)
 
     if order:
@@ -570,17 +553,15 @@ async def complete_order(order_id: str, admin: dict = Depends(get_current_admin)
             location_id=order.get('location_id')
         )
         await orders_db.update_status(original_order_id, 'completed')
-        
-        # Bot Sync: update message if mapping exists
+
         from app.utils.admin_notifications import update_order_notifications
         await update_order_notifications(original_order_id, 'completed')
     else:
         raise HTTPException(status_code=404, detail='Active order not found')
-    
+
     await active_orders_db.remove_order(order_id)
     return {'status': 'ok'}
 
-# CRUD for Beans
 @app.post('/api/admin/upload')
 async def admin_upload_image(file: UploadFile = File(...), admin: dict = Depends(get_current_admin)):
     if admin.get('role') not in ('owner', 'boss', 'super', 'developer'):
@@ -588,19 +569,19 @@ async def admin_upload_image(file: UploadFile = File(...), admin: dict = Depends
     from app.utils.paths import get_uploads_dir
     import uuid
     import shutil
-    
+
     ext = file.filename.split('.')[-1].lower()
     if ext not in ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif']:
         raise HTTPException(status_code=400, detail="Непідтримуваний формат файлу")
-        
+
     filename = f"{uuid.uuid4()}.{ext}"
     uploads_dir = get_uploads_dir()
     uploads_dir.mkdir(parents=True, exist_ok=True)
-    
+
     file_path = uploads_dir / filename
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-        
+
     return {"status": "ok", "url": f"/uploads/{filename}"}
 
 @app.get('/api/admin/beans')
@@ -642,7 +623,6 @@ async def admin_delete_bean(bean_id: str, admin: dict = Depends(get_current_admi
         raise HTTPException(status_code=400, detail='Не вдалося видалити товар')
     return {'status': 'ok'}
 
-# CRUD for Locations
 @app.get('/api/admin/locations')
 async def admin_get_locations(admin: dict = Depends(get_current_admin)):
     if admin.get('role') == 'admin':
@@ -676,7 +656,6 @@ async def admin_delete_location(loc_id: str, admin: dict = Depends(get_current_a
         raise HTTPException(status_code=400, detail='Не вдалося видалити локацію')
     return {'status': 'ok'}
 
-# CRUD for Contacts/Socials
 @app.get('/api/admin/socials')
 async def admin_get_socials(admin: dict = Depends(get_current_admin)):
     if admin.get('role') == 'admin':
@@ -710,18 +689,14 @@ async def admin_delete_social(sid: str, admin: dict = Depends(get_current_admin)
         raise HTTPException(status_code=400, detail='Не вдалося видалити контакт')
     return {'status': 'ok'}
 
-# CRUD for Team/Staff
 @app.get('/api/admin/team')
 async def admin_get_team(admin: dict = Depends(get_current_admin)):
     try:
         if admin.get('role') not in ('owner', 'developer'):
             raise HTTPException(status_code=403, detail='Недостатньо прав')
-        
-        # Get admins from DB
+
         admins_data = await admin_db.get_admins_with_locations()
-        # result.append((str(r['user_id']), r.get('username'), r.get('display_name'), r.get('role') or 'admin', ...))
-        
-        # We need to enrich this with phone numbers from user_db
+
         from app.databases.user_database import user_db
         enriched = []
         for a in admins_data:
@@ -747,29 +722,27 @@ async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
         me_role = admin.get('role')
         target_role = data.get('role', 'admin')
 
-        # Permission check
         if me_role in ('owner', 'boss', 'super', 'developer'):
-            # Owners can add anyone
+
             pass
         elif me_role == 'developer':
             if target_role not in ('owner', 'boss', 'super', 'developer'):
                 raise HTTPException(status_code=403, detail='Розробник може додавати тільки власників')
         else:
             raise HTTPException(status_code=403, detail='Недостатньо прав')
-        
+
         user_id_val = data.get('user_id', '').strip()
         username = data.get('username', '').strip().replace('@', '')
-        
-        # Try to find user via the same logic as the bot
+
         from app.databases.user_database import user_db
         target = None
-        
+
         if user_id_val.isdigit():
             u_info = await user_db.get_user_by_id(int(user_id_val))
             if u_info:
                 target = {'user_id': int(u_info[0]), 'display_name': u_info[1], 'username': u_info[2]}
             elif data.get('display_name'):
-                # Allow adding if not in DB but we have a name and ID
+
                 target = {'user_id': int(user_id_val), 'display_name': data.get('display_name'), 'username': None}
         elif user_id_val.startswith('@') or username:
             un = username or user_id_val.replace('@', '')
@@ -783,8 +756,7 @@ async def admin_add_team(data: dict, admin: dict = Depends(get_current_admin)):
         user_id = int(target['user_id'])
         final_username = target.get('username') or username
         final_display_name = data.get('display_name') or target.get('display_name') or target.get('username') or str(user_id)
-        
-        # Location access is removed as per user request
+
         await admin_db.add_admin(user_id=user_id, username=final_username, display_name=final_display_name, added_by=admin['user_id'], role=target_role, locations=[])
         return {'status': 'ok'}
     except HTTPException: raise
@@ -797,20 +769,19 @@ async def admin_delete_team(uid: str, admin: dict = Depends(get_current_admin)):
     try:
         me_role = admin.get('role')
         logger.info(f"DELETE TEAM REQUEST: target_uid={uid}, admin_id={admin.get('user_id')}, role={me_role}")
-        
+
         if me_role not in ('owner', 'boss', 'super', 'developer'):
             raise HTTPException(status_code=403, detail='Тільки власник може видаляти персонал')
-            
-        # Try numeric ID first
+
         target_uid = None
         if uid.isdigit():
             target_uid = int(uid)
         else:
-            # Try to find by identifier (@username or phone)
+
             target = await admin_db.find_admin_by_identifier(uid)
             if target:
                 target_uid = int(target.get('user_id'))
-        
+
         if target_uid is None:
             raise HTTPException(status_code=400, detail=f'Не вдалося знайти користувача за ідентифікатором: {uid}')
 
@@ -825,21 +796,20 @@ async def admin_delete_team(uid: str, admin: dict = Depends(get_current_admin)):
         logger.error(f"Error in delete_team: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-# Stats and Broadcast
 @app.get('/api/admin/stats')
 async def get_admin_stats(admin: dict = Depends(get_current_admin)):
     if admin.get('role') not in ('developer', 'owner', 'boss', 'super'):
         raise HTTPException(status_code=403, detail='Тільки Розробник або Власник мають доступ до статистики')
-    
+
     sales = await sales_db.get_all_sales()
-    # Calculate revenue handling both total and price*quantity fields
+
     total_revenue = sum(
         s.get('total', 0) or (s.get('price', 0) * s.get('quantity', 1))
         for s in sales if s.get('record_type') == 'sale'
     )
     total_sales = len([s for s in sales if s.get('record_type') == 'sale'])
     avg_check = int(total_revenue / total_sales) if total_sales > 0 else 0
-    
+
     return {
         'total_revenue': int(total_revenue),
         'total_sales': total_sales,
@@ -851,12 +821,12 @@ async def get_admin_stats(admin: dict = Depends(get_current_admin)):
 async def reset_admin_stats(admin: dict = Depends(get_current_admin)):
     if admin.get('role') not in ('owner', 'boss', 'super', 'developer'):
         raise HTTPException(status_code=403, detail='Тільки Власник може скидати статистику')
-    
+
     db = await get_db()
     await db.sales.delete_many({})
     if 'bookings' in await db.list_collection_names():
         await db.bookings.delete_many({})
-    
+
     return {'status': 'ok'}
 
 if _site_dir:

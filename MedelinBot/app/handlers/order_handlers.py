@@ -76,33 +76,33 @@ async def np_city_search(message: Message, state: FSMContext):
     if len(search) < 2:
         await message.answer('Назва занадто коротка. Спробуйте ще раз:')
         return
-    
+
     cities = await np_client.search_settlements(search)
     if not cities:
         await message.answer('🏙 Місто не знайдено. Спробуйте іншу назву:')
         return
-    
+
     await message.answer(f'🔍 <b>РЕЗУЛЬТАТИ ПОШУКУ "{search}":</b>', reply_markup=kb.get_np_cities_kb(cities), parse_mode='HTML')
 
 @order_router.callback_query(F.data.startswith('np_city_'), OrderStates.searching_np_city)
 async def np_city_chosen(callback: CallbackQuery, state: FSMContext):
     city_ref = callback.data.replace('np_city_', '')
-    # Find city name from keyboard (or we could store it in state during search)
+
     city_name = "Місто"
     for row in callback.message.reply_markup.inline_keyboard:
         for button in row:
             if button.callback_data == callback.data:
                 city_name = button.text
                 break
-    
+
     await state.update_data(np_city_ref=city_ref, np_city_name=city_name)
-    
+
     warehouses = await np_client.get_warehouses(city_ref)
     if not warehouses:
         await callback.answer('У цьому місті не знайдено відділень.', show_alert=True)
         return
-    
-    await state.update_data(all_warehouses=warehouses) # Cache for pagination
+
+    await state.update_data(all_warehouses=warehouses) 
     await safe_edit_message(callback.message, f'🏪 <b>ОБЕРІТЬ ВІДДІЛЕННЯ ({city_name}):</b>\n\nМожна ввести номер або вулицю для пошуку:', reply_markup=kb.get_np_warehouses_kb(warehouses), parse_mode='HTML')
     await state.set_state(OrderStates.choosing_np_warehouse)
 
@@ -114,12 +114,12 @@ async def np_wh_search(message: Message, state: FSMContext):
     if not city_ref:
         await message.answer('Спочатку оберіть місто.')
         return
-    
+
     warehouses = await np_client.get_warehouses(city_ref, search)
     if not warehouses:
         await message.answer('Нічого не знайдено. Спробуйте інший номер або вулицю:')
         return
-    
+
     await message.answer(f'🔍 <b>РЕЗУЛЬТАТИ ПОШУКУ "{search}":</b>', reply_markup=kb.get_np_warehouses_kb(warehouses), parse_mode='HTML')
 
 @order_router.callback_query(F.data.startswith('np_wh_page_'), OrderStates.choosing_np_warehouse)
@@ -139,7 +139,7 @@ async def np_wh_chosen(callback: CallbackQuery, state: FSMContext):
             if button.callback_data == callback.data:
                 wh_name = button.text
                 break
-    
+
     await state.update_data(np_warehouse=wh_name)
     await ask_phone_order(callback, state)
 
@@ -160,7 +160,7 @@ async def order_phone_entered(message: Message, state: FSMContext, bot: Bot):
         return
     await state.update_data(phone=phone)
     await user_db.set_phone(message.from_user.id, phone)
-    
+
     kb_pay = kb.get_beans_payment_kb()
     await message.answer('💳 <b>ОБЕРІТЬ СПОСІБ ОПЛАТИ:</b>', reply_markup=kb_pay, parse_mode='HTML')
     await state.set_state(OrderStates.choosing_bean_payment)
@@ -169,7 +169,7 @@ async def order_phone_entered(message: Message, state: FSMContext, bot: Bot):
 async def bean_payment_chosen(callback: CallbackQuery, state: FSMContext, bot: Bot):
     pay_method = 'card' if callback.data == 'bean_pay_card' else 'cash'
     await state.update_data(payment_method=pay_method)
-    
+
     if pay_method == 'card':
         await send_beans_invoice(callback.from_user, callback.message.chat.id, state, bot)
     else:
@@ -178,7 +178,7 @@ async def bean_payment_chosen(callback: CallbackQuery, state: FSMContext, bot: B
 async def send_beans_invoice(user, chat_id, state, bot):
     data = await state.get_data()
     total = int(data.get('base_price') or 300)
-    
+
     order_type = 'beans_delivery' if data.get('delivery_type') == 'nova_poshta' else 'beans_booking'
     rid, is_new = await orders_db.add_order(
         user_id=user.id, username=user.username, fullname=user.full_name, phone=data.get('phone', '—'), 
@@ -196,7 +196,6 @@ async def send_beans_invoice(user, chat_id, state, bot):
         from app.utils.admin_notifications import send_admin_notification
         await send_admin_notification(msg, reply_markup=akb.get_booking_manage_kb(rid), location_id=data.get('location_id'), order_id=rid)
 
-
     payment_url = f"{WEB_APP_URL}/index.html?order_id={rid}"
     kb_pay = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='💳 ПЕРЕЙТИ ДО ОПЛАТИ', url=payment_url)],
@@ -209,10 +208,10 @@ async def process_beans_final(user, chat_id, state, bot):
     data = await state.get_data()
     is_admin = await admin_db.is_admin(user.id)
     order_type = 'beans_delivery' if data.get('delivery_type') == 'nova_poshta' else 'beans_booking'
-    
+
     delivery_info = f"{data.get('np_city_name', '')}, {data.get('np_warehouse', '')}" if order_type == 'beans_delivery' else "Самовивіз"
     pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
-    
+
     rid, is_new = await orders_db.add_order(
         user_id=user.id, username=user.username, fullname=user.full_name, phone=data.get('phone', '—'), 
         location_id=data.get('location_id') or "NP", wishes="НОВА ПОШТА", 

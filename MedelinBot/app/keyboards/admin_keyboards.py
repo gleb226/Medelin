@@ -13,17 +13,16 @@ def get_admin_main_kb(role='admin'):
     Main Admin Menu Keyboard.
     Roles: owner, developer, admin
     """
-    # 1. Orders Block (All roles see this)
+
     keyboard = [
         [KeyboardButton(text='🆕 НОВІ'), KeyboardButton(text='📦 АКТИВНІ')],
     ]
-    
-    # 2. Content & Staff Management (Owner & Developer only)
+
     if role in ('owner', 'developer'):
         keyboard.append([KeyboardButton(text='☕️ ЗЕРНА')])
         keyboard.append([KeyboardButton(text='📍 ЛОКАЦІЇ'), KeyboardButton(text='📞 КОНТАКТИ')])
         keyboard.append([KeyboardButton(text='👤 ПЕРСОНАЛ')])
-    
+
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
 def get_admin_main_inline_kb(role='admin'):
@@ -54,7 +53,7 @@ def get_bean_card_kb(bean_id, category='commercial', is_specialty=False, role='o
     if role != 'developer':
         buttons.append([InlineKeyboardButton(text='✏️ РЕДАГУВАТИ', callback_data=f'bean_edit_fields_{bean_id}')])
         buttons.append([InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data=f'bean_del_confirm_{bean_id}')])
-    
+
     buttons.append([InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data=f'beans_page_{category}')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -63,11 +62,10 @@ def get_bean_edit_fields_kb(bean_id, category='commercial'):
         [InlineKeyboardButton(text='🏷 Назва', callback_data=f'bean_fedit_{bean_id}_name'), InlineKeyboardButton(text='💰 Ціна', callback_data=f'bean_fedit_{bean_id}_price')],
         [InlineKeyboardButton(text='📸 Фото', callback_data=f'bean_fedit_{bean_id}_photo')]
     ]
-    
-    # Hide quality score for commercial coffee
+
     if category == 'specialty':
         rows[1].append(InlineKeyboardButton(text='📈 Оцінка', callback_data=f'bean_fedit_{bean_id}_score'))
-    
+
     rows.extend([
         [InlineKeyboardButton(text='🌿 Склад', callback_data=f'bean_fedit_{bean_id}_species'), InlineKeyboardButton(text='🔥 Обсмаж.', callback_data=f'bean_fedit_{bean_id}_roast')],
         [InlineKeyboardButton(text='📅 Врожай', callback_data=f'bean_fedit_{bean_id}_harvest'), InlineKeyboardButton(text='⛰ Висота', callback_data=f'bean_fedit_{bean_id}_altitude')],
@@ -76,7 +74,6 @@ def get_bean_edit_fields_kb(bean_id, category='commercial'):
         [InlineKeyboardButton(text='⬅️ НАЗАД ДО КАРТКИ', callback_data=f'bean_open_{bean_id}')]
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
-
 
 def get_locations_manage_kb(role='owner'):
     kb = [[InlineKeyboardButton(text='📍 СПИСОК ЛОКАЦІЙ', callback_data='locations_list')]]
@@ -124,7 +121,7 @@ def get_contact_edit_fields_kb(contact_id):
     ])
 
 def get_staff_manage_kb(role='owner'):
-    # Developer and Owner can add staff (Developer adds Owners, Owner adds Admins)
+
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='➕ ДОДАТИ ПЕРСОНАЛ', callback_data='staff_add')],
         [InlineKeyboardButton(text='👤 СПИСОК ПЕРСОНАЛУ', callback_data='staff_list')],
@@ -140,7 +137,7 @@ def get_active_types_kb():
 
 def get_booking_manage_kb(order_id, user_id=-1, role='admin'):
     if role == 'developer':
-        return None # Developer sees no action buttons
+        return None 
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='✅ ПІДТВЕРДИТИ', callback_data=f'confirm_order_{order_id}')],
         [InlineKeyboardButton(text='❌ ВІДХИЛИТИ', callback_data=f'reject_order_{order_id}')]

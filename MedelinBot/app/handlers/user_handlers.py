@@ -43,16 +43,15 @@ user_router = Router()
 @user_router.message(F.text == '/start', StateFilter('*'))
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
-    
-    # Register user in DB so they can be added to staff later
+
     await user_db.add_user(
         message.from_user.id, 
         message.from_user.first_name, 
         message.from_user.username
     )
-    
+
     is_admin = await admin_db.is_admin(message.from_user.id)
-    
+
     if not is_admin:
         kb_contact = ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text='📱 ПОДІЛИТИСЯ КОНТАКТОМ', request_contact=True)]],
@@ -68,37 +67,34 @@ async def cmd_start(message: Message, state: FSMContext):
         return
 
     role = await admin_db.get_admin_role(message.from_user.id)
-    
+
     role_label = {
         'developer': 'developer',
         'owner': 'власник',
         'admin': 'адмін'
     }.get(role, role)
-    
+
     await message.answer(f'🔐 <b>ВІТАЄМО В АДМІН-ПАНЕЛІ!</b>\nВаша роль: <b>{role_label}</b>', reply_markup=akb.get_admin_main_kb(role), parse_mode='HTML')
 
 @user_router.message(F.contact)
 async def handle_contact(message: Message):
     if not message.contact: return
-    
-    # Check if contact belongs to the user
+
     if message.contact.user_id != message.from_user.id:
         await message.answer("❌ Будь ласка, надішліть свій власний контакт.")
         return
-        
+
     await user_db.set_phone(message.from_user.id, message.contact.phone_number)
-    
+
     is_admin = await admin_db.is_admin(message.from_user.id)
     if not is_admin:
         await message.answer(
             "✅ <b>Дякуємо! Ваш номер збережено.</b>\n\nТепер власник може додати вас до команди. Очікуйте повідомлення про призначення ролі.", 
             parse_mode='HTML',
-            reply_markup=ReplyKeyboardMarkup(keyboard=[], remove_keyboard=True) # Hide keyboard
+            reply_markup=ReplyKeyboardMarkup(keyboard=[], remove_keyboard=True) 
         )
     else:
         await message.answer("✅ Номер телефону оновлено.", reply_markup=ReplyKeyboardMarkup(keyboard=[], remove_keyboard=True))
-
-# --- Public Information Handlers ---
 
 async def show_contacts(message: Message):
     text = (
@@ -125,8 +121,7 @@ async def cmd_start_msg(message: Message, is_admin: bool=False):
 @user_router.message()
 async def block_all_other_messages(message: Message):
     is_admin = await admin_db.is_admin(message.from_user.id)
-    
-    # Allow main menu buttons for everyone
+
     if message.text == kb.BTN_CONTACTS:
         return await show_contacts(message)
     if message.text == kb.BTN_LOCATIONS:
@@ -157,10 +152,8 @@ async def show_location_details(callback: CallbackQuery):
     text += f"🏠 <b>Адреса:</b> {loc['address']}\n"
     text += f"🕒 <b>Графік:</b> {loc['schedule']}\n"
 
-
     if loc.get('description') or loc.get('atmosphere'):
         text += f"\n✨ {loc.get('description') or loc['atmosphere']}\n"
-
 
     kb_loc = InlineKeyboardMarkup(inline_keyboard=[
 
@@ -226,14 +219,14 @@ async def show_bean_details(callback: CallbackQuery, state: FSMContext):
     if bean.get('roast'): text += f"<b>Обсмаження:</b> {bean['roast']}\n"
     if bean.get('quality_score') or bean.get('cup_score'): 
         text += f"<b>Оцінка якості:</b> {bean.get('quality_score') or bean['cup_score']}\n"
-    
+
     if bean.get('variety'): text += f"<b>Різновид:</b> {bean['variety']}\n"
     if bean.get('altitude'): text += f"<b>Висота зростання:</b> {bean['altitude']}\n"
     if bean.get('processing'): text += f"<b>Метод обробки:</b> {bean['processing']}\n"
     if bean.get('harvest'): text += f"<b>Період врожаю:</b> {bean['harvest']}\n"
     if bean.get('descriptors') or bean.get('taste'):
         text += f"<b>Дескриптори:</b> {bean.get('descriptors') or bean.get('taste')}\n"
-    
+
     text += f"\n💰 <b>Ціна:</b> {bean.get('price_250', 0)} ₴"
 
     await callback.message.answer_photo(bean.get('image_url', ''), caption=text, reply_markup=kb.get_beans_weight_kb(), parse_mode='HTML')

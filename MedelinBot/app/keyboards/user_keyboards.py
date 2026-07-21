@@ -7,7 +7,6 @@ import datetime
 import hashlib
 import re
 
-
 def truncate(text, length):
     return text[:length] + '..' if len(text) > length else text
 
@@ -128,12 +127,12 @@ def get_np_warehouses_kb(warehouses, page=0):
     per_page = 6
     start = page * per_page
     end = start + per_page
-    
+
     for wh in warehouses[start:end]:
         name = wh.get('Description', 'Відділення')
         ref = wh.get('Ref', '')
         keyboard.append([InlineKeyboardButton(text=name, callback_data=f'np_wh_{ref}')])
-        
+
     nav_row = []
     if page > 0:
         nav_row.append(InlineKeyboardButton(text='⬅️', callback_data=f'np_wh_page_{page-1}'))
@@ -141,7 +140,7 @@ def get_np_warehouses_kb(warehouses, page=0):
         nav_row.append(InlineKeyboardButton(text='➡️', callback_data=f'np_wh_page_{page+1}'))
     if nav_row:
         keyboard.append(nav_row)
-        
+
     keyboard.append([InlineKeyboardButton(text='🏠 НА ГОЛОВНУ', callback_data='back_main_menu_only')])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
@@ -170,8 +169,7 @@ async def get_contact_kb():
     for s in socials:
         name = s['name']
         url = s['url']
-        
-        # Format phone/email links if they aren't already
+
         if name.lower() == 'телефон' and not url.startswith('tel:'):
             clean_phone = re.sub(r'[^\d+]', '', url)
             url = f"tel:{clean_phone}"
@@ -179,8 +177,7 @@ async def get_contact_kb():
             url = f"mailto:{url}"
 
         icon = get_social_icon(url, name)
-        
-        # Basic URL validation for InlineKeyboardButton
+
         if not (url.startswith('http') or url.startswith('tg://') or url.startswith('tel:') or url.startswith('mailto:')):
             continue
 
@@ -188,7 +185,7 @@ async def get_contact_kb():
         if len(row) == 2:
             keyboard.append(row)
             row = []
-    
+
     if row:
         keyboard.append(row)
 

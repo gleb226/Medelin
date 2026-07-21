@@ -1,14 +1,10 @@
-/* ============================================================
-   MOBILE MENU — Medelin Coffee
-   Beautiful full-screen overlay with animated burger → X
-   ============================================================ */
+
 
 :root {
     --mobile-menu-duration: 0.45s;
     --mobile-menu-ease: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
-/* Accessibility */
 .accessibility-hidden {
     position: absolute;
     width: 1px;
@@ -21,15 +17,12 @@
     border: 0;
 }
 
-/* Hide on desktop */
 .mobile-menu {
     display: none;
 }
 
-/* ── Show on tablet/mobile ── */
 @media (max-width: 1024px) {
 
-    /* Wrapper — fixed top-right */
     .mobile-menu {
         display: block;
         position: fixed;
@@ -39,7 +32,6 @@
         pointer-events: auto;
     }
 
-    /* ── Burger button ── */
     .mobile-menu__toggle {
         position: fixed;
         top: 1rem;
@@ -69,7 +61,6 @@
         border-color: var(--color-gold);
     }
 
-    /* Lines */
     .mobile-menu__icon-line {
         display: block;
         width: 22px;
@@ -83,7 +74,6 @@
         transform-origin: center;
     }
 
-    /* ── Animate to X ── */
     .mobile-menu__toggle[aria-expanded='true'] {
         background: rgba(43, 27, 20, 0.95);
         border-color: rgba(201, 169, 110, 0.5);
@@ -102,12 +92,11 @@
         transform: translateY(-7.5px) rotate(-45deg);
     }
 
-    /* ── Full-screen overlay panel ── */
     .mobile-menu__panel {
         position: fixed;
         inset: 0;
         background: var(--color-dark-brown);
-        /* subtle texture via gradient */
+
         background-image:
             radial-gradient(ellipse at 20% 20%, rgba(201, 169, 110, 0.08) 0%, transparent 60%),
             radial-gradient(ellipse at 80% 80%, rgba(111, 78, 55, 0.12) 0%, transparent 60%);
@@ -125,7 +114,6 @@
         overflow: hidden;
     }
 
-    /* Decorative top border line */
     .mobile-menu__panel::before {
         content: '';
         position: absolute;
@@ -138,7 +126,6 @@
         transition: opacity 0.6s ease 0.3s;
     }
 
-    /* ── Open state ── */
     .mobile-menu__panel--open {
         opacity: 1;
         visibility: visible;
@@ -148,7 +135,6 @@
         opacity: 1;
     }
 
-    /* ── Logo inside panel ── */
     .mobile-menu__inner {
         width: 100%;
         max-width: 420px;
@@ -158,7 +144,6 @@
         gap: 0;
     }
 
-    /* Logo text in menu */
     .mobile-menu__logo {
         font-family: var(--font-logo);
         font-size: 2.8rem;
@@ -180,7 +165,6 @@
         transform: translateY(0);
     }
 
-    /* Divider under logo */
     .mobile-menu__divider {
         width: 60px;
         height: 2px;
@@ -199,7 +183,6 @@
         transform: scaleX(1);
     }
 
-    /* ── Nav links container ── */
     .mobile-menu__links {
         display: flex;
         flex-direction: column;
@@ -208,7 +191,6 @@
         width: 100%;
     }
 
-    /* ── Individual links ── */
     .mobile-menu__link {
         font-family: var(--font-accent);
         font-size: clamp(1.45rem, 5.4vw, 2.2rem);
@@ -225,7 +207,6 @@
         position: relative;
         overflow: hidden;
 
-        /* Entrance animation */
         opacity: 0;
         transform: translateY(28px);
         transition:
@@ -235,7 +216,6 @@
             opacity 0.4s ease;
     }
 
-    /* Staggered entrance when panel opens */
     .mobile-menu__panel--open .mobile-menu__link:nth-child(1) {
         opacity: 1;
         transform: translateY(0);
@@ -262,14 +242,12 @@
         transition-delay: 0.48s;
     }
 
-    /* Hover state */
     .mobile-menu__link:hover {
         color: var(--color-cream);
         background: rgba(201, 169, 110, 0.12);
         transform: scale(1.04);
     }
 
-    /* Active page link */
     .mobile-menu__link--active {
         color: var(--color-gold) !important;
     }
@@ -286,7 +264,6 @@
         border-radius: 2px;
     }
 
-    /* ── Footer in menu ── */
     .mobile-menu__footer {
         opacity: 0;
         transform: translateY(16px);
@@ -307,14 +284,12 @@
         transform: translateY(0);
     }
 
-    /* Hide old unused elements */
     .mobile-menu__header,
     .mobile-menu__close {
         display: none;
     }
 }
 
-/* ── Small phones ── */
 @media (max-width: 400px) {
     .mobile-menu__toggle {
         width: 46px;
@@ -342,7 +317,6 @@
     }
 }
 
-/* ── Landscape phone ── */
 @media (max-height: 500px) and (orientation: landscape) {
     .mobile-menu__panel {
         padding: 4.5rem 2rem 2rem;

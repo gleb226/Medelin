@@ -1,22 +1,9 @@
-/* ================================================================
-   RESPONSIVE.CSS — Medelin Coffee  v3.0
-   Mobile-first breakpoints:
-   ≤ 480px   — small phones
-   ≤ 600px   — phones
-   ≤ 768px   — large phones / phablets
-   ≤ 992px   — tablets portrait
-   ≤ 1200px  — tablets landscape / small laptops
-   ≥ 2000px  — large screens
-   ================================================================ */
 
-/* ── Root tokens for mobile ── */
+
 :root {
     --header-mobile-height: 70px;
 }
 
-/* ================================================================
-   1. LARGE SCREENS ≤ 1400px
-   ================================================================ */
 @media (max-width: 1400px) {
     :root {
         --container-width: 95%;
@@ -24,9 +11,6 @@
     }
 }
 
-/* ================================================================
-   2. SMALL LAPTOPS / LARGE TABLETS ≤ 1200px
-   ================================================================ */
 @media (max-width: 1200px) {
     .products-grid,
     #coffee-root .products-grid,
@@ -40,12 +24,8 @@
     }
 }
 
-/* ================================================================
-   3. TABLETS PORTRAIT ≤ 992px
-   ================================================================ */
 @media (max-width: 1024px) {
 
-    /* ── Header: transparent strip, burger handles navigation ── */
     .header {
         background: transparent !important;
         box-shadow: none !important;
@@ -53,7 +33,6 @@
         pointer-events: none;
     }
 
-    /* The logo is hidden — shown inside mobile panel */
     .header__container {
         pointer-events: none;
     }
@@ -66,12 +45,10 @@
         display: none !important;
     }
 
-    /* Main content: top padding to account for the burger button area */
     .main--pt-header {
         padding-top: 80px;
     }
 
-    /* ── Cart modal ── */
     .cart-modal__list {
         padding: 0 1.5rem 1.25rem;
     }
@@ -84,7 +61,6 @@
         padding: 1.25rem 1.5rem 1.75rem !important;
     }
 
-    /* ── Contact page ── */
     .contact {
         padding: 2rem 1.5rem 3rem;
     }
@@ -138,13 +114,11 @@
         grid-template-columns: repeat(2, 1fr);
     }
 
-    /* ── Footer ── */
     .footer__content {
         grid-template-columns: 1fr 1fr;
         gap: 2.5rem;
     }
 
-    /* ── Menu categories ── */
     .menu__categories {
         grid-template-columns: repeat(2, 1fr);
         gap: 2rem;
@@ -154,7 +128,6 @@
         padding: 2rem 1.5rem;
     }
 
-    /* ── Modals full-screen on tablet ── */
     .checkout-modal,
     .cart-modal__content,
     .booking-modal__content {
@@ -197,14 +170,8 @@
     }
 }
 
-/* 900px bean breakpoint now handled by 1024px rule in style.css */
-
-/* ================================================================
-   4. LARGE PHONES / PHABLETS ≤ 768px
-   ================================================================ */
 @media (max-width: 768px) {
 
-    /* ── Base ── */
     html, body {
         overflow-x: hidden !important;
         width: 100%;
@@ -217,7 +184,6 @@
         --gutter-x: 1rem;
     }
 
-    /* ── Hero ── */
     .hero {
         height: 75vh;
         min-height: 420px;
@@ -242,14 +208,12 @@
         margin-bottom: 1.5rem;
     }
 
-    /* ── Section title ── */
     .section-title {
         font-size: clamp(1.7rem, 6vw, 2.4rem);
         margin-bottom: 1.5rem;
         padding: 0 0.5rem;
     }
 
-    /* ── Promo cards ── */
     .promo {
         padding: 0.75rem 1rem;
     }
@@ -294,7 +258,6 @@
         margin-bottom: 1.25rem;
     }
 
-    /* ── About ── */
     .about-summary {
         padding: 2rem 1.25rem;
     }
@@ -310,14 +273,12 @@
         display: none;
     }
 
-    /* ── Buttons ── */
     .btn {
         padding: 1rem 2rem;
         font-size: 1rem;
         min-height: 52px;
     }
 
-    /* ── Products grid ── */
     .products-grid,
     #coffee-root .products-grid,
     #locations-grid {
@@ -327,8 +288,8 @@
     }
 
     .product-card__image {
-        height: 380px !important; /* More vertical/portrait */
-        margin: 12px 12px 0 12px !important; /* Side and top padding for image effect */
+        height: 380px !important; 
+        margin: 12px 12px 0 12px !important; 
         width: calc(100% - 24px) !important;
         border-radius: 20px !important;
     }
@@ -338,7 +299,6 @@
         border-radius: 24px !important;
     }
 
-    /* ── Booking hero ── */
     .booking-hero {
         padding: 3.5rem 1.25rem;
     }
@@ -364,7 +324,6 @@
         width: 100%;
     }
 
-    /* ── Cart / Checkout modals full-screen ── */
     .checkout-modal,
     .cart-modal__content,
     .booking-modal__content {
@@ -596,22 +555,17 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
 
-    /* ── Menu categories ── */
     .menu__categories {
         grid-template-columns: 1fr;
         gap: 2rem;
     }
 
-    /* ── Footer 2-col ── */
     .footer__content {
         grid-template-columns: 1fr 1fr;
         gap: 2rem;
     }
 }
 
-/* ================================================================
-   5. PHONES ≤ 600px
-   ================================================================ */
 @media (max-width: 600px) {
 
     .products-grid,
@@ -648,9 +602,6 @@
     }
 }
 
-/* ================================================================
-   6. SMALL PHONES ≤ 480px
-   ================================================================ */
 @media (max-width: 480px) {
 
     html {
@@ -661,7 +612,6 @@
         --gutter-x: 1rem;
     }
 
-    /* ── Hero ── */
     .hero {
         height: 75vh;
         min-height: 400px;
@@ -679,13 +629,11 @@
         margin-bottom: 2.5rem;
     }
 
-    /* ── Section title ── */
     .section-title {
         font-size: clamp(1.75rem, 8vw, 2.25rem);
         margin-bottom: 2rem;
     }
 
-    /* ── Buttons ── */
     .btn {
         padding: 1.1rem 2rem;
         font-size: 1.05rem;
@@ -696,7 +644,6 @@
         justify-content: center;
     }
 
-    /* ── Product card ── */
     .product-card {
         border-radius: 20px !important;
     }
@@ -708,7 +655,6 @@
         border-radius: 16px !important;
     }
 
-    /* Specific adjustment for locations to avoid stretching */
     #locations-grid .product-card__image {
         height: 240px !important;
         margin: 10px 10px 0 10px !important;
@@ -724,7 +670,6 @@
         font-size: 1.35rem;
     }
 
-    /* ── Bean detail ── */
     .bean-full-view__image {
         height: 480px !important;
         border-radius: 24px !important;
@@ -755,22 +700,19 @@
         grid-column: span 1;
     }
 
-    /* ── Promo card ── */
     .promo-card__image {
         height: 240px;
     }
-    
+
     .promo-card__title {
         font-size: 1.75rem;
     }
 
-    /* ── About ── */
     .about-summary__text {
         font-size: 1.05rem;
         line-height: 1.7;
     }
 
-    /* ── Footer ── */
     .footer__content {
         grid-template-columns: 1fr;
         text-align: center;
@@ -797,7 +739,6 @@
         font-size: 0.9rem;
     }
 
-    /* ── Contact ── */
     .contact-card__link {
         flex-direction: column;
         text-align: center;
@@ -816,7 +757,6 @@
         height: 100px;
     }
 
-    /* ── Payment ── */
     .payment-btn {
         padding: 1.1rem 1.25rem !important;
         font-size: 0.95rem !important;
@@ -827,9 +767,6 @@
     }
 }
 
-/* ================================================================
-   7. EXTRA-SMALL PHONES ≤ 360px
-   ================================================================ */
 @media (max-width: 360px) {
 
     html {
@@ -849,9 +786,6 @@
     }
 }
 
-/* ================================================================
-   8. LANDSCAPE PHONES
-   ================================================================ */
 @media (max-height: 500px) and (orientation: landscape) {
 
     .hero {
@@ -874,9 +808,6 @@
     }
 }
 
-/* ================================================================
-   9. TABLET LANDSCAPE 769–1024px
-   ================================================================ */
 @media (min-width: 769px) and (max-width: 1024px) {
 
     .products-grid,
@@ -894,9 +825,6 @@
 
 }
 
-/* ================================================================
-   10. LARGE SCREENS ≥ 2000px
-   ================================================================ */
 @media (min-width: 2000px) {
     :root {
         --container-width: 1800px;
@@ -921,23 +849,16 @@
     }
 }
 
-/* ================================================================
-   11. BEAN DETAIL PAGE — MOBILE "ADD TO CART" STICKY BAR
-   ================================================================ */
-
-/* Sticky add-to-cart bottom bar for bean detail on mobile */
 .bean-detail-sticky-bar {
     display: none;
 }
 
 @media (max-width: 768px), (max-width: 1024px) and (orientation: portrait) {
 
-    /* Hide the inline price card on mobile — use sticky bar instead */
     .bean-full-view .bean-full-view__price-card {
         display: none;
     }
 
-    /* Sticky bottom bar */
     .bean-detail-sticky-bar {
         display: flex;
         position: fixed;
@@ -1003,12 +924,10 @@
         box-shadow: 0 3px 10px rgba(201,169,110,0.3);
     }
 
-    /* Push content above sticky bar so it's not hidden */
     #bean-detail-section {
         padding-bottom: 100px !important;
     }
 
-    /* Bean full view tweaks on mobile */
     .bean-full-view {
         padding: 1rem 0 0;
     }
@@ -1048,7 +967,6 @@
         font-size: 1rem;
     }
 
-    /* Back button for bean detail */
     #bean-detail-section > .container > .btn {
         margin-top: 0.5rem !important;
         margin-bottom: 1rem !important;
@@ -1095,10 +1013,6 @@
         height: 240px;
     }
 }
-
-/* ================================================================
-   11b. TABLET ORIENTATION FIXES
-   ================================================================ */
 
 @media (min-width: 769px) and (max-width: 1200px) and (orientation: landscape) {
     :root {
@@ -1321,9 +1235,6 @@
     }
 }
 
-/* ================================================================
-   12. SIDEBAR TOGGLE (admin etc)
-   ================================================================ */
 @media (max-width: 1024px) {
     .sidebar-toggle {
         display: flex !important;

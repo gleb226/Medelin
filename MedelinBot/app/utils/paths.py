@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-
 def get_site_dir() -> Path:
     """
     Find where the MedelinSite files are located.
@@ -15,12 +14,10 @@ def get_site_dir() -> Path:
     for p in candidates:
         if p.exists():
             return p
-    
-    # Dev fallback
+
     repo_root = Path(__file__).resolve().parents[3]
     dev_path = repo_root / "MedelinSite"
     return dev_path
-
 
 def get_uploads_dir() -> Path:
     """
@@ -32,8 +29,6 @@ def get_uploads_dir() -> Path:
         p.mkdir(parents=True, exist_ok=True)
         return p
 
-    # Prefer a stable path in /app/uploads if we are in a container
-    # or the MedelinSite assets path if it's writable.
     candidates = [
         Path("/app/uploads"),
         get_site_dir() / "assets" / "images" / "uploads",
@@ -42,7 +37,7 @@ def get_uploads_dir() -> Path:
         try:
             if not p.exists():
                 p.mkdir(parents=True, exist_ok=True)
-            # Test writability
+
             test_file = p / ".write_test"
             test_file.touch()
             test_file.unlink()
@@ -50,12 +45,10 @@ def get_uploads_dir() -> Path:
         except Exception:
             pass
 
-    # Dev fallback
     repo_root = Path(__file__).resolve().parents[3]
     dev_path = repo_root / "MedelinSite" / "assets" / "images" / "uploads"
     dev_path.mkdir(parents=True, exist_ok=True)
     return dev_path
-
 
 def get_cache_dir() -> Path:
     """

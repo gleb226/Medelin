@@ -86,8 +86,7 @@ async def global_error_handler(event: ErrorEvent, bot: Bot):
     from app.utils.admin_notifications import send_developer_error
 
     uname = html.escape(f"@{username}") if username else "N/A"
-    
-    # Escape variables for safe HTML formatting
+
     e_command = html.escape(str(command))
     e_type = html.escape(str(etype))
     e_msg = html.escape(str(emsg))

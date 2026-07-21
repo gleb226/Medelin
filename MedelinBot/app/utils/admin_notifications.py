@@ -11,7 +11,6 @@ async def send_admin_notification(text: str, reply_markup=None, location_id: str
     from app.databases.admin_database import admin_db
     from app.databases.mongo_client import get_db
 
-    # Get targets based on role and notification type
     targets = await admin_db.get_notification_targets(location_id, notification_type)
 
     if not targets:
@@ -23,7 +22,7 @@ async def send_admin_notification(text: str, reply_markup=None, location_id: str
         try:
             msg = await bot.send_message(uid, text, parse_mode='HTML', reply_markup=reply_markup)
             if order_id:
-                # Store message mapping for sync
+
                 await db.order_notifications.insert_one({
                     'order_id': str(order_id),
                     'admin_id': int(uid),
@@ -39,25 +38,24 @@ async def update_order_notifications(order_id: str, status: str) -> None:
     from app.databases.orders_database import orders_db
     import app.keyboards.admin_keyboards as akb
     from app.utils.message_utils import safe_edit_message
-    
+
     db = await get_db()
     order = await orders_db.get_order_by_id(order_id)
     if not order: return
-    
+
     order_num = order.get('order_number', '—')
     if status == 'confirmed': status_label = "✅ ПІДТВЕРДЖЕНО"
     elif status == 'completed': status_label = "🏁 ЗАВЕРШЕНО"
     elif status == 'paid': status_label = "💳 ОПЛАЧЕНО"
     elif status == 'new': status_label = "🆕 НОВЕ"
     else: status_label = "❌ ВІДХИЛЕНО"
-    
-    # Find all messages sent for this order
+
     cursor = db.order_notifications.find({'order_id': str(order_id)})
     notifications = await cursor.to_list(length=None)
-    
+
     for n in notifications:
         try:
-            # Reconstruct basic info for the message
+
             type_map = {
                 'takeaway': 'З собою', 'in_house': 'В закладі', 
                 'nova_poshta': 'Доставка', 'beans_delivery': 'Доставка', 
@@ -65,15 +63,15 @@ async def update_order_notifications(order_id: str, status: str) -> None:
             }
             order_type = order.get('order_type')
             type_label = type_map.get(order_type, order_type)
-            
+
             delivery_info = order.get('delivery_info') or ""
             if not delivery_info and order_type == 'in_house':
-                delivery_info = f"Стіл #{order.get('table_number', '—')}"
-            
+                delivery_info = f"Стіл {order.get('table_number', '?')}"
+
             if order.get('status') == 'paid' or order.get('is_paid'): pay_label = "ОПЛАЧЕНО"
             else: pay_label = "НАКЛАДНИЙ ПЛАТІЖ"
 
-            new_text = f"📦 <b>ЗАМОВЛЕННЯ #{order_num}</b> ({status_label})\n\n"
+            new_text = f"📦 <b>ЗАМОВЛЕННЯ #{order.get('order_number', '???')}</b>\n"
             new_text += f"👤 <b>{order.get('fullname')}</b>\n"
             new_text += f"📞 <code>{order.get('phone')}</code>\n"
             new_text += f"🚚 Куди: <b>{type_label} {delivery_info}</b>\n"
@@ -81,11 +79,11 @@ async def update_order_notifications(order_id: str, status: str) -> None:
             new_text += f"💳 Оплата: <b>{pay_label}</b>\n\n"
             new_text += f"🛒 <b>СКЛАД:</b>\n{order.get('cart')}\n\n"
             new_text += f"📝 ПОБАЖАННЯ: <b>{order.get('wishes') or '—'}</b>"
-            
+
             kb = None
             if status == 'confirmed':
                 kb = akb.get_active_finish_kb(order_id)
-            
+
             await bot.edit_message_text(
                 text=new_text,
                 chat_id=n['admin_id'],

@@ -1,319 +1,97 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html lang="uk">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Medelin | Admin Panel</title>
-        <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ50BUE2d30GBASKRdrCoBgrFBfvjFTiAKCYA&s" type="image/png" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Marcellus&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-        <style>
-            :root {
-                --color-cream: #f7f3e9;
-                --color-dark-brown: #3c2f2f;
-                --color-coffee: #8b5e3c;
-                --color-coffee-soft: rgba(139, 94, 60, 0.1);
-                --color-text: #2d3436;
-                --color-text-muted: #636e72;
-                --sidebar-width: 280px;
-                --shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-                --radius: 20px;
-                --font-main: 'Manrope', sans-serif;
-                --font-accent: 'Marcellus', serif;
-                --font-logo: 'Oswald', sans-serif;
-                --color-success: #00b894;
-                --color-danger: #d63031;
-                --color-warning: #fdcb6e;
-            }
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Medelin | Admin Panel</title>
+<link href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ50BUE2d30GBASKRdrCoBgrFBfvjFTiAKCYA&amp;s" rel="icon" type="image/png"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&amp;family=Marcellus&amp;family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 
-            * { box-sizing: border-box; margin: 0; padding: 0; }
-
-            body {
-                font-family: var(--font-main);
-                background-color: var(--color-cream);
-                color: var(--color-text);
-                display: flex;
-                min-height: 100vh;
-                overflow-x: hidden;
-            }
-
-            html, body { scrollbar-width: none; -ms-overflow-style: none; }
-            html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
-
-            #login-screen {
-                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-                background: linear-gradient(135deg, var(--color-cream) 0%, #e8e2d5 100%);
-                display: flex; justify-content: center; align-items: center;
-                z-index: 5000; transition: opacity 0.5s ease, visibility 0.5s;
-                padding: 1rem;
-            }
-            .login-screen--hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-
-            .login-card {
-                background: white; padding: clamp(1.5rem, 5vw, 4rem); border-radius: 40px;
-                box-shadow: 0 30px 80px rgba(60, 47, 47, 0.15);
-                width: 100%; max-width: 500px; text-align: center;
-                border: 1px solid rgba(139, 94, 60, 0.1);
-            }
-
-            .login-logo { font-family: var(--font-logo); font-size: clamp(2.5rem, 10vw, 3.5rem); color: var(--color-dark-brown); margin-bottom: 0.5rem; letter-spacing: 2px; text-transform: uppercase; }
-            .login-subtitle { color: var(--color-coffee); font-weight: 800; font-size: clamp(0.7rem, 2vw, 0.85rem); letter-spacing: 4px; margin-bottom: clamp(1.5rem, 5vw, 3rem); text-transform: uppercase; }
-
-            .input-group { margin-bottom: 1.8rem; text-align: left; }
-            .input-label { display: block; margin-bottom: 0.8rem; font-weight: 800; font-size: 0.85rem; color: var(--color-dark-brown); text-transform: uppercase; letter-spacing: 1px; }
-            .login-input {
-                width: 100%; padding: 1.3rem; border-radius: 18px; border: 2px solid var(--color-coffee-soft);
-                font-family: var(--font-main); font-size: 1rem; outline: none; transition: all 0.3s;
-                background: #fdfcf9;
-            }
-            .login-input:focus { border-color: var(--color-coffee); background: #fff; box-shadow: 0 0 0 5px var(--color-coffee-soft); }
-
-            #verify-state { display: none; }
-            .verify-pulse {
-                width: 100px; height: 100px; background: var(--color-coffee-soft);
-                border-radius: 50%; margin: 2.5rem auto; display: flex; align-items: center; justify-content: center;
-                position: relative;
-            }
-            .verify-pulse::after {
-                content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-                border: 4px solid var(--color-coffee); border-radius: 50%;
-                animation: pulse 2s infinite;
-            }
-            @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
-
-            .sidebar {
-                width: var(--sidebar-width); background: var(--color-dark-brown);
-                color: white; display: flex; flex-direction: column; position: fixed; height: 100vh;
-                transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                z-index: 2000; box-shadow: 15px 0 40px rgba(0,0,0,0.15);
-            }
-
-            .sidebar-overlay {
-                position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-                z-index: 1999; display: none; backdrop-filter: blur(4px);
-                transition: opacity 0.4s ease; opacity: 0;
-            }
-            .sidebar-overlay--active { display: block; opacity: 1; }
-
-            .main-content {
-                flex: 1; margin-left: var(--sidebar-width); padding: clamp(1.5rem, 4vw, 4rem);
-                width: calc(100% - var(--sidebar-width)); transition: all 0.4s ease;
-            }
-
-            .sidebar__header { padding: 4rem 2rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-            .sidebar__logo { font-family: var(--font-logo); font-size: 2.4rem; letter-spacing: 4px; color: white; text-decoration: none; display: block; text-transform: uppercase; }
-            .sidebar__nav { flex: 1; padding: 2.5rem 0; overflow-y: auto; display: flex; flex-direction: column; }
-            .nav-item { padding: 1.3rem 2.5rem; display: flex; align-items: center; gap: 1.2rem; cursor: pointer; transition: all 0.3s ease; color: rgba(255, 255, 255, 0.5); text-decoration: none; font-weight: 600; border-left: 5px solid transparent; font-size: 0.95rem; }
-            .nav-item:hover, .nav-item--active { background-color: rgba(255, 255, 255, 0.05); color: white; border-left-color: var(--color-coffee); }
-            .nav-item i { width: 24px; text-align: center; font-size: 1.3rem; opacity: 0.8; }
-
-            .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4rem; gap: 2rem; flex-wrap: wrap; }
-            .header__title { font-family: var(--font-accent); font-size: clamp(2.2rem, 5vw, 3.2rem); font-weight: 400; color: var(--color-dark-brown); }
-
-            .card { background: white; border-radius: 30px; padding: clamp(1.5rem, 4vw, 3rem); box-shadow: var(--shadow); margin-bottom: 2.5rem; border: 1px solid rgba(139, 94, 60, 0.05); overflow: hidden; }
-
-            .btn { padding: 1rem 2rem; border-radius: 16px; border: none; cursor: pointer; font-weight: 800; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: var(--font-main); display: inline-flex; align-items: center; gap: 10px; text-decoration: none; white-space: nowrap; font-size: 0.95rem; }
-            .btn--primary { background-color: var(--color-coffee); color: white; box-shadow: 0 8px 25px rgba(139, 94, 60, 0.25); }
-            .btn--primary:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(139, 94, 60, 0.35); }
-            .btn--block { width: 100%; justify-content: center; padding: 1.4rem; font-size: 1.1rem; }
-            .btn--success { background-color: var(--color-success); color: white; }
-            .btn--danger { background-color: var(--color-danger); color: white; }
-            .btn--outline { background: transparent; border: 2.5px solid var(--color-coffee); color: var(--color-coffee); }
-            .btn--sm { padding: 0.6rem 1.2rem; font-size: 0.85rem; border-radius: 12px; }
-
-            .order-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.04); padding: 2rem 0; gap: 2rem; }
-            .order-item:last-child { border-bottom: none; }
-            .order-info { display: flex; flex-direction: column; gap: 0.6rem; flex: 1; }
-            .order-title { font-weight: 800; font-size: 1.3rem; color: var(--color-dark-brown); }
-            .order-meta { color: var(--color-text-muted); font-size: 1rem; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
-            .order-items { margin-top: 1rem; font-size: 1.05rem; color: #444; background: #fdfaf5; padding: 1.5rem; border-radius: 20px; border: 1px solid rgba(139, 94, 60, 0.03); line-height: 1.6; }
-            .order-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: flex-end; }
-
-            .admin-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; padding-bottom: 1rem; border-bottom: 2px solid var(--color-coffee-soft); }
-            .admin-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
-            
-            .bean-card, .location-card {
-                background: white; border-radius: 18px; overflow: hidden;
-                box-shadow: var(--shadow); border: 1px solid rgba(139, 94, 60, 0.05);
-                transition: all 0.3s ease; display: flex; flex-direction: column;
-            }
-            .bean-card:hover, .location-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(139, 94, 60, 0.1); }
-            .bean-card .card-img { width: 100%; aspect-ratio: 3/4; height: auto; object-fit: cover; cursor: zoom-in; }
-            .location-card .card-img { width: 100%; aspect-ratio: 16/9; height: auto; object-fit: cover; cursor: zoom-in; }
-            .card-body { padding: 1.2rem; flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
-
-            .info-block { background: #fdfcf9; padding: 0.8rem 1.2rem; border-radius: 12px; border: 1px solid var(--color-coffee-soft); font-size: 0.95rem; }
-            .info-block b { color: var(--color-coffee); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.2rem; }
-            .card-title { font-family: var(--font-main); font-weight: 800; font-size: 1.35rem; color: var(--color-dark-brown); margin-bottom: 0.1rem; }
-            .card-desc { font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: 0.5rem; flex: 1; line-height: 1.5; }
-            .card-stats { display: flex; gap: 0.6rem; font-size: 0.85rem; font-weight: 700; color: var(--color-coffee); margin-bottom: 0.4rem; }
-
-            .hint-text { font-size: 0.8rem; color: var(--color-coffee); margin-top: 0.3rem; font-weight: 600; opacity: 0.8; }
-
-            .confirm-modal {
-                position: fixed; inset: 0; background: rgba(60, 47, 47, 0.4); z-index: 6000;
-                display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px);
-                overflow: hidden; touch-action: none; overscroll-behavior: contain;
-            }
-            .confirm-panel {
-                background: white; padding: 2.5rem; border-radius: 25px; width: calc(100% - 2rem); max-width: 400px;
-                text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.2); border: 1px solid var(--color-coffee-soft); box-sizing: border-box; margin: 1rem;
-            }
-            .confirm-panel h4 { font-family: var(--font-accent); font-size: 1.8rem; margin-bottom: 1rem; color: var(--color-dark-brown); }
-            .confirm-panel p { margin-bottom: 2rem; color: var(--color-text-muted); }
-            .confirm-actions { display: flex; gap: 1rem; justify-content: center; }
-
-            .admin-field { display: flex; flex-direction: column; gap: 0.6rem; }
-            .admin-field label { font-size: 0.8rem; font-weight: 800; color: var(--color-dark-brown); text-transform: uppercase; letter-spacing: 1px; }
-            .admin-field input, .admin-field select, .admin-field textarea {
-                width: 100%; padding: 1rem 1.2rem; border: 2px solid var(--color-coffee-soft);
-                border-radius: 15px; font-family: var(--font-main); font-size: 0.95rem; outline: none; background: white; transition: all 0.3s;
-                resize: none; box-sizing: border-box;
-            }
-            .admin-field input:focus { border-color: var(--color-coffee); box-shadow: 0 0 0 4px var(--color-coffee-soft); }
-            textarea { resize: none !important; box-sizing: border-box; }
-
-            .admin-modal { position: fixed; inset: 0; background: rgba(60, 47, 47, 0.6); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(8px); overflow: hidden; touch-action: none; overscroll-behavior: contain; }
-            .admin-modal--active { display: flex; }
-            .admin-modal__panel { width: min(800px, 100%); max-height: 90vh; overflow-y: auto; background: white; border-radius: 35px; padding: clamp(2rem, 5vw, 3.5rem); box-shadow: 0 40px 100px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.2); box-sizing: border-box; }
-            .admin-modal__panel--large { width: min(1000px, 100%); }
-            .admin-modal__header { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin-bottom: 2.5rem; }
-            .admin-modal__title { font-family: var(--font-accent); color: var(--color-dark-brown); font-size: 2.2rem; font-weight: 400; }
-            .admin-modal__footer { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2.5rem; flex-wrap: wrap; }
-
-            .loader-wrap { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(247, 243, 233, 0.95); display: none; justify-content: center; align-items: center; z-index: 6000; backdrop-filter: blur(5px); }
-            .spinner { width: 70px; height: 70px; border: 7px solid rgba(139, 94, 60, 0.1); border-top-color: var(--color-coffee); border-radius: 50%; animation: spin 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite; }
-            @keyframes spin { to { transform: rotate(360deg); } }
-
-            .sidebar-toggle {
-                display: none; width: 55px; height: 55px; background: var(--color-dark-brown); color: white;
-                border-radius: 18px; align-items: center; justify-content: center; cursor: pointer; border: none;
-                font-size: 1.4rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            }
-
-            @media (max-width: 768px), (max-width: 1024px) and (orientation: portrait) {
-                .sidebar { transform: translateX(-100%); }
-                .sidebar--active { transform: translateX(0); }
-                .main-content { margin-left: 0; width: 100%; padding: 1.5rem; }
-                .sidebar-toggle { display: flex; }
-
-                /* Tablet specific adjustments */
-                .admin-grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
-                .admin-modal__panel--large { width: 90%; }
-                
-                .header { margin-bottom: 2rem; flex-direction: column; align-items: flex-start; gap: 1rem; }
-                .header__actions { width: 100%; justify-content: space-between; }
-                .order-item { flex-direction: column; align-items: stretch; gap: 1rem; padding: 1.5rem 0; }
-                .order-actions { justify-content: flex-start; width: 100%; flex-direction: row !important; align-items: center; }
-                .order-actions .btn { width: auto !important; flex: none !important; }
-                .admin-toolbar { flex-direction: column; align-items: flex-start; gap: 1rem; }
-            }
-
-            @media (max-width: 768px) {
-                .header__title { font-size: 1.8rem; }
-                .order-actions { flex-wrap: wrap; gap: 0.5rem; }
-                .order-actions .btn { flex: 0 1 auto; width: auto; }
-                .admin-toolbar .btn { width: auto; margin-top: 0.5rem; }
-                .admin-toolbar h3 { font-size: 1.5rem; }
-                .admin-modal__panel { border-radius: 20px; padding: 1.5rem; margin: 1rem; width: calc(100% - 2rem); max-width: 100%; overflow-y: auto; max-height: 85vh; box-sizing: border-box; }
-                .admin-modal__title { font-size: 1.6rem; }
-                .admin-modal__header { margin-bottom: 1.5rem; flex-wrap: wrap; }
-                .admin-grid { grid-template-columns: 1fr; }
-                .order-info { word-break: break-word; overflow-wrap: break-word; }
-                .order-items { overflow-x: auto; }
-            }
-        </style>
-    </head>
-    <body>
-        <button class="sidebar-toggle" id="menu-toggle" style="position:fixed; top:1.5rem; right:1.5rem; z-index:2100;">
-            <i class="fas fa-bars"></i>
-        </button>
-
-        <div class="sidebar-overlay" id="sidebar-overlay"></div>
-
-        <div id="login-screen">
-            <div class="login-card">
-                <div id="login-form">
-                    <h1 class="login-logo">MEDELIN</h1>
-                    <p class="login-subtitle">Admin Dashboard</p>
-                    <div class="input-group">
-                        <label class="input-label">Ідентифікатор</label>
-                        <input type="text" id="login-id" class="login-input" placeholder="TG ID, @username або телефон" onkeyup="if(event.key==='Enter') attemptLogin()">
-                    </div>
-                    <div class="input-group">
-                        <label class="input-label">Пароль панелі</label>
-                        <input type="password" id="login-pass" class="login-input" placeholder="••••••••" onkeyup="if(event.key==='Enter') attemptLogin()">
-                    </div>
-                    <button class="btn btn--primary btn--block" onclick="attemptLogin()">Авторизуватися</button>
-                </div>
-                <div id="verify-state">
-                    <h2 style="font-family:var(--font-accent); font-size: 2rem; margin-bottom: 1rem;">Очікування...</h2>
-                    <p style="color: var(--color-text-muted); line-height: 1.6; padding: 0 1rem;">Ми надіслали повідомлення в Telegram.<br>Будь ласка, підтвердьте або відхиліть вхід у боті.</p>
-                    <div class="verify-pulse"><i class="fab fa-telegram-plane" style="font-size:2.5rem; color:var(--color-coffee);"></i></div>
-                    <button class="btn btn--outline" onclick="resetLogin()">Скасувати</button>
-                </div>
-            </div>
-        </div>
-
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar__header">
-                <span class="sidebar__logo">MEDELIN</span>
-            </div>
-            <nav class="sidebar__nav">
-                <a class="nav-item nav-item--active" data-section="new_orders"><i class="fas fa-bell"></i> Нові</a>
-                <a class="nav-item" data-section="orders"><i class="fas fa-shopping-bag"></i> Активні</a>
-                <a class="nav-item" data-section="beans"><i class="fas fa-coffee"></i> Зерно</a>
-                <a class="nav-item" data-section="locations"><i class="fas fa-map-marker-alt"></i> Локації</a>
-                <a class="nav-item" data-section="socials"><i class="fas fa-hashtag"></i> Контакти</a>
-                <a class="nav-item" data-section="stats"><i class="fas fa-chart-line"></i> Статистика</a>
-                <a class="nav-item" data-section="team"><i class="fas fa-users-gear"></i> Персонал</a>
-                <a href="/" class="nav-item" style="margin-top:auto; border-top:1px solid rgba(255,255,255,0.05);"><i class="fas fa-external-link-alt"></i> На сайт</a>
-            </nav>
-        </aside>
-
-        <main class="main-content" id="main-content">
-            <header class="header">
-                <div>
-                    <h2 class="header__title" id="section-title">Нові замовлення</h2>
-                    <p id="admin-info" style="font-size:0.85rem; color:var(--color-coffee); font-weight:700;"></p>
-                </div>
-                <div class="header__actions">
-                    <button class="btn btn--outline" onclick="logout()">Вийти</button>
-                </div>
-            </header>
-            <div id="content-area"><div class="card"><div id="items-list">Завантаження...</div></div></div>
-        </main>
-
-        <div class="confirm-modal" id="nice-confirm">
-            <div class="confirm-panel">
-                <i class="fas fa-exclamation-triangle" style="font-size:3rem; color:var(--color-danger); margin-bottom:1.5rem; display:block;"></i>
-                <h4 id="nice-confirm-title">Ви впевнені?</h4>
-                <p id="nice-confirm-msg">Цю дію неможливо буде скасувати.</p>
-                <div class="confirm-actions">
-                    <button class="btn btn--outline btn--sm" id="nice-confirm-cancel">Скасувати</button>
-                    <button class="btn btn--danger btn--sm" id="nice-confirm-ok">Так, видалити</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="confirm-modal" id="nice-alert">
-            <div class="confirm-panel">
-                <i class="fas fa-info-circle" style="font-size:3rem; color:var(--color-coffee); margin-bottom:1.5rem; display:block;"></i>
-                <h4 id="nice-alert-title">Увага</h4>
-                <p id="nice-alert-msg"></p>
-                <div class="confirm-actions">
-                    <button class="btn btn--primary btn--sm" id="nice-alert-ok">ОК</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="full-image-modal" id="image-modal" onclick="this.style.display='none'"><img src="" id="full-img"></div>
-        <div class="loader-wrap" id="loader"><div class="spinner"></div></div>
-        <div class="admin-modal" id="admin-modal"></div>
-
-        <script>
+<link href="assets/css/pages/admin-panel.css" rel="stylesheet"/></head>
+<body>
+<button class="sidebar-toggle admin-inline-button-1" id="menu-toggle">
+<i class="fas fa-bars"></i>
+</button>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div id="login-screen">
+<div class="login-card">
+<div id="login-form">
+<h1 class="login-logo">MEDELIN</h1>
+<p class="login-subtitle">Admin Dashboard</p>
+<div class="input-group">
+<label class="input-label">Ідентифікатор</label>
+<input class="login-input" id="login-id" onkeyup="if(event.key==='Enter') attemptLogin()" placeholder="TG ID, @username або телефон" type="text"/>
+</div>
+<div class="input-group">
+<label class="input-label">Пароль панелі</label>
+<input class="login-input" id="login-pass" onkeyup="if(event.key==='Enter') attemptLogin()" placeholder="••••••••" type="password"/>
+</div>
+<button class="btn btn--primary btn--block" onclick="attemptLogin()">Авторизуватися</button>
+</div>
+<div id="verify-state">
+<h2 class="admin-inline-h2-2">Очікування...</h2>
+<p class="admin-inline-p-3">Ми надіслали повідомлення в Telegram.<br/>Будь ласка, підтвердьте або відхиліть вхід у боті.</p>
+<div class="verify-pulse"><i class="fab fa-telegram-plane admin-inline-i-4"></i></div>
+<button class="btn btn--outline" onclick="resetLogin()">Скасувати</button>
+</div>
+</div>
+</div>
+<aside class="sidebar" id="sidebar">
+<div class="sidebar__header">
+<span class="sidebar__logo">MEDELIN</span>
+</div>
+<nav class="sidebar__nav">
+<a class="nav-item nav-item--active" data-section="new_orders"><i class="fas fa-bell"></i> Нові</a>
+<a class="nav-item" data-section="orders"><i class="fas fa-shopping-bag"></i> Активні</a>
+<a class="nav-item" data-section="beans"><i class="fas fa-coffee"></i> Зерно</a>
+<a class="nav-item" data-section="locations"><i class="fas fa-map-marker-alt"></i> Локації</a>
+<a class="nav-item" data-section="socials"><i class="fas fa-hashtag"></i> Контакти</a>
+<a class="nav-item" data-section="stats"><i class="fas fa-chart-line"></i> Статистика</a>
+<a class="nav-item" data-section="team"><i class="fas fa-users-gear"></i> Персонал</a>
+<a class="nav-item admin-inline-a-5" href="/"><i class="fas fa-external-link-alt"></i> На сайт</a>
+</nav>
+</aside>
+<main class="main-content" id="main-content">
+<header class="header">
+<div>
+<h2 class="header__title" id="section-title">Нові замовлення</h2>
+<p class="admin-inline-p-6" id="admin-info"></p>
+</div>
+<div class="header__actions">
+<button class="btn btn--outline" onclick="logout()">Вийти</button>
+</div>
+</header>
+<div id="content-area"><div class="card"><div id="items-list">Завантаження...</div></div></div>
+</main>
+<div class="confirm-modal" id="nice-confirm">
+<div class="confirm-panel">
+<i class="fas fa-exclamation-triangle admin-inline-i-7"></i>
+<h4 id="nice-confirm-title">Ви впевнені?</h4>
+<p id="nice-confirm-msg">Цю дію неможливо буде скасувати.</p>
+<div class="confirm-actions">
+<button class="btn btn--outline btn--sm" id="nice-confirm-cancel">Скасувати</button>
+<button class="btn btn--danger btn--sm" id="nice-confirm-ok">Так, видалити</button>
+</div>
+</div>
+</div>
+<div class="confirm-modal" id="nice-alert">
+<div class="confirm-panel">
+<i class="fas fa-info-circle admin-inline-i-8"></i>
+<h4 id="nice-alert-title">Увага</h4>
+<p id="nice-alert-msg"></p>
+<div class="confirm-actions">
+<button class="btn btn--primary btn--sm" id="nice-alert-ok">ОК</button>
+</div>
+</div>
+</div>
+<div class="full-image-modal" id="image-modal" onclick="this.style.display='none'"><img id="full-img" src=""/></div>
+<div class="loader-wrap" id="loader"><div class="spinner"></div></div>
+<div class="admin-modal" id="admin-modal"></div>
+<script>
             let sessionToken = localStorage.getItem('medelin_admin_token') || '';
             let currentAdmin = JSON.parse(localStorage.getItem('medelin_admin_user') || 'null');
             let currentSection = 'new_orders';
@@ -442,7 +220,7 @@
                 sessionToken = token; currentAdmin = admin;
                 localStorage.setItem('medelin_admin_token', token);
                 localStorage.setItem('medelin_admin_user', JSON.stringify(admin));
-                
+
                 // Instead of reload, just transition UI
                 document.getElementById('login-screen').classList.add('login-screen--hidden');
                 showPanel();
@@ -507,17 +285,17 @@
                 const modal = document.getElementById('nice-confirm');
                 document.getElementById('nice-confirm-title').textContent = title;
                 document.getElementById('nice-confirm-msg').textContent = msg;
-                
+
                 const okBtn = document.getElementById('nice-confirm-ok');
                 const cancelBtn = document.getElementById('nice-confirm-cancel');
-                
+
                 okBtn.textContent = okText;
                 okBtn.className = `btn ${okBtnClass} btn--sm`;
                 cancelBtn.textContent = cancelText;
                 cancelBtn.className = `btn ${cancelBtnClass} btn--sm`;
 
                 const cleanup = () => { modal.style.display = 'none'; okBtn.onclick = null; cancelBtn.onclick = null; };
-                
+
                 okBtn.onclick = () => { cleanup(); onOk(); };
                 cancelBtn.onclick = () => { cleanup(); if (onCancel) onCancel(); };
 
@@ -528,38 +306,38 @@
                 showLoader(true);
                 const orders = await apiFetch('new-orders');
                 const list = document.getElementById('items-list');
-                if (!orders || orders.length === 0) { list.innerHTML = '<p style="text-align:center; padding:2rem;">Немає нових замовлень</p>'; showLoader(false); return; }
+                if (!orders || orders.length === 0) { list.innerHTML = '<p class="js-inline-style-100">Немає нових замовлень</p>'; showLoader(false); return; }
                 list.innerHTML = '';
                 const role = currentAdmin.role;
                 const isOwner = ['owner', 'boss', 'super'].includes(role);
                 const isAdmin = role === 'admin';
                 const isDeveloper = role === 'developer';
                 const canManage = isOwner || isAdmin;
-                
+
                 orders.forEach(o => {
                     const div = document.createElement('div'); div.className = 'order-item';
                     const date = o.created_at ? new Date(o.created_at).toLocaleString('uk-UA') : '—';
                     const num = o.order_number && o.order_number !== '—' ? o.order_number : '—';
-                    
+
                     // Construct delivery info
                     let deliveryInfo = '';
                     if (o.order_type === 'beans_delivery') {
                         const branch = o.delivery_branch_id ? `Відділення №${o.delivery_branch_id}` : '';
                         const dt = o.delivery_type === 'branch' ? 'Відділення' : (o.delivery_type === 'courier' ? "Кур'єр" : (branch ? 'Відділення' : "Кур'єр"));
-                        let adr = `<i class="fas fa-truck" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch ? branch + ': ' : ''}${o.delivery_address || ''}`;
+                        let adr = `<i class="fas fa-truck js-inline-style-101" ></i> Куди: ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch ? branch + ': ' : ''}${o.delivery_address || ''}`;
                         deliveryInfo = adr.replace(', ,', ',').replace(' ,', ',');
                     } else if (o.order_type === 'beans_booking' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-map-marker-alt" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: Самовивіз: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-map-marker-alt js-inline-style-102" ></i> Куди: Самовивіз: ${o.location_name}`;
                     } else if (o.order_type === 'takeaway' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-walking" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: З собою: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-walking js-inline-style-103" ></i> Куди: З собою: ${o.location_name}`;
                     } else if (o.order_type === 'in_house' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-coffee" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: В залі: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-coffee js-inline-style-104" ></i> Куди: В залі: ${o.location_name}`;
                     } else {
-                        deliveryInfo = o.delivery_info ? `<i class="fas fa-info-circle" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.delivery_info}` : '—';
+                        deliveryInfo = o.delivery_info ? `<i class="fas fa-info-circle js-inline-style-105" ></i> ${o.delivery_info}` : '—';
                     }
 
                     let paymentStr = (o.status === 'paid' || o.is_paid) ? 'ОПЛАЧЕНО' : 'НАКЛАДНИЙ ПЛАТІЖ';
-                    
+
                     // Construct cart items
                     let cartItems = '';
                     if (Array.isArray(o.cart) && o.cart.length > 0) {
@@ -567,20 +345,20 @@
                     } else if (typeof o.cart === 'string') {
                         cartItems = o.cart; // Fallback for old string format
                     }
-                    
+
                     div.innerHTML = `
                         <div class="order-info">
-                            <div class="order-title"><i class="fas fa-box" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ЗАМОВЛЕННЯ #${num} (${o.status === 'new' ? 'НОВЕ' : 'АКТИВНЕ'})</div>
+                            <div class="order-title"><i class="fas fa-box js-inline-style-106" ></i> ЗАМОВЛЕННЯ #${num} (${o.status === 'new' ? 'НОВЕ' : 'АКТИВНЕ'})</div>
                             <div class="order-meta">
-                                <div><i class="fas fa-user" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.fullname || o.username || '—'}</div>
-                                <div><i class="fas fa-phone" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.phone || '—'}</div>
+                                <div><i class="fas fa-user js-inline-style-107" ></i> ${o.fullname || o.username || '—'}</div>
+                                <div><i class="fas fa-phone js-inline-style-108" ></i> ${o.phone || '—'}</div>
                                 ${deliveryInfo && deliveryInfo !== '—' ? `<div>${deliveryInfo}</div>` : ''}
-                                <div><i class="fas fa-money-bill-wave" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Сума: ${o.total_amount || o.total || 0} ₴</div>
-                                <div><i class="fas fa-credit-card" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Оплата: ${paymentStr}</div>
+                                <div><i class="fas fa-money-bill-wave js-inline-style-109" ></i> Сума: ${o.total_amount || o.total || 0} ₴</div>
+                                <div><i class="fas fa-credit-card js-inline-style-110" ></i> Оплата: ${paymentStr}</div>
                             </div>
                             <div class="order-items">
-                                <b><i class="fas fa-shopping-cart" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Товари:</b><br>${cartItems || 'Немає товарів'}
-                                ${o.wishes ? `<br><br><b><i class="fas fa-sticky-note" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ПОБАЖАННЯ:</b> ${o.wishes}` : ''}
+                                <b><i class="fas fa-shopping-cart js-inline-style-111" ></i> Товари:</b><br>${cartItems || 'Немає товарів'}
+                                ${o.wishes ? `<br><br><b><i class="fas fa-sticky-note js-inline-style-112" ></i> ПОБАЖАННЯ:</b> ${o.wishes}` : ''}
                             </div>
                         </div>
                         <div class="order-actions">
@@ -601,7 +379,7 @@
                 showLoader(true);
                 const orders = await apiFetch('active-orders');
                 const list = document.getElementById('items-list');
-                if (!orders || orders.length === 0) { list.innerHTML = '<p style="text-align:center; padding:2rem;">Немає активних замовлень</p>'; showLoader(false); return; }
+                if (!orders || orders.length === 0) { list.innerHTML = '<p class="js-inline-style-113">Немає активних замовлень</p>'; showLoader(false); return; }
                 list.innerHTML = '';
                 const role = currentAdmin.role;
                 const isOwner = ['owner', 'boss', 'super'].includes(role);
@@ -618,20 +396,20 @@
                     if (o.order_type === 'beans_delivery') {
                         const branch = o.delivery_branch_id ? `Відділення №${o.delivery_branch_id}` : '';
                         const dt = o.delivery_type === 'branch' ? 'Відділення' : (o.delivery_type === 'courier' ? "Кур'єр" : (branch ? 'Відділення' : "Кур'єр"));
-                        let adr = `<i class="fas fa-truck" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch ? branch + ': ' : ''}${o.delivery_address || ''}`;
+                        let adr = `<i class="fas fa-truck js-inline-style-114" ></i> Куди: ${dt} ${o.delivery_city || ''}, ${o.delivery_state || ''}, ${branch ? branch + ': ' : ''}${o.delivery_address || ''}`;
                         deliveryInfo = adr.replace(', ,', ',').replace(' ,', ',');
                     } else if (o.order_type === 'beans_booking' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-map-marker-alt" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: Самовивіз: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-map-marker-alt js-inline-style-115" ></i> Куди: Самовивіз: ${o.location_name}`;
                     } else if (o.order_type === 'takeaway' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-walking" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: З собою: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-walking js-inline-style-116" ></i> Куди: З собою: ${o.location_name}`;
                     } else if (o.order_type === 'in_house' && o.location_name) {
-                        deliveryInfo = `<i class="fas fa-coffee" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Куди: В залі: ${o.location_name}`;
+                        deliveryInfo = `<i class="fas fa-coffee js-inline-style-117" ></i> Куди: В залі: ${o.location_name}`;
                     } else {
-                        deliveryInfo = o.delivery_info ? `<i class="fas fa-info-circle" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.delivery_info}` : '—';
+                        deliveryInfo = o.delivery_info ? `<i class="fas fa-info-circle js-inline-style-118" ></i> ${o.delivery_info}` : '—';
                     }
 
                     let paymentStr = (o.status === 'paid' || o.is_paid) ? 'ОПЛАЧЕНО' : 'НАКЛАДНИЙ ПЛАТІЖ';
-                    
+
                     // Construct cart items
                     let cartItems = '';
                     if (Array.isArray(o.cart) && o.cart.length > 0) {
@@ -642,17 +420,17 @@
 
                     div.innerHTML = `
                         <div class="order-info">
-                            <div class="order-title"><i class="fas fa-box" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ЗАМОВЛЕННЯ #${num} (АКТИВНЕ)</div>
+                            <div class="order-title"><i class="fas fa-box js-inline-style-119" ></i> ЗАМОВЛЕННЯ #${num} (АКТИВНЕ)</div>
                             <div class="order-meta">
-                                <div><i class="fas fa-user" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.fullname || o.username || '—'}</div>
-                                <div><i class="fas fa-phone" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ${o.phone || '—'}</div>
+                                <div><i class="fas fa-user js-inline-style-120" ></i> ${o.fullname || o.username || '—'}</div>
+                                <div><i class="fas fa-phone js-inline-style-121" ></i> ${o.phone || '—'}</div>
                                 ${deliveryInfo && deliveryInfo !== '—' ? `<div>${deliveryInfo}</div>` : ''}
-                                <div><i class="fas fa-money-bill-wave" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Сума: ${o.total_amount || o.total || 0} ₴</div>
-                                <div><i class="fas fa-credit-card" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Оплата: ${paymentStr}</div>
+                                <div><i class="fas fa-money-bill-wave js-inline-style-122" ></i> Сума: ${o.total_amount || o.total || 0} ₴</div>
+                                <div><i class="fas fa-credit-card js-inline-style-123" ></i> Оплата: ${paymentStr}</div>
                             </div>
                             <div class="order-items">
-                                <b><i class="fas fa-shopping-cart" style="color:var(--color-coffee); width:20px; text-align:center;"></i> Товари:</b><br>${cartItems || 'Немає товарів'}
-                                ${o.wishes ? `<br><br><b><i class="fas fa-sticky-note" style="color:var(--color-coffee); width:20px; text-align:center;"></i> ПОБАЖАННЯ:</b> ${o.wishes}` : ''}
+                                <b><i class="fas fa-shopping-cart js-inline-style-124" ></i> Товари:</b><br>${cartItems || 'Немає товарів'}
+                                ${o.wishes ? `<br><br><b><i class="fas fa-sticky-note js-inline-style-125" ></i> ПОБАЖАННЯ:</b> ${o.wishes}` : ''}
                             </div>
                         </div>
                         <div class="order-actions">
@@ -680,7 +458,7 @@
                     div.onclick = () => openBeanDetail(b);
                     div.innerHTML = `
                         <img src="${window.fixImageUrl(b.image_url)}" class="card-img">
-                        <div class="card-body" style="text-align:center;">
+                        <div class="card-body js-inline-style-126" >
                             <div class="card-title">${b.name}</div>
                         </div>`;
                     document.getElementById('beans-grid').appendChild(div);
@@ -694,17 +472,17 @@
                 const isOwner = ['owner', 'boss', 'super'].includes(role);
                 const isDeveloper = role === 'developer';
                 const isSpecialty = (b.category === 'specialty') || (parseFloat(b.quality_score || b.cup_score || 0) >= 80);
-                
+
                 modal.innerHTML = `
                     <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>Деталі сорту</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
-                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:2.5rem;">
+                        <div class="js-inline-style-127">
                             <div>
-                                <img src="${window.fixImageUrl(b.image_url)}" style="width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:25px; box-shadow: var(--shadow);">
+                                <img src="${window.fixImageUrl(b.image_url)}" class="js-inline-style-128">
                             </div>
-                            <div style="display:flex; flex-direction:column; gap:0.8rem;">
-                                <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown); font-size:2.5rem; margin-bottom:0.5rem;">${b.name}</h2>
-                                <div class="admin-grid" style="grid-template-columns: 1fr 1fr; gap:1rem;">
+                            <div class="js-inline-style-129">
+                                <h2 class="js-inline-style-130">${b.name}</h2>
+                                <div class="admin-grid js-inline-style-131" >
                                     <div class="info-block"><b>Ціна (250г):</b> ${b.price_250} ₴</div>
                                     <div class="info-block"><b>Обсмажка:</b> ${b.roast || '—'}</div>
                                     <div class="info-block"><b>Врожай:</b> ${b.harvest || '—'}</div>
@@ -715,16 +493,16 @@
                                     <div class="info-block"><b>Оцінка якості:</b> ${b.quality_score || b.cup_score || '—'}</div>
                                     ` : ''}
                                 </div>
-                                <div style="margin-top:1rem; padding:1.2rem; background:var(--color-cream); border-radius:15px;">
+                                <div class="js-inline-style-132">
                                     <p><b>Дескриптори:</b> ${b.descriptors || b.taste || '—'}</p>
                                 </div>
-                                <div style="margin-top:1rem; padding:1.5rem; background:#fdfcf9; border-radius:20px; border:1px solid var(--color-coffee-soft); line-height:1.6;">
-                                    <h4 style="font-family:var(--font-accent); color:var(--color-coffee); margin-bottom:0.8rem;">ОПИС</h4>
+                                <div class="js-inline-style-133">
+                                    <h4 class="js-inline-style-134">ОПИС</h4>
                                     ${b.description || 'Опис відсутній'}
                                 </div>
                             </div>
                         </div>
-                        <div class="admin-modal__footer" style="justify-content: space-between; margin-top:3rem;">
+                        <div class="admin-modal__footer js-inline-style-135" >
                                 <div>
                                     ${(isOwner && !isDeveloper) ? `
                                     <button class="btn btn--danger btn--sm" onclick="deleteBean('${b.id}')"><i class="fas fa-trash"></i> Видалити</button>
@@ -736,8 +514,6 @@
                     </div>`;
                 modal.classList.add('admin-modal--active');
             }
-
-
 
             async function uploadImage(file) {
                 const formData = new FormData(); formData.append('file', file);
@@ -755,7 +531,7 @@
                     <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>${b ? 'Редагувати' : 'Додати'} сорт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
                         <form id="bean-form" onkeyup="if(event.key==='Enter') saveBean('${b?.id || ''}')">
-                            <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
+                            <div class="admin-grid js-inline-style-136" >
                                 <div class="admin-field"><label>Назва</label><input name="name" value="${b?.name || ''}" placeholder="Ethiopia Sidamo" required></div>
                                 <div class="admin-field"><label>Ціна 250г</label><input type="number" name="price_250" value="${b?.price_250 || ''}" placeholder="400" required></div>
                                 <div class="admin-field"><label>Категорія</label><select name="category" onchange="toggleQualityScore(this.value)"><option value="commercial" ${b?.category==='commercial'?'selected':''}>Комерційна</option><option value="specialty" ${b?.category==='specialty'?'selected':''}>Спешелті</option></select></div>
@@ -764,14 +540,14 @@
                                 <div class="admin-field"><label>Різновид</label><input name="variety" value="${b?.variety || ''}" placeholder="Heirloom / Bourbon"></div>
                                 <div class="admin-field"><label>Висота</label><input name="altitude" value="${b?.altitude || ''}" placeholder="1800-2100 м"></div>
                                 <div class="admin-field"><label>Метод обробки</label><input name="processing" value="${b?.processing || ''}" placeholder="Natural / Washed"></div>
-                                <div class="admin-field" id="quality-score-field" style="display: ${b?.category === 'specialty' ? 'block' : 'none'}"><label>Оцінка якості</label><input name="quality_score" value="${b?.quality_score || b?.cup_score || ''}" placeholder="87"></div>
+                                <div class="admin-field js-inline-style-137" id="quality-score-field" ><label>Оцінка якості</label><input name="quality_score" value="${b?.quality_score || b?.cup_score || ''}" placeholder="87"></div>
                             </div>
-                            <div class="admin-field" style="margin-top:1.5rem;"><label>Дескриптори</label><input name="descriptors" value="${b?.descriptors || b?.taste || ''}" placeholder="Жасмин, персик, бергамот"></div>
-                            <div class="admin-field" style="margin-top:1.5rem;"><label>Опис</label><textarea name="description" rows="4" placeholder="Детальний опис для покупця...">${b?.description || ''}</textarea></div>
-                            <div class="admin-field" style="margin-top:2rem;"><label>Фото</label>
-                                <div style="display:flex; align-items:center; gap:2rem;">
-                                    <img id="bean-img-preview" src="${window.fixImageUrl(b?.image_url || '/photos/Comercial.png')}" style="width:120px; aspect-ratio:3/4; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
-                                    <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="bean-file-input" style="display:none;"></label>
+                            <div class="admin-field js-inline-style-138" ><label>Дескриптори</label><input name="descriptors" value="${b?.descriptors || b?.taste || ''}" placeholder="Жасмин, персик, бергамот"></div>
+                            <div class="admin-field js-inline-style-139" ><label>Опис</label><textarea name="description" rows="4" placeholder="Детальний опис для покупця...">${b?.description || ''}</textarea></div>
+                            <div class="admin-field js-inline-style-140" ><label>Фото</label>
+                                <div class="js-inline-style-141">
+                                    <img id="bean-img-preview" src="${window.fixImageUrl(b?.image_url || '/photos/Comercial.png')}" class="js-inline-style-142">
+                                    <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="bean-file-input" class="js-inline-style-143"></label>
                                     <input type="hidden" name="image_url" id="bean-image-url" value="${b?.image_url || ''}">
                                 </div>
                             </div>
@@ -803,7 +579,7 @@
                     div.onclick = () => openLocationDetail(l);
                     div.innerHTML = `
                         <img src="${window.fixImageUrl(l.image_url)}" class="card-img">
-                        <div class="card-body" style="text-align:center;">
+                        <div class="card-body js-inline-style-144" >
                             <div class="card-title">${l.name}</div>
                             <div class="card-desc">${l.address}</div>
                         </div>`;
@@ -820,22 +596,22 @@
                 modal.innerHTML = `
                     <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>Деталі локації</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
-                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:2.5rem;">
+                        <div class="js-inline-style-145">
                             <div>
-                                <img src="${window.fixImageUrl(l.image_url)}" style="width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:25px; box-shadow: var(--shadow);">
+                                <img src="${window.fixImageUrl(l.image_url)}" class="js-inline-style-146">
                             </div>
-                            <div style="flex:1;">
-                                <h2 style="font-family:var(--font-accent); color:var(--color-dark-brown); font-size:2.2rem; margin-bottom:1.5rem;">${l.name}</h2>
-                                <div style="display:flex; flex-direction:column; gap:1rem;">
-                                    <p><i class="fas fa-map-marker-alt" style="color:var(--color-coffee); width:20px;"></i> <b>Адреса:</b> ${l.address}</p>
-                                    <p><i class="fas fa-clock" style="color:var(--color-coffee); width:20px;"></i> <b>Графік:</b> ${l.schedule || '—'}</p>
-                                    <p><i class="fas fa-star" style="color:var(--color-coffee); width:20px;"></i> <b>Зручності:</b> ${Array.isArray(l.amenities) ? l.amenities.join(', ') : (l.amenities || '—')}</p>
-                                    <p><i class="fas fa-align-left" style="color:var(--color-coffee); width:20px;"></i> <b>Опис:</b> ${l.description || l.atmosphere || '—'}</p>
-                                    ${l.google_maps_url ? `<a href="${l.google_maps_url}" target="_blank" class="btn btn--outline btn--sm" style="margin-top:1rem;">ВІДКРИТИ НА КАРТАХ <i class="fas fa-external-link-alt"></i></a>` : ''}
+                            <div class="js-inline-style-147">
+                                <h2 class="js-inline-style-148">${l.name}</h2>
+                                <div class="js-inline-style-149">
+                                    <p><i class="fas fa-map-marker-alt js-inline-style-150" ></i> <b>Адреса:</b> ${l.address}</p>
+                                    <p><i class="fas fa-clock js-inline-style-151" ></i> <b>Графік:</b> ${l.schedule || '—'}</p>
+                                    <p><i class="fas fa-star js-inline-style-152" ></i> <b>Зручності:</b> ${Array.isArray(l.amenities) ? l.amenities.join(', ') : (l.amenities || '—')}</p>
+                                    <p><i class="fas fa-align-left js-inline-style-153" ></i> <b>Опис:</b> ${l.description || l.atmosphere || '—'}</p>
+                                    ${l.google_maps_url ? `<a href="${l.google_maps_url}" target="_blank" class="btn btn--outline btn--sm js-inline-style-154" >ВІДКРИТИ НА КАРТАХ <i class="fas fa-external-link-alt"></i></a>` : ''}
                                 </div>
                             </div>
                         </div>
-                        <div class="admin-modal__footer" style="justify-content: space-between; margin-top:2rem;">
+                        <div class="admin-modal__footer js-inline-style-155" >
                                 ${(isOwner && !isDeveloper) ? `
                                 <button class="btn btn--danger btn--sm" onclick="deleteLocation('${l.id}')"><i class="fas fa-trash"></i> Видалити</button>
                                 <button class="btn btn--outline btn--sm" onclick='openLocationModal(${JSON.stringify(l).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i> Редагувати</button>
@@ -851,17 +627,17 @@
                     <div class="admin-modal__panel admin-modal__panel--large">
                         <div class="admin-modal__header"><h3>${l ? 'Редагувати' : 'Додати'} локацію</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
                         <form id="loc-form" onkeyup="if(event.key==='Enter') saveLocation('${l?.id || ''}')">
-                            <div class="admin-grid" style="grid-template-columns: 1fr; gap:1.5rem;">
+                            <div class="admin-grid js-inline-style-156" >
                                 <div class="admin-field"><label>Назва</label><input name="name" value="${l?.name || ''}" placeholder="Меделін Центр" required></div>
-                                <div class="admin-field"><label>Адреса</label><textarea name="address" placeholder="вул. Корятовича, 1" required style="min-height:80px;">${l?.address || ''}</textarea></div>
-                                <div class="admin-field"><label>Графік</label><textarea name="schedule" placeholder="Пн-Пт: 08:00-20:00" style="min-height:80px;">${l?.schedule || ''}</textarea></div>
-                                <div class="admin-field"><label>Зручності (через кому)</label><textarea name="amenities" placeholder="Wi-Fi, Тераса, Pets friendly" style="min-height:80px;">${l?.amenities || ''}</textarea></div>
+                                <div class="admin-field"><label>Адреса</label><textarea name="address" placeholder="вул. Корятовича, 1" required class="js-inline-style-157">${l?.address || ''}</textarea></div>
+                                <div class="admin-field"><label>Графік</label><textarea name="schedule" placeholder="Пн-Пт: 08:00-20:00" class="js-inline-style-158">${l?.schedule || ''}</textarea></div>
+                                <div class="admin-field"><label>Зручності (через кому)</label><textarea name="amenities" placeholder="Wi-Fi, Тераса, Pets friendly" class="js-inline-style-159">${l?.amenities || ''}</textarea></div>
                                 <div class="admin-field"><label>Maps URL</label><input name="google_maps_url" value="${l?.google_maps_url || ''}" placeholder="https://maps.app.goo.gl/..."></div>
-                                <div class="admin-field"><label>Атмосфера / Опис</label><textarea name="description" rows="4" placeholder="Короткий опис закладу..." style="min-height:100px;">${l?.description || l?.atmosphere || ''}</textarea></div>
+                                <div class="admin-field"><label>Атмосфера / Опис</label><textarea name="description" rows="4" placeholder="Короткий опис закладу..." class="js-inline-style-160">${l?.description || l?.atmosphere || ''}</textarea></div>
                                 <div class="admin-field"><label>Фото</label>
-                                    <div style="display:flex; align-items:center; gap:2rem;">
-                                        <img id="loc-img-preview" src="${window.fixImageUrl(l?.image_url || 'https://images.unsplash.com/photo-1567880905822-56f8e06fe630?q=80&w=735&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')}" style="width:200px; aspect-ratio:16/9; object-fit:cover; border-radius:15px; border: 2px solid var(--color-coffee-soft);">
-                                        <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="loc-file-input" style="display:none;"></label>
+                                    <div class="js-inline-style-161">
+                                        <img id="loc-img-preview" src="${window.fixImageUrl(l?.image_url || 'https://images.unsplash.com/photo-1567880905822-56f8e06fe630?q=80&w=735&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')}" class="js-inline-style-162">
+                                        <label class="custom-file-upload"><i class="fas fa-cloud-upload-alt"></i> Вибрати фото<input type="file" id="loc-file-input" class="js-inline-style-163"></label>
                                         <input type="hidden" name="image_url" id="loc-image-url" value="${l?.image_url || ''}">
                                     </div>
                                 </div>
@@ -888,7 +664,7 @@
                 const isOwner = ['owner', 'boss', 'super'].includes(role);
                 const isDeveloper = role === 'developer';
                 list.innerHTML = `<div class="admin-toolbar"><h3>Контакти</h3>${(isOwner && !isDeveloper) ? `<button class="btn btn--primary btn--sm" onclick="openSocialModal()">+ Додати</button>` : ''}</div><div id="socials-list"></div>`;
-                
+
                 const SOCIAL_ICONS = {
                     instagram: 'fab fa-instagram',
                     facebook: 'fab fa-facebook-f',
@@ -919,11 +695,11 @@
                     const nameKey = s.name.toLowerCase().trim();
                     const byUrl = guessSocialKeyFromUrl(s.url);
                     const icon = SOCIAL_ICONS[nameKey] || (byUrl ? SOCIAL_ICONS[byUrl] : null) || 'fas fa-link';
-                    
+
                     const displayUrl = s.url.replace(/^mailto:/, '').replace(/^tel:/, '');
-                    
+
                     const div = document.createElement('div'); div.className = 'order-item';
-                    div.innerHTML = `<div class="order-info"><div style="font-weight:700;"><i class="${icon}" style="width:24px; color:var(--color-coffee);"></i> ${s.name}</div><div style="font-size:0.9rem; opacity:0.7;">${displayUrl}</div></div>
+                    div.innerHTML = `<div class="order-info"><div class="js-inline-style-164"><i class="${icon} js-inline-style-165" ></i> ${s.name}</div><div class="js-inline-style-166">${displayUrl}</div></div>
                         ${(isOwner && !isDeveloper) ? `<div class="order-actions"><button class="btn btn--outline btn--sm" onclick='openSocialModal(${JSON.stringify(s).replace(/'/g, "&apos;")})'>Редагувати</button><button class="btn btn--danger btn--sm" onclick="deleteSocial('${s.id}')">Видалити</button></div>` : ''}`;
                     document.getElementById('socials-list').appendChild(div);
                 });
@@ -932,7 +708,7 @@
 
             function openSocialModal(s = null) {
                 const modal = document.getElementById('admin-modal');
-                modal.innerHTML = `<div class="admin-modal__panel" style="max-width:400px;"><div class="admin-modal__header"><h3>${s ? 'Редагувати' : 'Додати'} контакт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="social-form" onkeyup="if(event.key==='Enter') saveSocial('${s?.id || ''}')"><div class="admin-field"><label>Назва</label><input name="name" value="${s?.name || ''}" placeholder="Наприклад: Instagram" required></div><div class="admin-field" style="margin-top:1rem;"><label>Дані (URL / Тел / Email)</label><input name="url" value="${s?.url || ''}" placeholder="https://instagram.com/medelin..." required></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveSocial('${s?.id || ''}')">Зберегти</button></div></div>`;
+                modal.innerHTML = `<div class="admin-modal__panel js-inline-style-167" ><div class="admin-modal__header"><h3>${s ? 'Редагувати' : 'Додати'} контакт</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div><form id="social-form" onkeyup="if(event.key==='Enter') saveSocial('${s?.id || ''}')"><div class="admin-field"><label>Назва</label><input name="name" value="${s?.name || ''}" placeholder="Наприклад: Instagram" required></div><div class="admin-field js-inline-style-168" ><label>Дані (URL / Тел / Email)</label><input name="url" value="${s?.url || ''}" placeholder="https://instagram.com/medelin..." required></div></form><div class="admin-modal__footer"><button class="btn btn--primary" onclick="saveSocial('${s?.id || ''}')">Зберегти</button></div></div>`;
                 modal.classList.add('admin-modal--active');
             }
             async function saveSocial(id) { await apiFetch(id ? `socials/${id}` : 'socials', 'POST', Object.fromEntries(new FormData(document.getElementById('social-form')).entries())); if (res) { closeAdminModal(); refreshData(); }}
@@ -951,37 +727,37 @@
                         <h3>Статистика</h3>
                         ${(isOwner || isDeveloper) ? `<button class="btn btn--danger btn--sm" onclick="resetStats()">Скинути статистику</button>` : ''}
                     </div>
-                    <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                        <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none; padding:1.5rem;">
-                            <div style="font-size:0.7rem; font-weight:800; color:var(--color-coffee); margin-bottom:0.5rem; text-transform:uppercase;">ЗАГАЛЬНА ВИРУЧКА</div>
-                            <div style="font-size:1.8rem; font-weight:400; font-family:var(--font-accent); color:var(--color-dark-brown);">${stats.total_revenue || 0} ₴</div>
+                    <div class="admin-grid js-inline-style-169" >
+                        <div class="card js-inline-style-170" >
+                            <div class="js-inline-style-171">ЗАГАЛЬНА ВИРУЧКА</div>
+                            <div class="js-inline-style-172">${stats.total_revenue || 0} ₴</div>
                         </div>
-                        <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none; padding:1.5rem;">
-                            <div style="font-size:0.7rem; font-weight:800; color:var(--color-coffee); margin-bottom:0.5rem; text-transform:uppercase;">КІЛЬКІСТЬ ПРОДАЖІВ</div>
-                            <div style="font-size:1.8rem; font-weight:400; font-family:var(--font-accent); color:var(--color-dark-brown);">${stats.total_sales || 0}</div>
+                        <div class="card js-inline-style-173" >
+                            <div class="js-inline-style-174">КІЛЬКІСТЬ ПРОДАЖІВ</div>
+                            <div class="js-inline-style-175">${stats.total_sales || 0}</div>
                         </div>
-                        <div class="card" style="text-align:center; background: var(--color-coffee-soft); border:none; padding:1.5rem;">
-                            <div style="font-size:0.7rem; font-weight:800; color:var(--color-coffee); margin-bottom:0.5rem; text-transform:uppercase;">СЕРЕДНІЙ ЧЕК</div>
-                            <div style="font-size:1.8rem; font-weight:400; font-family:var(--font-accent); color:var(--color-dark-brown);">${stats.avg_check || 0} ₴</div>
+                        <div class="card js-inline-style-176" >
+                            <div class="js-inline-style-177">СЕРЕДНІЙ ЧЕК</div>
+                            <div class="js-inline-style-178">${stats.avg_check || 0} ₴</div>
                         </div>
                     </div>
-                    <div class="admin-toolbar" style="border:none; margin-top:2rem;"><h3>Останні продажі</h3></div>
+                    <div class="admin-toolbar js-inline-style-179" ><h3>Останні продажі</h3></div>
                     <div id="stats-recent"></div>`;
-                
+
                 if (stats.recent_sales?.length) {
                     stats.recent_sales.forEach(s => { 
                         const div = document.createElement('div'); div.className = 'order-item'; 
                         const date = s.timestamp ? new Date(s.timestamp).toLocaleString('uk-UA') : '—';
                         div.innerHTML = `
                             <div class="order-info">
-                                <div style="font-weight:700;">${s.fullname || 'Гість'}</div>
-                                <div style="font-size:0.85rem; opacity:0.7;">${date} | ${s.cart || ''}</div>
+                                <div class="js-inline-style-180">${s.fullname || 'Гість'}</div>
+                                <div class="js-inline-style-181">${date} | ${s.cart || ''}</div>
                             </div>
-                            <div style="font-weight:800; color:var(--color-coffee); font-size:1.2rem;">${s.total || (s.price * (s.quantity||1))} ₴</div>`; 
+                            <div class="js-inline-style-182">${s.total || (s.price * (s.quantity||1))} ₴</div>`; 
                         document.getElementById('stats-recent').appendChild(div); 
                     });
                 } else {
-                    document.getElementById('stats-recent').innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.5;">Дані про продажі відсутні</p>';
+                    document.getElementById('stats-recent').innerHTML = '<p class="js-inline-style-183">Дані про продажі відсутні</p>';
                 }
                 showLoader(false);
             }
@@ -1004,21 +780,21 @@
                 const isOwner = ['owner', 'boss', 'super'].includes(role);
                 const isDeveloper = role === 'developer';
                 list.innerHTML = `<div class="admin-toolbar"><h3>Персонал</h3>${(isOwner || isDeveloper) ? `<button class="btn btn--primary btn--sm" onclick='openTeamModal()'>+ Додати</button>` : ''}</div><div id="team-list"></div>`;
-                
+
                 team.forEach(t => { 
                     const div = document.createElement('div'); div.className = 'order-item'; 
                     const canDelete = isOwner; // Only owner can delete
 
                     div.innerHTML = `<div class="order-info">
-                            <div style="font-weight:800; color:var(--color-dark-brown);">${t.display_name}</div>
-                            <div style="font-size:0.9rem; color:var(--color-text-muted);">
-                                <i class="fab fa-telegram" style="color:#0088cc;"></i> @${t.username || '—'} | 
+                            <div class="js-inline-style-184">${t.display_name}</div>
+                            <div class="js-inline-style-185">
+                                <i class="fab fa-telegram js-inline-style-186" ></i> @${t.username || '—'} | 
                                 <i class="fas fa-fingerprint"></i> ID: ${t.user_id} | 
                                 <i class="fas fa-phone-alt"></i> ${t.phone || '—'} | 
                                 <b>${roleName(t.role)}</b>
                             </div>
                         </div>
-                        <div class="order-actions" style="justify-content:flex-end; min-width:fit-content;">${canDelete ? `<button class="btn btn--danger btn--sm" style="width:auto !important; flex:none !important;" onclick="deleteTeam('${t.user_id}')"><i class="fas fa-trash"></i></button>` : ''}</div>`; 
+                        <div class="order-actions js-inline-style-187" >${canDelete ? `<button class="btn btn--danger btn--sm js-inline-style-188"  onclick="deleteTeam('${t.user_id}')"><i class="fas fa-trash"></i></button>` : ''}</div>`; 
                     document.getElementById('team-list').appendChild(div); 
                 });
                 showLoader(false);
@@ -1028,12 +804,12 @@
                 const modal = document.getElementById('admin-modal');
                 const role = currentAdmin.role;
                 const isDeveloper = role === 'developer';
-                modal.innerHTML = `<div class="admin-modal__panel" style="max-width:500px;"><div class="admin-modal__header"><h3>Додати персонал</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
-                    <p style="font-size:0.85rem; color:var(--color-text-muted); margin-bottom:1.5rem;">Введіть ID, @username або номер телефону. Дані підтягнуться з бази бота.</p>
+                modal.innerHTML = `<div class="admin-modal__panel js-inline-style-189" ><div class="admin-modal__header"><h3>Додати персонал</h3><button class="btn btn--outline btn--sm" onclick="closeAdminModal()">X</button></div>
+                    <p class="js-inline-style-190">Введіть ID, @username або номер телефону. Дані підтягнуться з бази бота.</p>
                     <form id="team-form" onkeyup="if(event.key==='Enter') saveTeam()">
                         <div class="admin-field"><label>ID / @username / Телефон</label><input name="user_id" placeholder="ID, @username або +380..." required></div>
-                        <div class="admin-field" style="margin-top:1rem;"><label>Ім'я в команді</label><input name="display_name" placeholder="Наприклад: Олександр" required></div>
-                        <div class="admin-field" style="margin-top:1rem;"><label>Роль</label>
+                        <div class="admin-field js-inline-style-191" ><label>Ім'я в команді</label><input name="display_name" placeholder="Наприклад: Олександр" required></div>
+                        <div class="admin-field js-inline-style-192" ><label>Роль</label>
                             <select name="role">
                                 ${isDeveloper ? '<option value="owner">Власник</option>' : `
                                 <option value="admin">Адмін</option>
@@ -1049,7 +825,7 @@
                 const form = document.getElementById('team-form'); 
                 const fd = new FormData(form); 
                 const data = Object.fromEntries(fd.entries());
-                
+
                 showLoader(true);
                 const res = await apiFetch('team', 'POST', data); 
                 showLoader(false);
@@ -1076,5 +852,5 @@
 
             if (sessionToken && currentAdmin) { document.getElementById('login-screen').classList.add('login-screen--hidden'); showPanel(); }
         </script>
-    </body>
+</body>
 </html>

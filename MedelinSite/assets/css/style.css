@@ -1,4 +1,4 @@
-/* --- Coffee Bean Full View --- */
+
 .bean-full-view {
     padding: var(--space-lg) 0;
 }
@@ -164,18 +164,16 @@
     }
 }
 
-/* --- Global Scrollbar Styling --- */
 html, body {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
+    scrollbar-width: none; 
+    -ms-overflow-style: none; 
 }
 
 html::-webkit-scrollbar, 
 body::-webkit-scrollbar {
-    display: none; /* Chrome/Safari */
+    display: none; 
 }
 
-/* Allow scrollbars in specific areas where needed */
 .cart-modal__body,
 .checkout-modal,
 .popup__content,
@@ -288,7 +286,6 @@ body::-webkit-scrollbar {
     will-change: transform, opacity;
 }
 
-/* Приховуємо лише якщо JS активний і додав клас .js-enabled до body */
 .js-enabled .revealable:not(.revealable--active) {
     opacity: 0;
     transform: translateY(30px);
@@ -564,6 +561,7 @@ h4 {
 }
 
 .hero__subtitle {
+    font-family: var(--font-main);
     font-size: 1.75rem;
     margin-bottom: 1.5rem;
     font-weight: 300;
@@ -1127,7 +1125,6 @@ h4 {
     color: var(--color-dark-brown);
 }
 
-/* --- Past Orders Styles (in Cart) --- */
 .cart-modal__past-orders {
     padding: 2rem 2.5rem 2.5rem;
     background: rgba(139, 94, 60, 0.05);
@@ -1187,7 +1184,6 @@ h4 {
     background: var(--color-coffee-soft) !important;
 }
 
-/* --- Payment Methods Styles (Checkout) --- */
 .payment-methods-grid {
     display: flex !important;
     flex-direction: column !important;
@@ -3733,9 +3729,6 @@ textarea, input { resize: none !important; }
     background: rgba(139, 94, 60, 0.05);
 }
 
-/* --- FINAL UI REFINEMENTS --- */
-
-/* 1. Payment Methods: 1 Column, Moderate Size */
 .payment-methods-grid {
     display: flex !important;
     flex-direction: column !important;
@@ -3759,7 +3752,6 @@ textarea, input { resize: none !important; }
     width: 35px !important;
 }
 
-/* 2. Back button: Large and Prominent */
 .btn-back {
     display: flex !important;
     padding: 1.4rem !important;
@@ -3772,7 +3764,6 @@ textarea, input { resize: none !important; }
     box-shadow: 0 4px 12px rgba(139, 94, 60, 0.1) !important;
 }
 
-/* 3. Cart & Past Orders: Larger */
 .cart-modal__list li {
     padding: 1.4rem !important;
 }
@@ -3862,12 +3853,10 @@ textarea, input { resize: none !important; }
     align-items: center;
 }
 
-/* Зменшуємо margin-bottom бо кнопка фільтру вже нижче */
 .beans-page-header .section-title {
     margin-bottom: 1.5rem;
 }
 
-/* --- Coffee Filters --- */
 .coffee-filters-container {
     display: flex;
     flex-direction: column;
@@ -3987,3 +3976,6 @@ textarea, input { resize: none !important; }
         width: 100%;
     }
 }
+. s e c t i o n - t i t l e - - m t - m e d i u m  
+   m a r g i n - t o p :   1 . 2 r e m ;    
+ 

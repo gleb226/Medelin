@@ -10,18 +10,14 @@ logger = logging.getLogger(__name__)
 class PublicDataCache:
     def __init__(self) -> None:
         self._memory: dict[str, Any] = {}
-        
-        # Robust path detection
-        # 1. Docker container path (mapped in docker-compose)
+
         docker_path = Path('/app/cache')
-        
-        # 2. Unified container (Nginx + Bot): Site is at /usr/share/nginx/html
+
         unified_path = Path('/usr/share/nginx/html/cache')
-        
-        # 3. Local development fallback
+
         repo_root = Path(__file__).resolve().parents[3]
         dev_path = repo_root / 'MedelinSite' / 'cache'
-        
+
         if unified_path.parent.exists():
             self._dir = unified_path
         elif docker_path.exists() or docker_path.parent.exists():

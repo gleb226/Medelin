@@ -14,13 +14,11 @@ from app.databases.mongo_client import close_client
 PHOTO_URL_BEANS = 'https://images.unsplash.com/photo-1685798830559-c116586a0d33?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
 PHOTO_URL_LOCATION = 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1074&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
 
-
 def _norm(s: str) -> str:
     return ' '.join(str(s or '').strip().split()).casefold()
 
-
 BEANS_DATA = [
-    # --- COMMERCIAL (15 items) ---
+
     {
         'name': 'Бразилія Сантос',
         'price_250': 235,
@@ -232,7 +230,6 @@ BEANS_DATA = [
         'harvest': '2024'
     },
 
-    # --- SPECIALTY ESPRESSO (6 items) ---
     {
         'name': 'Ефіопія Гуджі (Specialty)',
         'price_250': 340,
@@ -318,7 +315,6 @@ BEANS_DATA = [
         'harvest': '2024'
     },
 
-    # --- SPECIALTY FILTER (6 items) ---
     {
         'name': 'Ефіопія Йергачіф (Filter)',
         'price_250': 360,
@@ -464,7 +460,6 @@ SOCIALS_DATA = [
     {'name': 'Instagram Свалява', 'url': 'https://www.instagram.com/medelin.svaliava/'},
 ]
 
-
 async def seed():
     await coffee_beans_db.connect()
     await location_db.connect()
@@ -482,7 +477,6 @@ async def seed():
             pass
         roast = (b.get('roast') or '').lower()
 
-        # Determine category image
         if not b.get('quality_score') or score < 80:
             img_url = '/photos/Comercial.png'
         elif roast == 'espresso':
@@ -521,7 +515,6 @@ async def seed():
         await contacts_db.add_contact(s['name'], s['url'])
 
     await close_client()
-
 
 if __name__ == '__main__':
     asyncio.run(seed())
