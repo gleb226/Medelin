@@ -53,8 +53,6 @@ def get_bean_card_kb(bean_id, category='commercial', is_specialty=False, role='o
     buttons = []
     if role != 'developer':
         buttons.append([InlineKeyboardButton(text='✏️ РЕДАГУВАТИ', callback_data=f'bean_edit_fields_{bean_id}')])
-        if is_specialty:
-            buttons.append([InlineKeyboardButton(text='📦 ПОПОВНИТИ ЗАПАС', callback_data=f'bean_restock_{bean_id}')])
         buttons.append([InlineKeyboardButton(text='🗑 ВИДАЛИТИ', callback_data=f'bean_del_confirm_{bean_id}')])
     
     buttons.append([InlineKeyboardButton(text='⬅️ ДО СПИСКУ', callback_data=f'beans_page_{category}')])
