@@ -1,17 +1,18 @@
-# 🤖 MedelinBot - Telegram Bot
-
 <div align="center">
 
-![MedelinBot Logo](https://img.shields.io/badge/Medelin-Telegram%20Bot-brown?style=for-the-badge&logo=telegram)
+# 🤖 MedelinBot
 
-**Telegram бот для кав'ярні Medelin в Ужгороді 🇺🇦**
+**Telegram-бот та REST API для управління бізнесом Medelin Coffee Roasters**
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg?style=flat-square&logo=python)](https://www.python.org/)
-[![Telegram Bot API](https://img.shields.io/badge/Telegram-Bot%20API-blue?style=flat-square&logo=telegram)](https://core.telegram.org/bots/api)
-[![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
-[![Uzhhorod](https://img.shields.io/badge/Made%20in-Uzhhorod-yellow.svg?style=flat-square)](https://goo.gl/maps/medelin)
+[![Telegram Bot](https://img.shields.io/badge/Telegram-@MedelnBot-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/MedelnBot)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![aiogram](https://img.shields.io/badge/aiogram-3.26-2CA5E0?style=for-the-badge)](https://docs.aiogram.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.135-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Motor_3.7-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://mongodb.com)
 
-[Особливості](#-особливості) • [Встановлення](#-встановлення) • [Меню](#-меню) • [Документація](#-документація) • [Внесок](#-внесок)
+<br/>
+
+> *Повноцінний бізнес-інструмент у Telegram. Приймай замовлення, керуй командою, слідкуй за продажами — все з телефону, без жодного зайвого додатку.*
 
 </div>
 
@@ -19,1001 +20,573 @@
 
 ## 📋 Зміст
 
-- [Про проект](#-про-проект)
-- [Особливості](#-особливості)
-- [Технології](#-технології)
-- [Встановлення](#-встановлення)
-- [Конфігурація](#-конфігурація)
-- [Використання](#-використання)
-- [Команди](#-команди)
-- [Структура проекту](#-структура-проекту)
-- [API Документація](#-api-документація)
+- [Архітектура](#-архітектура)
+- [Структура файлів](#-структура-файлів)
+- [Ролі та доступ](#-ролі-та-доступ)
+- [Функціонал бота](#-функціонал-бота)
+- [REST API](#-rest-api)
 - [База даних](#-база-даних)
-- [Безпека](#-безпека)
-- [Тестування](#-тестування)
-- [Розгортання](#-розгортання)
-- [Внесок у проект](#-внесок-у-проект)
-- [Ліцензія](#-ліцензія)
-- [Контакти](#-контакти)
+- [Утиліти та сервіси](#-утиліти-та-сервіси)
+- [Конфігурація](#-конфігурація)
+- [Фонові задачі](#-фонові-задачі)
+- [Запуск](#-запуск)
 
 ---
 
-## 🎯 Про проект
+## 🏛️ Архітектура
 
-**MedelinBot** — це сучасний Telegram бот для кав'ярні **Medelin** в Ужгороді. Бот створений для зручного замовлення
-кави, десертів та інших страв, бронювання столиків, відстеження програми лояльності та отримання актуальної інформації
-про заклад.
+MedelinBot — це **монолітний асинхронний додаток**, де Telegram Bot і FastAPI API запускаються в одному процесі через спільний asyncio event loop.
 
-### 🌟 Чому MedelinBot?
+```
+main.py (точка входу)
+     │
+     ├── FastAPI App (uvicorn, port 8000)
+     │       ├── /api/* (REST endpoints)
+     │       └── /admin-panel (захищена HTML-панель)
+     │
+     ├── aiogram Dispatcher (polling mode)
+     │       ├── admin_router  (управління бізнесом)
+     │       ├── user_router   (взаємодія з клієнтом)
+     │       ├── order_router  (обробка замовлень)
+     │       └── error_router  (глобальна обробка помилок)
+     │
+     ├── APScheduler (фонові задачі)
+     │       ├── cleanup_old_data    (щотижня)
+     │       └── send_monthly_stats  (1-го числа місяця)
+     │
+     └── PublicDataCache (in-memory кеш)
+             ├── coffee     (каталог кави)
+             ├── locations  (локації)
+             └── socials    (контакти)
+```
 
-- ⚡ **Швидке замовлення**: Зроби замовлення за 30 секунд
-- 🎁 **Бонуси**: Накопичуй бали та отримуй знижки
-- 📍 **Зручна локація**: Ми в центрі Ужгорода
-- ☕ **Якісна кава**: Лише свіжообсмажені зерна
-- 🇺🇦 **Українська кав'ярня**: Підтримуй локальний бізнес
+### Чому Bot + API в одному процесі?
 
----
-
-## ✨ Особливості
-
-### ☕ Замовлення
-
-- 📱 **Онлайн меню**
-    - Повний каталог напоїв та їжі
-    - Фото страв та детальні описи
-    - Інформація про алергени
-    - Калорійність та склад
-
-- 🛒 **Кошик та оплата**
-    - Швидке додавання в кошик
-    - Можливість змінити розмір напою
-    - Додаткові інгредієнти (сироп, вершки, молоко)
-    - Онлайн оплата або готівка
-
-- 🖼️ **Intelligent Photo Processing**: 
-    - Automatic detection of photos and document-sent images.
-    - Smart conversion to **WebP** (85% quality) for optimal web performance.
-    - Robust path resolution for Docker and Local environments.
-- 🚀 **Доставка та самовивіз**
-    - Доставка по Ужгороду
-    - Самовивіз зі знижкою 10%
-    - Відстеження статусу замовлення
-    - Приблизний час приготування
-
-### 🎯 Програма лояльності
-
-- 💳 **Бонусна система**
-    - Накопичуй бали за кожне замовлення
-    - 1₴ = 1 бал
-    - Обмінюй бали на знижки
-    - Спеціальні акції для постійних клієнтів
-
-- 🎁 **Акції та знижки**
-    - Щоденна happy hour (15:00-17:00) -15%
-    - Кава дня зі знижкою
-    - Бонус на день народження
-    - Реферальна програма
-
-### 📅 Бронювання
-
-- 🪑 **Резервація столиків**
-    - Вибір зручного часу
-    - Вказати кількість гостей
-    - Побажання щодо розміщення
-    - Підтвердження бронювання
-
-- 🎉 **Заходи та івенти**
-    - Кавові дегустації
-    - Майстер-класи від бариста
-    - Музичні вечори
-    - Кінопокази
-
-### 📢 Інформація
-
-- 🕐 **Режим роботи**
-    - Пн-Пт: 8:00 - 22:00
-    - Сб-Нд: 9:00 - 23:00
-    - Святкові дні
-
-- 📍 **Локація та контакти**
-    - Адреса та карта
-    - Номер телефону
-    - Соціальні мережі
-    - Wi-Fi пароль
+- **Render Free Tier** дає лише 1 контейнер — це єдиний варіант
+- **Спільний кеш** — бот та API читають дані з одного об'єкту в пам'яті
+- **Спрощений деплой** — один `docker build`, один `docker run`
+- **Без race conditions** — всі операції асинхронні через asyncio
 
 ---
 
-## 🛠 Технології
+## 📁 Структура файлів
 
-### Backend
+```
+MedelinBot/
+│
+├── 📄 main.py                 # Точка входу — запуск Bot + API разом
+├── 📄 api.py                  # Всі FastAPI endpoints (REST API)
+├── 📄 bot.py                  # Ініціалізація об'єкту бота
+├── 📄 requirements.txt        # Python-залежності
+├── 📄 .env.docker.example     # Приклад файлу конфігурації
+│
+├── 📂 app/
+│   │
+│   ├── 📂 common/
+│   │   ├── bot_instance.py    # Єдиний екземпляр Bot (Singleton)
+│   │   └── config.py          # Завантаження змінних середовища
+│   │
+│   ├── 📂 databases/          # Шар доступу до даних (Repository Pattern)
+│   │   ├── mongo_client.py    # Підключення до MongoDB (Motor)
+│   │   ├── user_database.py   # CRUD для користувачів
+│   │   ├── orders_database.py # CRUD для замовлень
+│   │   ├── active_orders_database.py  # Активні замовлення
+│   │   ├── coffee_beans_database.py   # Каталог кави
+│   │   ├── location_database.py       # Локації
+│   │   ├── admin_database.py          # Адміністратори та персонал
+│   │   ├── contacts_database.py       # Соцмережі та контакти
+│   │   └── sales_database.py          # Статистика продажів
+│   │
+│   ├── 📂 handlers/           # Telegram Message/Callback Handlers
+│   │   ├── admin_handlers.py  # ВЕЛИКИЙ файл (~74KB) — весь адмін-функціонал
+│   │   ├── user_handlers.py   # Взаємодія з клієнтом
+│   │   ├── order_handlers.py  # Обробка нових замовлень з сайту
+│   │   └── error_handler.py   # Глобальний обробник помилок
+│   │
+│   ├── 📂 keyboards/
+│   │   ├── admin_keyboards.py # InlineKeyboardMarkup для адмін-панелі
+│   │   └── user_keyboards.py  # Клавіатури для кінцевих користувачів
+│   │
+│   └── 📂 utils/
+│       ├── admin_notifications.py  # Формування повідомлень для адмінів
+│       ├── data_cache.py           # In-memory кеш публічних даних
+│       ├── logger.py               # Налаштування логування
+│       ├── message_utils.py        # Утиліти для Telegram-повідомлень
+│       ├── nova_poshta.py          # Інтеграція з API Нової Пошти
+│       ├── paths.py                # Шляхи до файлів та URL-утиліти
+│       ├── payment_refunds.py      # Логіка повернення коштів LiqPay
+│       ├── phone_utils.py          # Форматування та валідація телефонів
+│       ├── photo_utils.py          # Завантаження та обробка фото (Pillow)
+│       ├── scheduler.py            # APScheduler — фонові задачі
+│       └── time_utils.py           # Робота з датами (Kyiv timezone)
+│
+├── 📂 cache/                  # Директорія для кешованих даних
+└── 📂 fills/
+    └── seed.py                # Наповнення БД тестовими даними
+```
+
+---
+
+## 👥 Ролі та доступ
+
+Система має 3 рівні доступу:
+
+| Роль | Опис | Можливості |
+|---|---|---|
+| 👑 **Owner** | Власник бізнесу | Все + управління командою, місячна статистика |
+| 🔧 **Admin** | Адміністратор | Замовлення, каталог, локації, контакти |
+| 👤 **Staff** | Персонал | Перегляд та управління замовленнями |
+
+### Як визначається роль?
 
 ```python
-Python
-3.8 +  # Основна мова програмування
-python - telegram - bot  # Telegram Bot API
-SQLAlchemy  # ORM для роботи з БД
-Redis  # Кешування та черги
-APScheduler  # Планувальник задач (нагадування)
-Pillow  # Обробка зображень меню
-```
-
-### База даних
-
-```sql
-PostgreSQL
-13+      # Основна БД
-Redis 6+            # Кеш, сесії та черги замовлень
-```
-
-### Платіжні системи
-
-```yaml
-LiqPay              # Онлайн-платежі
-Monobank API        # Інтеграція з Monobank
-Wayforpay           # Альтернативна платіжна система
-```
-
-### Інструменти розробки
-
-```yaml
-Docker              # Контейнеризація
-Docker Compose      # Оркестрація
-pytest              # Тестування
-pre-commit          # Git hooks
-Black               # Форматування коду
-Flake8              # Лінтинг
+# При кожній взаємодії бот перевіряє Telegram ID у колекції admins
+admin = await admin_db.get_admin(user.id)
+if admin:
+    role = admin.get("role")  # "owner" | "admin" | "staff"
 ```
 
 ---
 
+## 🤖 Функціонал бота
 
-### Передумови
+### 📋 Управління замовленнями (admin_handlers.py)
 
-Переконайтеся, що у вас встановлено:
+**Нове замовлення надходить так:**
+1. Клієнт на сайті оформлює замовлення → POST `/api/orders`
+2. API зберігає замовлення в MongoDB
+3. API відправляє сповіщення в Telegram усім адмінам
+4. Адмін натискає **✅ Підтвердити** або **❌ Відхилити**
+5. Клієнт бачить оновлений статус на сайті через polling
 
-- Python 3.8 або новіша версія
-- PostgreSQL 13+
-- Redis 6+
-- Git
+```
+📩 Нове замовлення #1234!
 
+👤 Клієнт: Олексій Коваль
+📞 Телефон: +380 67 123 45 67
+📦 Спосіб: Нова Пошта, м. Ужгород, відд. №5
 
-```bash
-# Створення таблиць
-python manage.py db init
-python manage.py db migrate
-python manage.py db upgrade
+🛒 Склад замовлення:
+  • Ethiopia Yirgacheffe × 1 (250г) — 320 ₴
+  • Guatemala Huehuetenango × 2 (250г) — 680 ₴
 
-# Заповнення меню та початковими даними
-python manage.py seed_menu
+💰 Сума: 1000 ₴
+💳 Оплата: Готівка при отриманні
+
+[✅ Підтвердити] [❌ Відхилити]
 ```
 
-#### 6. Запуск бота
+---
 
-```bash
-python main.py
+### ☕ Управління каталогом кави
+
+**FSM (Finite State Machine) для додавання кави:**
+
+```
+Стартовий стан
+     │
+     ▼
+Введення назви зерна
+     │
+     ▼
+Вибір типу (Комерційна / Спешелті)
+     │
+     ├── Комерційна
+     │       └── Ціна 250г → Опис → Фото → Збереження
+     │
+     └── Спешелті
+             ├── Ціна 250г
+             ├── Країна походження
+             ├── Регіон
+             ├── Сорт (variety)
+             ├── Висота (altitude)
+             ├── Метод обробки (processing)
+             ├── Ступінь обсмаження (filter / espresso)
+             ├── Дескриптори смаку
+             ├── Врожай (harvest year)
+             ├── Оцінка якості SCA (quality_score)
+             ├── Опис
+             └── Фото → Збереження
 ```
 
-### 🐳 Встановлення через Docker
+**Редагування** — посторінковий редактор для кожного поля окремо:
+- Бот пропонує поточне значення та чекає нове
+- Підтримка зміни фото з автоматичним збереженням
 
-```bash
-# Клонування репозиторію
-git clone https://github.com/gleb226/MedelinBot.git
-cd MedelinBot
+---
 
-# Налаштування змінних середовища
-cp .env.example .env
-nano .env
+### 📍 Управління локаціями
 
-# Запуск через Docker Compose
-docker-compose up -d
+- Перегляд усіх локацій зі скороченою інформацією
+- Редагування кожної локації:
+  - Назва та адреса
+  - Графік роботи
+  - Телефон та Google Maps посилання
+  - Фотографія (через фото або URL)
+  - Список зручностей (теги: Wi-Fi, кухня, дитяча кімната...)
+  - GPS-координати (для карти Leaflet)
 
-# Перевірка логів
-docker-compose logs -f bot
+---
+
+### 👥 Управління командою (тільки Owner)
+
+```
+/team
+  │
+  ├── Список всіх членів команди
+  │       └── для кожного: ім'я, роль, Telegram username
+  │
+  ├── Додати члена команди
+  │       ├── Пошук за Telegram ID, @username або телефоном
+  │       └── Призначення ролі (admin / staff)
+  │
+  └── Видалити члена команди
+          └── Підтвердження перед видаленням
+```
+
+---
+
+### 📊 Статистика (тільки Owner)
+
+**Звіт включає:**
+- Загальна кількість замовлень за період
+- Загальна сума продажів
+- ТОП-5 найпопулярніших позицій
+- Розбивка по способах оплати
+- Порівняння з попереднім аналогічним періодом
+
+**Доступні фільтри:**
+- Сьогодні / Тиждень / Місяць / Все за всі часи
+
+---
+
+### 🔗 Управління контактами та соцмережами
+
+- Перегляд та редагування посилань: Instagram, Facebook, Telegram, TikTok, телефон, email
+- Зміни одразу відображаються на сайті (через кеш-інвалідацію)
+
+---
+
+## 🌐 REST API
+
+### Публічні ендпоінти (без авторизації)
+
+| Метод | URL | Опис |
+|---|---|---|
+| `GET` | `/api/coffee` | Весь каталог кавових зерен |
+| `GET` | `/api/locations` | Список локацій |
+| `GET` | `/api/socials` | Контакти та соціальні мережі |
+| `POST` | `/api/orders` | Створення нового замовлення |
+| `GET` | `/api/orders/{order_id}` | Деталі замовлення |
+| `GET` | `/api/nova-poshta/cities` | Пошук міст НП |
+| `GET` | `/api/nova-poshta/warehouses` | Пошук відділень НП |
+| `POST` | `/api/liqpay/form` | Генерація форми оплати |
+| `POST` | `/api/liqpay/callback` | Callback від LiqPay після оплати |
+| `POST` | `/api/client-error` | Логування помилок з фронтенду |
+
+### Захищені ендпоінти
+
+| Метод | URL | Опис |
+|---|---|---|
+| `GET` | `/admin-panel` | HTML-панель (перевірка через сесію) |
+| `GET` | `/api/admin/*` | Admin API (JWT або cookie авторизація) |
+
+### Кешування API-відповідей
+
+```python
+class PublicDataCache:
+    """In-memory кеш з TTL для публічних даних"""
+    
+    async def get_coffee(self) -> list:
+        # Якщо кеш свіжий — повертає з пам'яті
+        # Якщо застарів — оновлює з MongoDB у фоні
+        pass
+    
+    async def warm_all(self, max_retries=3):
+        # Попереднє завантаження всіх даних при старті
+        pass
+    
+    def invalidate(self, key: str):
+        # Примусова інвалідація після змін через бота
+        pass
+```
+
+---
+
+## 🗃️ База даних
+
+### MongoDB Collections Schema
+
+**`coffee_beans`**
+```json
+{
+  "_id": "ObjectId",
+  "name": "Ethiopia Yirgacheffe",
+  "type": "specialty",
+  "roast": "filter",
+  "price_250": 340,
+  "quality_score": "87.5",
+  "processing": "Washed",
+  "variety": "Heirloom",
+  "altitude": "1800-2200m",
+  "harvest": "2024",
+  "descriptors": "Жасмин, бергамот, чорна смородина",
+  "description": "...",
+  "image_url": "/uploads/coffee/abc123.jpg",
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+**`orders`**
+```json
+{
+  "_id": "ObjectId",
+  "order_id": "ORD-2024-001",
+  "status": "confirmed",
+  "client": {
+    "name": "Олексій Коваль",
+    "phone": "+380671234567"
+  },
+  "delivery": {
+    "method": "nova_poshta",
+    "city": "Ужгород",
+    "warehouse": "Відділення №5"
+  },
+  "items": [
+    {"id": "...", "name": "Ethiopia", "quantity": 1, "weight": 250, "price": 340}
+  ],
+  "payment": {
+    "method": "liqpay",
+    "status": "paid",
+    "total": 340
+  },
+  "created_at": "2024-07-21T12:30:00Z"
+}
+```
+
+**`admins`**
+```json
+{
+  "user_id": 123456789,
+  "username": "john_doe",
+  "display_name": "Олексій",
+  "role": "admin",
+  "added_at": "2024-01-01T00:00:00Z",
+  "added_by": 987654321
+}
+```
+
+---
+
+## 🛠️ Утиліти та сервіси
+
+### `photo_utils.py` — Обробка зображень
+
+```python
+# Завантаження фото з Telegram → обробка через Pillow → збереження
+async def save_photo_from_telegram(bot, photo_file_id) -> str:
+    # 1. Завантажує файл через bot.download()
+    # 2. Конвертує в WebP або JPEG (Pillow)
+    # 3. Зменшує до максимального розміру
+    # 4. Зберігає в /app/uploads/
+    # 5. Повертає відносний URL
+    pass
+```
+
+### `nova_poshta.py` — Інтеграція з НП
+
+```python
+# API Нової Пошти v2.0
+async def search_cities(query: str) -> list:
+    """Пошук міст через searchSettlements"""
+    
+async def search_warehouses(city_ref: str, query: str) -> list:
+    """Пошук відділень та поштоматів"""
+```
+
+### `scheduler.py` — Фонові задачі
+
+```python
+def start_scheduler():
+    scheduler = AsyncIOScheduler(timezone="Europe/Kyiv")
+    
+    # Щонеділі о 03:00 — очищення старих замовлень (> 5 днів)
+    scheduler.add_job(cleanup_old_data, "cron", day_of_week="sun", hour=3)
+    
+    # 1-го числа кожного місяця — місячний звіт власнику
+    scheduler.add_job(send_monthly_stats, "cron", day=1, hour=9)
+    
+    scheduler.start()
+```
+
+### `data_cache.py` — Стратегія кешування
+
+```
+Старт системи
+     │
+     ▼
+warm_all() — завантажує coffee, locations, socials з MongoDB
+     │
+     ▼
+FastAPI API → читає з кешу (без звернення до БД!)
+     │
+     ▼
+Адмін змінює дані через бота
+     │
+     ▼
+cache.invalidate("coffee") → наступний запит оновить кеш
 ```
 
 ---
 
 ## ⚙️ Конфігурація
 
-### Файл .env
-
-Створіть файл `.env` у кореневій директорії проекту:
+### Змінні середовища (`.env`)
 
 ```env
-# Telegram Bot
-BOT_TOKEN=your_bot_token_here
+# Telegram
+BOT_TOKEN=7123456789:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-# База даних
-MONGO_URI=mongodb+srv://<user>:<password>@<cluster-host>/<db>?retryWrites=true&w=majority&appName=MedelinBot
-MONGO_DB_NAME=medelinbot
+# MongoDB
+MONGO_URI=mongodb+srv://user:password@cluster.mongodb.net/
+MONGO_DB_NAME=medelin
 
-# Redis
-REDIS_URL=redis://localhost:6379/0
-REDIS_CACHE_TTL=3600
+# Admin Telegram IDs (власник та адміни)
+ADMIN_TELEGRAM_IDS=123456789,987654321
+OWNER_TELEGRAM_ID=123456789
 
-# Безпека
-SECRET_KEY=your_secret_key_here
-ENCRYPTION_KEY=your_encryption_key_here
+# LiqPay (онлайн-оплата)
+LIQPAY_PUBLIC_KEY=your_public_key
+LIQPAY_PRIVATE_KEY=your_private_key
 
-# Платежі
-PAYMENT_TOKEN=your_payment_provider_token
+# Nova Poshta
+NP_API_KEY=your_nova_poshta_api_key
 
-# Налаштування кав'ярні
-CAFE_NAME=Medelin
-CAFE_ADDRESS=вул. Корзо, 15, Ужгород
-CAFE_PHONE=+380123456789
-CAFE_EMAIL=info@medelin.cafe
-
-# Доставка
-DELIVERY_ENABLED=true
-DELIVERY_MIN_ORDER=150
-DELIVERY_PRICE=50
-DELIVERY_FREE_FROM=500
-
-# Знижки
-SELF_PICKUP_DISCOUNT=10
-HAPPY_HOUR_START=15:00
-HAPPY_HOUR_END=17:00
-HAPPY_HOUR_DISCOUNT=15
-
-# Логування
-LOG_LEVEL=INFO
-LOG_FILE=logs/bot.log
-
-# Налаштування
-TIMEZONE=Europe/Uzhgorod
-LANGUAGE=uk
-MAX_MESSAGE_LENGTH=4096
+# Web App
+WEB_APP_URL=https://medelin.onrender.com
 ```
 
----
-
-## 📱 Використання
-
-### Початок роботи
-
-1. **Знайдіть бота** у Telegram: `@MedelinBot`
-2. **Натисніть** `/start` для початку
-3. **Виберіть дію** з головного меню
-
-### Приклади використання
-
-#### ☕ Замовлення кави
-
-```
-Користувач: /menu
-Бот: ☕ Меню Medelin
-
-     🔥 Популярне:
-     1. Капучино - 65₴
-     2. Латте - 70₴
-     3. Американо - 50₴
-     
-     Натисніть на напій для деталей →
-```
-
-#### 🛒 Додавання в кошик
-
-```
-Користувач: [обирає Капучино]
-Бот: ☕ Капучино - 65₴
-     
-     Розмір:
-     • Маленький (200ml) - 65₴
-     • Середній (300ml) - 75₴
-     • Великий (400ml) - 85₴
-     
-     Додатково:
-     ☐ Карамельний сироп (+15₴)
-     ☐ Вершки (+10₴)
-     ☐ Соєве молоко (+10₴)
-```
-
-#### 🚀 Оформлення замовлення
-
-```
-Користувач: /cart
-Бот: 🛒 Ваш кошик:
-     
-     1. Капучино (300ml) x1 - 75₴
-     2. Круасан з шоколадом x2 - 120₴
-     
-     Разом: 195₴
-     Бонуси: -20₴
-     До сплати: 175₴
-     
-     Спосіб отримання:
-     🚗 Доставка | 🚶 Самовивіз -10%
-```
-
-#### 💳 Бонусна карта
-
-```
-Користувач: /bonus
-Бот: 💳 Ваша бонусна картка
-     
-     Баланс: 245 балів
-     Рівень: ⭐ Срібний
-     
-     📊 Статистика:
-     Замовлень: 23
-     Витрачено: 3,450₴
-     Зекономлено: 345₴
-     
-     До наступного рівня: 255 балів
-```
-
----
-
-## 📚 Команди
-
-### Основні команди
-
-| Команда   | Опис                        |
-|-----------|-----------------------------|
-| `/start`  | Запуск бота та головне меню |
-| `/help`   | Довідка по командам         |
-| `/menu`   | Переглянути меню            |
-| `/cart`   | Мій кошик                   |
-| `/orders` | Мої замовлення              |
-| `/bonus`  | Бонусна картка              |
-
-### Замовлення
-
-| Команда       | Опис                         |
-|---------------|------------------------------|
-| `/order`      | Нове замовлення              |
-| `/repeat`     | Повторити останнє замовлення |
-| `/favorites`  | Обрані позиції               |
-| `/clear_cart` | Очистити кошик               |
-
-### Інформація
-
-| Команда     | Опис                 |
-|-------------|----------------------|
-| `/location` | Адреса та карта      |
-| `/contacts` | Контактна інформація |
-| `/hours`    | Режим роботи         |
-| `/events`   | Актуальні події      |
-| `/wifi`     | Пароль Wi-Fi         |
-
-### Бронювання
-
-| Команда           | Опис                 |
-|-------------------|----------------------|
-| `/book`           | Забронювати столик   |
-| `/my_bookings`    | Мої бронювання       |
-| `/cancel_booking` | Скасувати бронювання |
-
-### Налаштування
-
-| Команда          | Опис                     |
-|------------------|--------------------------|
-| `/settings`      | Налаштування профілю     |
-| `/language`      | Вибір мови               |
-| `/notifications` | Налаштування сповіщень   |
-| `/privacy`       | Налаштування приватності |
-
-### Адміністративні команди
-
-| Команда      | Опис                  |
-|--------------|-----------------------|
-| `/admin`     | Панель адміністратора |
-| `/stats`     | Статистика замовлень  |
-| `/broadcast` | Розсилка повідомлень  |
-| `/menu_edit` | Редагування меню      |
-| `/promo`     | Створити промокод     |
-
----
-
-## 📁 Структура проекту
-
-```
-MedelinBot/
-├── 📂 app/
-│   ├── 📂 handlers/          # Обробники команд
-│   │   ├── __init__.py
-│   │   ├── start.py         # /start, /help
-│   │   ├── menu.py          # Меню та каталог
-│   │   ├── cart.py          # Кошик
-│   │   ├── order.py         # Оформлення замовлень
-│   │   ├── booking.py       # Бронювання столиків
-│   │   ├── bonus.py         # Бонусна система
-│   │   └── admin.py         # Адмін-панель
-│   ├── 📂 models/           # Моделі бази даних
-│   │   ├── __init__.py
-│   │   ├── user.py          # Користувачі
-│   │   ├── product.py       # Товари
-│   │   ├── category.py      # Категорії
-│   │   ├── order.py         # Замовлення
-│   │   ├── cart.py          # Кошик
-│   │   ├── booking.py       # Бронювання
-│   │   └── bonus.py         # Бонуси
-│   ├── 📂 services/         # Бізнес-логіка
-│   │   ├── __init__.py
-│   │   ├── menu_service.py
-│   │   ├── order_service.py
-│   │   ├── payment_service.py
-│   │   ├── delivery_service.py
-│   │   ├── bonus_service.py
-│   │   └── notification_service.py
-│   ├── 📂 utils/            # Допоміжні функції
-│   │   ├── __init__.py
-│   │   ├── validators.py
-│   │   ├── formatters.py
-│   │   ├── decorators.py
-│   │   └── price_calculator.py
-│   ├── 📂 middleware/       # Middleware
-│   │   ├── __init__.py
-│   │   ├── auth.py
-│   │   └── logging.py
-│   └── 📂 keyboards/        # Клавіатури
-│       ├── __init__.py
-│       ├── main_menu.py
-│       ├── menu_keyboard.py
-│       └── inline_buttons.py
-├── 📂 database/
-│   ├── migrations/          # Міграції БД
-│   └── seeds/              # Початкові дані та меню
-├── 📂 static/
-│   ├── images/             # Фото страв та напоїв
-│   └── media/              # Інші медіафайли
-├── 📂 tests/               # Тести
-│   ├── test_handlers/
-│   ├── test_services/
-│   └── test_models/
-├── 📂 docker/
-│   ├── Dockerfile
-│   ├── docker-compose.yml
-│   └── nginx.conf
-├── 📂 docs/                # Документація
-│   ├── API.md
-│   ├── MENU.md
-│   └── DEPLOYMENT.md
-├── 📂 logs/                # Логи
-├── 📂 scripts/             # Скрипти
-│   ├── deploy.sh
-│   └── backup.sh
-├── .env.example            # Приклад змінних
-├── .gitignore
-├── requirements.txt        # Залежності Python
-├── config.py              # Конфігурація
-├── main.py                # Точка входу
-├── manage.py              # CLI команди
-├── README.md              # Цей файл
-└── LICENSE                # Ліцензія
-```
-
----
-
-## 🔌 API Документація
-
-### Endpoints
-
-#### Користувачі
-
-```http
-GET /api/users/{user_id}
-POST /api/users
-PUT /api/users/{user_id}
-GET /api/users/{user_id}/bonus
-```
-
-
-
-#### Замовлення
-
-```http
-GET /api/orders
-POST /api/orders
-GET /api/orders/{id}
-PUT /api/orders/{id}/status
-DELETE /api/orders/{id}
-```
-
-#### Бронювання
-
-```http
-GET /api/bookings
-POST /api/bookings
-GET /api/bookings/{id}
-DELETE /api/bookings/{id}
-```
-
-### Приклади запитів
-
-#### Створення замовлення
-
-```bash
-curl -X POST https://api.medelin.cafe/orders \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -d '{
-    "items": [
-      {"product_id": 15, "quantity": 2, "size": "medium"},
-      {"product_id": 23, "quantity": 1}
-    ],
-    "delivery_type": "delivery",
-    "address": "вул. Корзо, 10",
-    "payment_method": "online",
-    "use_bonus": 50
-  }'
-```
-
-#### Отримання меню
-
-```bash
-curl -X GET https://api.medelin.cafe/menu \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
----
-
-## 💾 База даних
-
-### Схема бази даних
-
-```sql
--- Користувачі
-CREATE TABLE users
-(
-    id           SERIAL PRIMARY KEY,
-    telegram_id  BIGINT UNIQUE NOT NULL,
-    username     VARCHAR(255),
-    full_name    VARCHAR(255),
-    phone        VARCHAR(20),
-    email        VARCHAR(255),
-    language     VARCHAR(10)    DEFAULT 'uk',
-    bonus_points INTEGER        DEFAULT 0,
-    total_orders INTEGER        DEFAULT 0,
-    total_spent  DECIMAL(10, 2) DEFAULT 0,
-    created_at   TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-    updated_at   TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
-);
-
--- Категорії меню
-CREATE TABLE categories
-(
-    id          SERIAL PRIMARY KEY,
-    name        VARCHAR(255) NOT NULL,
-    name_en     VARCHAR(255),
-    description TEXT,
-    icon        VARCHAR(50),
-    sort_order  INTEGER   DEFAULT 0,
-    is_active   BOOLEAN   DEFAULT true,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Товари (напої, їжа)
-CREATE TABLE products
-(
-    id           SERIAL PRIMARY KEY,
-    category_id  INTEGER REFERENCES categories (id),
-    name         VARCHAR(255)   NOT NULL,
-    name_en      VARCHAR(255),
-    description  TEXT,
-    price        DECIMAL(10, 2) NOT NULL,
-    image_url    VARCHAR(500),
-    calories     INTEGER,
-    is_available BOOLEAN   DEFAULT true,
-    is_popular   BOOLEAN   DEFAULT false,
-    allergens    TEXT[],
-    sizes        JSONB, -- {"small": 65, "medium": 75, "large": 85}
-    addons       JSONB, -- [{"name": "Сироп", "price": 15}, ...]
-    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Замовлення
-CREATE TABLE orders
-(
-    id               SERIAL PRIMARY KEY,
-    user_id          INTEGER REFERENCES users (id),
-    order_number     VARCHAR(50) UNIQUE NOT NULL,
-    status           VARCHAR(50)    DEFAULT 'pending', -- pending, preparing, ready, delivered, cancelled
-    delivery_type    VARCHAR(20),                      -- delivery, pickup
-    delivery_address TEXT,
-    total_price      DECIMAL(10, 2)     NOT NULL,
-    discount_amount  DECIMAL(10, 2) DEFAULT 0,
-    bonus_used       INTEGER        DEFAULT 0,
-    payment_method   VARCHAR(50),                      -- cash, online, card
-    payment_status   VARCHAR(50)    DEFAULT 'pending',
-    notes            TEXT,
-    estimated_time   INTEGER,                          -- в хвилинах
-    created_at       TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-    updated_at       TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
-);
-
--- Позиції замовлення
-CREATE TABLE order_items
-(
-    id           SERIAL PRIMARY KEY,
-    order_id     INTEGER REFERENCES orders (id) ON DELETE CASCADE,
-    product_id   INTEGER REFERENCES products (id),
-    product_name VARCHAR(255), -- збережена назва
-    quantity     INTEGER        NOT NULL,
-    size         VARCHAR(50),
-    addons       JSONB,
-    price        DECIMAL(10, 2) NOT NULL,
-    subtotal     DECIMAL(10, 2) NOT NULL
-);
-
--- Бронювання столиків
-CREATE TABLE bookings
-(
-    id           SERIAL PRIMARY KEY,
-    user_id      INTEGER REFERENCES users (id),
-    booking_date DATE    NOT NULL,
-    booking_time TIME    NOT NULL,
-    guests_count INTEGER NOT NULL,
-    table_number INTEGER,
-    status       VARCHAR(50) DEFAULT 'confirmed', -- confirmed, cancelled, completed
-    notes        TEXT,
-    created_at   TIMESTAMP   DEFAULT CURRENT_TIMESTAMP
-);
-
--- Бонусні транзакції
-CREATE TABLE bonus_transactions
-(
-    id          SERIAL PRIMARY KEY,
-    user_id     INTEGER REFERENCES users (id),
-    order_id    INTEGER REFERENCES orders (id),
-    amount      INTEGER NOT NULL, -- додатне = нарахування, від'ємне = списання
-    type        VARCHAR(50),      -- earned, spent, bonus_gift
-    description TEXT,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Промокоди
-CREATE TABLE promo_codes
-(
-    id               SERIAL PRIMARY KEY,
-    code             VARCHAR(50) UNIQUE NOT NULL,
-    discount_type    VARCHAR(20), -- percent, fixed
-    discount_value   DECIMAL(10, 2)     NOT NULL,
-    min_order_amount DECIMAL(10, 2),
-    max_uses         INTEGER,
-    uses_count       INTEGER   DEFAULT 0,
-    valid_from       TIMESTAMP,
-    valid_to         TIMESTAMP,
-    is_active        BOOLEAN   DEFAULT true,
-    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Міграції
-
-```bash
-# Створити нову міграцію
-python manage.py db migrate -m "Опис змін"
-
-# Застосувати міграції
-python manage.py db upgrade
-
-# Відкотити міграцію
-python manage.py db downgrade
-```
-
----
-
-## 🔒 Безпека
-
-### Захист даних
-
-- 🔐 **Шифрування**: Всі персональні дані шифруються AES-256
-- 🛡️ **GDPR**: Повна відповідність вимогам GDPR
-- 🔑 **Токени**: JWT токени для аутентифікації
-- 🚫 **Rate Limiting**: Захист від спаму та DDoS
-
-### Рекомендації
+### Завантаження конфігурації
 
 ```python
-# Ніколи не зберігайте токени у коді
-# ❌ НЕПРАВИЛЬНО
-BOT_TOKEN = "123456:ABC-DEF"
-
-# ✅ ПРАВИЛЬНО
+# app/common/config.py
+from dotenv import load_dotenv
 import os
 
-BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+load_dotenv()
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+MONGO_URI = os.getenv("MONGO_URI")
+ADMIN_IDS = [int(i) for i in os.getenv("ADMIN_TELEGRAM_IDS", "").split(",") if i]
 ```
-
-### Безпечні практики
-
-1. **Регулярно оновлюйте залежності**
-   ```bash
-   pip list --outdated
-   pip install --upgrade package_name
-   ```
-
-2. **Використовуйте сильні паролі для БД**
-3. **Обмежуйте доступ до адмін-панелі**
-4. **Регулярно робіть бекапи**
-5. **Моніторте логи на підозрілу активність**
 
 ---
 
-## 🧪 Тестування
+## ⏰ Фонові задачі
 
-### Запуск тестів
+| Задача | Розклад | Опис |
+|---|---|---|
+| `cleanup_old_data` | Щонеділі о 03:00 | Видаляє активні замовлення старіше 5 днів |
+| `send_monthly_stats` | 1-го числа о 09:00 | Надсилає місячний звіт власнику |
 
-```bash
-# Всі тести
-pytest
+### Місячний звіт (приклад)
 
-# З покриттям коду
-pytest --cov=app tests/
+```
+📊 Звіт за Червень 2024
 
-# Конкретний тест
-pytest tests/test_handlers/test_start.py
+📦 Замовлень: 47
+💰 Сума продажів: 28,340 ₴
 
-# З виводом у консоль
-pytest -v
+☕ ТОП позиції:
+  1. Ethiopia Yirgacheffe — 23 замовлення
+  2. Colombia Huila — 18 замовлень
+  3. Guatemala Huehuetenango — 15 замовлень
 
-# Паралельний запуск
-pytest -n auto
+💳 Способи оплати:
+  • LiqPay: 34 (72%)
+  • Готівка: 13 (28%)
 ```
 
-### Структура тестів
+---
+
+## 🚀 Запуск
+
+### Локально (без Docker)
+
+```bash
+cd MedelinBot
+
+# Встановлення залежностей
+pip install -r requirements.txt
+
+# Копіювання конфігурації
+cp .env.docker.example .env
+# Заповніть .env своїми значеннями
+
+# Запуск
+python main.py
+```
+
+### Локально (з Docker Compose)
+
+```bash
+# З кореня репозиторію
+docker-compose up --build
+```
+
+MongoDB буде доступна на `localhost:27017`, API — на `localhost/api/`.
+
+### Наповнення тестовими даними
+
+```bash
+# Після запуску системи
+python fills/seed.py
+```
+
+---
+
+## 📦 Залежності
+
+```
+aiogram==3.26.0        # Telegram Bot Framework (async)
+fastapi==0.135.2        # Web API Framework
+uvicorn==0.34.0         # ASGI Server
+motor==3.7.1            # Async MongoDB Driver
+pillow==11.1.0          # Image Processing
+python-dotenv==1.0.1    # .env file loader
+aiohttp==3.13.3         # Async HTTP Client (Nova Poshta)
+aiofiles==25.1.0        # Async File I/O
+aiosqlite==0.22.1       # SQLite (резерв)
+asyncpg==0.31.0         # PostgreSQL (резерв)
+apscheduler==3.11.2     # Background Job Scheduler
+liqpay-sdk-python3==1.0.6  # LiqPay Payment SDK
+python-multipart==0.0.9    # File Upload Support
+```
+
+---
+
+## 🔄 Потік обробки помилок
 
 ```python
-# tests/test_handlers/test_start.py
-import pytest
-from app.handlers.start import start_command
-
-
-@pytest.mark.asyncio
-async def test_start_command():
-    """Тест команди /start"""
-    # Arrange
-    mock_update = create_mock_update()
-
-    # Act
-    result = await start_command(mock_update, None)
-
-    # Assert
-    assert result is not None
-    assert "Вітаємо" in result
+# error_handler.py — глобальний обробник
+@error_router.errors(ExceptionHandler)
+async def handle_error(update: Update, exception: Exception):
+    logger.error(f"Unhandled exception: {exception}", exc_info=True)
+    
+    # Сповіщення власника про критичну помилку
+    if isinstance(exception, CriticalError):
+        await bot.send_message(OWNER_ID, f"🚨 Критична помилка: {exception}")
+    
+    # Коректне повідомлення користувачу
+    await update.message.answer("Сталася помилка. Спробуйте ще раз.")
 ```
-
-### Покриття коду
-
-```bash
-# Генерація звіту покриття
-coverage run -m pytest
-coverage report
-coverage html  # HTML звіт
-```
-
----
-
-#### 4. Systemd Service
-
-Створіть `/etc/systemd/system/medelinbot.service`:
-
-```ini
-[Unit]
-Description = MedelinBot Telegram Bot
-After = network.target postgresql.service redis.service
-
-[Service]
-Type = simple
-User = www-data
-WorkingDirectory = /var/www/MedelinBot
-Environment = "PATH=/var/www/MedelinBot/venv/bin"
-ExecStart = /var/www/MedelinBot/venv/bin/python main.py
-Restart = always
-
-[Install]
-WantedBy = multi-user.target
-```
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl start medelinbot
-sudo systemctl enable medelinbot
-```
-
-### Docker Deployment
-
-```yaml
-# docker-compose.yml
-version: '3.8'
-
-services:
-  bot:
-    build: .
-    container_name: medelinbot
-    restart: always
-    env_file: .env
-    depends_on:
-      - db
-      - redis
-    volumes:
-      - ./logs:/app/logs
-
-  db:
-    image: postgres:13
-    container_name: medelinbot_db
-    restart: always
-    environment:
-      POSTGRES_DB: medelinbot
-      POSTGRES_USER: botuser
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:6-alpine
-    container_name: medelinbot_redis
-    restart: always
-
-volumes:
-  postgres_data:
-```
-
----
-
-## 🤝 Внесок у проект
-
-Ми вітаємо будь-який внесок у розвиток проекту!
-
-### Як долучитися
-
-1. **Fork** проекту
-2. **Створіть** feature branch (`git checkout -b feature/AmazingFeature`)
-3. **Commit** ваші зміни (`git commit -m 'Add some AmazingFeature'`)
-4. **Push** в branch (`git push origin feature/AmazingFeature`)
-5. **Відкрийте** Pull Request
-
-### Правила коду
-
-- Використовуйте **Black** для форматування
-- Додавайте **docstrings** до функцій
-- Пишіть **тести** для нового функціоналу
-- Дотримуйтесь **PEP 8**
-
-```bash
-# Форматування коду
-black app/
-
-# Перевірка стилю
-flake8 app/
-
-# Сортування імпортів
-isort app/
-```
-
-### Звіт про помилки
-
-Створюйте Issue з такою інформацією:
-
-- 📝 Опис проблеми
-- 🔄 Кроки для відтворення
-- ✅ Очікувана поведінка
-- ❌ Фактична поведінка
-- 💻 Версія Python, ОС
-- 📋 Логи (якщо є)
-
-## 📊 Статистика
-
-<div align="center">
-
-![GitHub stars](https://img.shields.io/github/stars/gleb226/MedelinBot?style=social)
-![GitHub forks](https://img.shields.io/github/forks/gleb226/MedelinBot?style=social)
-![GitHub watchers](https://img.shields.io/github/watchers/gleb226/MedelinBot?style=social)
-
-![Commit Activity](https://img.shields.io/github/commit-activity/m/gleb226/MedelinBot)
-![Last Commit](https://img.shields.io/github/last-commit/gleb226/MedelinBot)
-![Code Size](https://img.shields.io/github/languages/code-size/gleb226/MedelinBot)
-
-</div>
-
----
-
-## 📄 Ліцензія
-
-Цей проект ліцензовано під [MIT License](LICENSE).
-
-```
-MIT License
-
-Copyright (c) 2024 Medelin Coffee Bot
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction...
-```
-
----
-
-## 👨‍💻 Автори
-
-- **Gleb** - *Creator & Developer* - [@gleb226](https://github.com/gleb226)
-
-### Contributors
-
-<a href="https://github.com/gleb226/MedelinBot/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=gleb226/MedelinBot" />
-</a>
-
----
-
-## 📞 Контакти
-
-### 🏪 Кав'ярня Medelin
-
-- 📍 Адреса: вул. Корзо, 15, Ужгород, Закарпатська область
-- 📞 Телефон: [+380 (XX) XXX-XX-XX](tel:+380XXXXXXXXX)
-- 📧 Email: info@medelin.cafe
-- 🌐 Веб-сайт: [medelin.cafe](https://medelin.cafe)
-
-### 💬 Соціальні мережі
-
-- 📱 Instagram: [@medelin.uzhhorod](https://instagram.com/medelin.uzhhorod)
-- 👥 Facebook: [Medelin Coffee](https://facebook.com/medelincoffee)
-- 🤖 Telegram Bot: [@MedelinBot](https://t.me/MedelinBot)
-- 📲 Telegram Channel: [@MedelinCafe](https://t.me/MedelinCafe)
-
-### 🐛 Технічна підтримка
-
-- 🔧 Issues: [GitHub Issues](https://github.com/gleb226/MedelinBot/issues)
-- 📖 Wiki: [GitHub Wiki](https://github.com/gleb226/MedelinBot/wiki)
-- 💬 Discussions: [GitHub Discussions](https://github.com/gleb226/MedelinBot/discussions)
-
----
-
-## 🙏 Подяки
-
-Особлива подяка всім, хто робить Medelin особливим:
-
-- 👨‍🍳 Нашим бариста за любов до кави
-- 🎨 Дизайнерам за чудовий інтерфейс
-- 🧪 Тестувальникам за терпіння
-- ❤️ Нашим гостям за підтримку та відгуки
-- 🇺🇦 Ужгороду за натхнення
-- 💻 Open Source спільноті за інструменти
-
----
-
-## ⭐ Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=gleb226/MedelinBot&type=Date)](https://star-history.com/#gleb226/MedelinBot&Date)
-
----
-
-## 🎯 Чому саме Medelin?
-
-> *"У Medelin ми віримо, що кожна чашка кави — це маленька подорож. Наш бот створений, щоб зробити цю подорож ще
-зручнішою та приємнішою."*
-
-### Наші цінності
-
-- ☕ **Якість**: Лише найкращі зерна
-- 💚 **Екологічність**: Підтримка локальних постачальників
-- 🤝 **Спільнота**: Створюємо затишний простір
-- 🚀 **Інновації**: Технології на службі комфорту
-- 🇺🇦 **Україна**: Горді бути українцями
 
 ---
 
 <div align="center">
 
+**🤖 [Відкрити бота](https://t.me/MedelnBot)** · **[⬆️ Загальний README](../README.md)**
 
-
-
-
-</div>
-
----
-
-<div align="center">
-
-**Зроблено з ❤️ та ☕ в Ужгороді**
-
-[⬆ Повернутися до початку](#-medelinbot)
-
----
-
-*Насолоджуйся кожною чашкою з Medelin!* 🇺🇦
+☕ *Зроблено з любов'ю до кави та чистого коду*
 
 </div>
