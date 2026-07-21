@@ -570,16 +570,7 @@ window.openCartModal = function () {
         html += `<li class="cart-modal__empty">Кошик порожній</li>`;
     } else {
         grouped.forEach((item, index) => {
-            // Find stock if specialty
             let maxStock = 999;
-            if (isBeans && typeof allCoffeeData !== 'undefined') {
-                const bean = allCoffeeData.find(b => (b.id || b._id) === item.id);
-                if (bean && bean.stock_packs !== undefined) {
-                    const q = (bean.quality_score || '').trim();
-                    const isSpec = q && q !== '—' && q !== '-' && q !== '0';
-                    if (isSpec) maxStock = parseInt(bean.stock_packs);
-                }
-            }
 
             html += `
             <li>
@@ -710,24 +701,7 @@ window.repeatOrder = function (idx) {
         groupedPast[key].count++;
     });
 
-    // Check against available stock
-    if (isBeans && typeof allCoffeeData !== 'undefined') {
-        for (const key in groupedPast) {
-            const item = groupedPast[key];
-            const bean = allCoffeeData.find(b => (b.id || b._id) === item.id);
-            if (bean && bean.stock_packs !== undefined) {
-                const q = (bean.quality_score || '').trim();
-                const isSpec = q && q !== '—' && q !== '-' && q !== '0';
-                if (isSpec) {
-                    const available = parseInt(bean.stock_packs);
-                    if (item.count > available) {
-                        alert(`Вибачте, ${bean.name} залишилося лише ${available} пачок. Ваше минуле замовлення містило ${item.count}.`);
-                        return;
-                    }
-                }
-            }
-        }
-    }
+
 
     clearPendingPayment();
     if (isBeans) {
