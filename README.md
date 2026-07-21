@@ -2,9 +2,9 @@
 
 # ☕ Medelin Coffee Roasters
 
-**Повноцінна цифрова екосистема для кав'ярні — від замовлення до доставки**
+**A complete digital ecosystem for a coffee shop — from ordering to delivery**
 
-[![Live Site](https://img.shields.io/badge/🌐_Сайт-medelin.onrender.com-6F4E37?style=for-the-badge)](https://medelin.onrender.com)
+[![Live Site](https://img.shields.io/badge/🌐_Site-medelin.onrender.com-6F4E37?style=for-the-badge)](https://medelin.onrender.com)
 [![Bot](https://img.shields.io/badge/🤖_Telegram-@MedelnBot-2CA5E0?style=for-the-badge)](https://t.me/MedelnBot)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
@@ -13,26 +13,26 @@
 
 <br/>
 
-> *Medelin — це не просто кав'ярня. Це досвід. І ця система створена, щоб кожна взаємодія — від перегляду меню до отримання замовлення — була бездоганною.*
+> *Medelin is more than just a coffee shop. It's an experience. And this system is built so that every interaction — from browsing the menu to receiving your order — is flawless.*
 
 </div>
 
 ---
 
-## 📖 Що це таке?
+## 📖 What is this?
 
-**Medelin Coffee Roasters** — це монорепозиторій, що містить повну цифрову інфраструктуру для мережі кав'ярень в Ужгороді. Проект складається з двох взаємопов'язаних компонентів, які разом утворюють єдину продуктивну систему:
+**Medelin Coffee Roasters** is a monorepo containing the complete digital infrastructure for a coffee shop chain in Uzhhorod. The project consists of two interconnected components that together form a single, cohesive production system:
 
-| Компонент | Опис |
+| Component | Description |
 |---|---|
-| 🌐 **MedelinSite** | Публічний вебсайт з каталогом кави, інформацією про локації, кошиком і оформленням замовлень |
-| 🤖 **MedelinBot** | Telegram-бот для управління бізнесом: замовлення, склад, персонал, статистика, фінанси |
+| 🌐 **MedelinSite** | Public website with a coffee catalogue, location information, shopping cart, and order checkout |
+| 🤖 **MedelinBot** | Telegram bot for business management: orders, inventory, staff, statistics, finances |
 
-Обидва компоненти живуть в одному Docker-контейнері і деплояться одним командою на [Render](https://render.com).
+Both components live in a single Docker container and are deployed with one command on [Render](https://render.com).
 
 ---
 
-## 🏛️ Архітектура системи
+## 🏛️ System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -74,126 +74,126 @@
 
 ---
 
-## 🚀 Стек технологій
+## 🚀 Technology Stack
 
 ### Backend
-| Технологія | Версія | Призначення |
+| Technology | Version | Purpose |
 |---|---|---|
-| Python | 3.11 | Основна мова |
-| FastAPI | 0.135 | REST API для сайту |
+| Python | 3.11 | Primary language |
+| FastAPI | 0.135 | REST API for the website |
 | aiogram | 3.26 | Telegram Bot Framework |
-| Uvicorn | 0.34 | ASGI-сервер |
-| Motor | 3.7 | Асинхронний MongoDB-драйвер |
-| APScheduler | 3.11 | Планувальник фонових задач |
-| LiqPay SDK | 1.0.6 | Онлайн-оплата |
-| Pillow | 11.1 | Обробка зображень |
-| aiohttp | 3.13 | HTTP-клієнт (Nova Poshta API) |
+| Uvicorn | 0.34 | ASGI server |
+| Motor | 3.7 | Async MongoDB driver |
+| APScheduler | 3.11 | Background job scheduler |
+| LiqPay SDK | 1.0.6 | Online payments |
+| Pillow | 11.1 | Image processing |
+| aiohttp | 3.13 | HTTP client (Nova Poshta API) |
 
 ### Frontend
-| Технологія | Призначення |
+| Technology | Purpose |
 |---|---|
-| Vanilla HTML/CSS/JS | Без фреймворків — чисто та швидко |
-| BEM Methodology | Структурована CSS-архітектура |
-| Font Awesome 6.5 | Іконки |
+| Vanilla HTML/CSS/JS | No frameworks — clean and fast |
+| BEM Methodology | Structured CSS architecture |
+| Font Awesome 6.5 | Icons |
 | Google Fonts | Montserrat, Manrope, Oswald, Jost |
-| Leaflet.js | Інтерактивна карта локацій |
+| Leaflet.js | Interactive location map |
 
 ### Infrastructure
-| Технологія | Призначення |
+| Technology | Purpose |
 |---|---|
-| Docker | Контейнеризація всього стеку |
-| Nginx | Статика + Reverse Proxy |
-| MongoDB | Основна база даних |
-| Render | Хостинг (PaaS) |
-| GitHub | Контроль версій (гілка `releases`) |
+| Docker | Containerisation of the entire stack |
+| Nginx | Static files + Reverse Proxy |
+| MongoDB | Primary database |
+| Render | Hosting (PaaS) |
+| GitHub | Version control (`releases` branch) |
 
 ---
 
-## 📁 Структура репозиторію
+## 📁 Repository Structure
 
 ```
 Medelin/
-├── 📄 Dockerfile              # Єдиний образ для всього стеку
-├── 📄 docker-compose.yml      # Локальне середовище (+ MongoDB)
-├── 📄 nginx.conf              # Конфігурація Nginx
-├── 📄 start.sh                # Точка входу контейнера
-├── 📄 .gitignore              # Ігноровані файли (включаючи .env)
+├── 📄 Dockerfile              # Single image for the entire stack
+├── 📄 docker-compose.yml      # Local environment (+ MongoDB)
+├── 📄 nginx.conf              # Nginx configuration
+├── 📄 start.sh                # Container entry point
+├── 📄 .gitignore              # Ignored files (including .env)
 │
-├── 📂 MedelinBot/             # Telegram-бот та REST API
-│   ├── main.py                # Точка входу (Bot + API разом)
-│   ├── api.py                 # FastAPI маршрути
-│   ├── bot.py                 # Ініціалізація бота
-│   ├── requirements.txt       # Python-залежності
+├── 📂 MedelinBot/             # Telegram bot and REST API
+│   ├── main.py                # Entry point (Bot + API together)
+│   ├── api.py                 # FastAPI routes
+│   ├── bot.py                 # Bot initialisation
+│   ├── requirements.txt       # Python dependencies
 │   └── app/
-│       ├── common/            # Спільні інстанси (bot, config)
-│       ├── databases/         # MongoDB-репозиторії
-│       ├── handlers/          # Telegram-хендлери
-│       ├── keyboards/         # Inline та Reply клавіатури
-│       └── utils/             # Утиліти (кеш, планувальник, NP)
+│       ├── common/            # Shared instances (bot, config)
+│       ├── databases/         # MongoDB repositories
+│       ├── handlers/          # Telegram handlers
+│       ├── keyboards/         # Inline and Reply keyboards
+│       └── utils/             # Utilities (cache, scheduler, NP)
 │
-└── 📂 MedelinSite/            # Статичний вебсайт
-    ├── index.html             # Головна сторінка
-    ├── 404.html               # Кастомна сторінка помилки
-    ├── admin-panel.html       # Веб-панель адміністратора
-    ├── robots.txt             # SEO директиви
-    ├── sitemap.xml            # Карта сайту
+└── 📂 MedelinSite/            # Static website
+    ├── index.html             # Home page
+    ├── 404.html               # Custom error page
+    ├── admin-panel.html       # Web admin panel
+    ├── robots.txt             # SEO directives
+    ├── sitemap.xml            # Site map
     ├── pages/
-    │   ├── beans.html         # Каталог кави в зернах
-    │   └── contact.html       # Локації та контакти
+    │   ├── beans.html         # Whole-bean coffee catalogue
+    │   └── contact.html       # Locations and contacts
     └── assets/
-        ├── css/               # BEM-стилі (style.css, responsive.css, pages/)
-        └── js/                # Логіка (main.js, coffee.js, locations.js)
+        ├── css/               # BEM styles (style.css, responsive.css, pages/)
+        └── js/                # Logic (main.js, coffee.js, locations.js)
 ```
 
 ---
 
-## 🌟 Ключові можливості системи
+## 🌟 Key System Features
 
-### 🛒 Для покупця (сайт)
-- **Каталог кави в зернах** — комерційні та спешелті сорти з детальними картками
-- **Фільтрація** — за типом (комерційна / спешелті) та ступенем обсмаження
-- **Детальна карточка зерна** — дескриптори, процесинг, врожай, висота, оцінка якості
-- **Кошик** — з персистентністю через localStorage
-- **Оформлення замовлення** — вибір способу отримання: самовивіз, кур'єр або Нова Пошта
-- **Онлайн-оплата** через LiqPay (картка, Apple Pay, Google Pay)
-- **Відстеження замовлення** — живе оновлення статусу без перезавантаження сторінки
-- **Карта закладів** — інтерактивна Leaflet-карта з усіма локаціями
-- **Адаптивний дизайн** — ідеально на будь-якому пристрої
+### 🛒 For the Customer (website)
+- **Whole-bean coffee catalogue** — commercial and specialty varieties with detailed cards
+- **Filtering** — by type (commercial / specialty) and roast level
+- **Detailed bean card** — descriptors, processing, harvest, altitude, quality score
+- **Shopping cart** — with persistence via localStorage
+- **Order checkout** — choose delivery method: pick-up, courier, or Nova Poshta
+- **Online payment** via LiqPay (card, Apple Pay, Google Pay)
+- **Order tracking** — live status updates without page reload
+- **Location map** — interactive Leaflet map with all locations
+- **Responsive design** — looks great on any device
 
-### 🤖 Для адміністратора (бот)
-- **Управління замовленнями** — прийом, підтвердження, відхилення, виконання
-- **Управління каталогом** — додавання/редагування/видалення позицій кави
-- **Управління локаціями** — оновлення інформації про кав'ярні
-- **Управління персоналом** — додавання/видалення членів команди та їхніх ролей
-- **Управління контактами та соцмережами** — актуальне оновлення в реальному часі
-- **Фінансова статистика** — продажі за день, тиждень, місяць з детальною розбивкою
-- **Автоматичні звіти** — щомісячна статистика надсилається власнику автоматично
-- **Сповіщення** — миттєве повідомлення при кожному новому замовленні
+### 🤖 For the Administrator (bot)
+- **Order management** — accept, confirm, reject, fulfil
+- **Catalogue management** — add / edit / delete coffee items
+- **Location management** — update coffee shop information
+- **Staff management** — add / remove team members and their roles
+- **Contact and social media management** — real-time updates
+- **Financial statistics** — sales for the day, week, and month with a detailed breakdown
+- **Automated reports** — monthly statistics sent to the owner automatically
+- **Notifications** — instant message for every new order
 
 ---
 
-## ⚙️ Швидкий старт
+## ⚙️ Quick Start
 
-### Вимоги
+### Requirements
 - Docker + Docker Compose
-- MongoDB Atlas або локальний MongoDB
-- Telegram Bot Token (від [@BotFather](https://t.me/BotFather))
-- LiqPay ключі (якщо потрібна оплата)
-- Nova Poshta API ключ (якщо потрібна доставка)
+- MongoDB Atlas or local MongoDB
+- Telegram Bot Token (from [@BotFather](https://t.me/BotFather))
+- LiqPay keys (if payment is required)
+- Nova Poshta API key (if delivery is required)
 
-### 1. Клонування репозиторію
+### 1. Clone the repository
 ```bash
 git clone https://github.com/gleb226/Medelin.git
 cd Medelin
 ```
 
-### 2. Налаштування змінних середовища
+### 2. Configure environment variables
 ```bash
 cp MedelinBot/.env.docker.example MedelinBot/.env
-# Заповніть всі значення у .env
+# Fill in all values in .env
 ```
 
-Приклад `.env`:
+Example `.env`:
 ```env
 BOT_TOKEN=your_telegram_bot_token
 MONGO_URI=mongodb://localhost:27017/medelin
@@ -205,90 +205,90 @@ NP_API_KEY=your_nova_poshta_api_key
 WEB_APP_URL=https://your-domain.com
 ```
 
-### 3. Запуск локально (з Docker Compose)
+### 3. Run locally (with Docker Compose)
 ```bash
 docker-compose up --build
 ```
 
-Після запуску:
-- 🌐 Сайт: `http://localhost`
+After startup:
+- 🌐 Site: `http://localhost`
 - 🔧 API: `http://localhost/api/`
 - 🗄️ MongoDB: `mongodb://localhost:27017`
 
-### 4. Деплой на Render
-1. Підключіть репозиторій до Render
-2. Виберіть тип сервісу: **Web Service**
+### 4. Deploy to Render
+1. Connect the repository to Render
+2. Choose service type: **Web Service**
 3. Runtime: **Docker**
 4. Branch: `releases`
-5. Додайте всі змінні середовища через Render Dashboard
-6. Натисніть **Deploy**
+5. Add all environment variables via the Render Dashboard
+6. Click **Deploy**
 
 ---
 
-## 🔐 Безпека
+## 🔐 Security
 
-- Файл `.env` включено до `.gitignore` — жодних секретів у репозиторії
-- Nginx заблоковує доступ до прихованих файлів (`.env`, `.sql`, `.bak` тощо)
-- Адмін-панель (`/admin-panel`) закрита через серверну логіку FastAPI
-- Пошуковики (robots.txt) не індексують `/admin-panel`
-- Усі секретні ключі передаються виключно через змінні середовища
+- The `.env` file is included in `.gitignore` — no secrets in the repository
+- Nginx blocks access to hidden files (`.env`, `.sql`, `.bak`, etc.)
+- The admin panel (`/admin-panel`) is protected via FastAPI server-side logic
+- Search engines (robots.txt) do not index `/admin-panel`
+- All secret keys are passed exclusively through environment variables
 
 ---
 
-## 🗃️ База даних MongoDB
+## 🗃️ MongoDB Database
 
-| Колекція | Призначення |
+| Collection | Purpose |
 |---|---|
-| `users` | Telegram-користувачі та їхні дані |
-| `orders` | Всі замовлення (архів) |
-| `active_orders` | Поточні активні замовлення |
-| `coffee_beans` | Каталог кавових зерен |
-| `locations` | Локації кав'ярень |
-| `admins` | Список адміністраторів та власника |
-| `contacts` | Соціальні мережі та контакти |
-| `sales` | Фінансова статистика продажів |
+| `users` | Telegram users and their data |
+| `orders` | All orders (archive) |
+| `active_orders` | Currently active orders |
+| `coffee_beans` | Coffee bean catalogue |
+| `locations` | Coffee shop locations |
+| `admins` | List of administrators and the owner |
+| `contacts` | Social media and contact details |
+| `sales` | Financial sales statistics |
 
 ---
 
-## 📊 Потік замовлення
+## 📊 Order Flow
 
 ```
-Покупець на сайті
+Customer on the website
      │
      ▼
-Обирає каву → Додає в кошик → Оформляє замовлення
+Selects coffee → Adds to cart → Proceeds to checkout
      │
      ▼
-Вибирає спосіб доставки (самовивіз / кур'єр / НП)
+Chooses delivery method (pick-up / courier / Nova Poshta)
      │
      ▼
-Вибирає спосіб оплати (LiqPay / готівка)
+Chooses payment method (LiqPay / cash)
      │
-     ├─── LiqPay → Оплата онлайн → Автопідтвердження
+     ├─── LiqPay → Online payment → Auto-confirmation
      │
-     └─── Готівка → Замовлення у стані "очікує підтвердження"
+     └─── Cash → Order placed in "awaiting confirmation" state
                          │
                          ▼
-              Адмін отримує сповіщення в Telegram
+              Admin receives a notification in Telegram
                          │
                          ▼
-              Підтверджує / відхиляє замовлення
+              Confirms / rejects the order
                          │
                          ▼
-              Покупець бачить оновлений статус на сайті
+              Customer sees the updated status on the website
 ```
 
 ---
 
-## 🤝 Розробка
+## 🤝 Development
 
-### Гілки
-| Гілка | Призначення |
+### Branches
+| Branch | Purpose |
 |---|---|
-| `releases` | Production-гілка, Render відслідковує її |
-| `backup_before_cleanup` | Резервна копія до великого рефакторингу |
+| `releases` | Production branch, tracked by Render |
+| `backup_before_cleanup` | Backup snapshot before the major refactor |
 
-### Підключення до бота в dev-режимі
+### Running the bot in dev mode
 ```bash
 cd MedelinBot
 pip install -r requirements.txt
@@ -297,17 +297,17 @@ python main.py
 
 ---
 
-## 📄 Ліцензія та авторство
+## 📄 License & Authorship
 
-Проект розроблений для **Medelin Coffee Roasters** (Ужгород, Україна).  
-Всі права захищені © 2024–2026 Medelin.
+This project was developed for **Medelin Coffee Roasters** (Uzhhorod, Ukraine).  
+All rights reserved © 2026 Medelin.
 
 ---
 
 <div align="center">
 
-☕ *Зроблено з любов'ю до кави та чистого коду*
+☕ *Made with love for coffee and clean code*
 
-**[Сайт](https://medelin.onrender.com)** · **[Telegram Бот](https://t.me/MedelnBot)** · **[GitHub](https://github.com/gleb226/Medelin)**
+**[Website](https://medelin.onrender.com)** · **[Telegram Bot](https://t.me/MedelnBot)** · **[GitHub](https://github.com/gleb226/Medelin)**
 
 </div>
