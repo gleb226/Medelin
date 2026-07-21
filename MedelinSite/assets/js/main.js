@@ -15,10 +15,10 @@ window.fetchMedelinData = async function (key) {
     console.log(`[Medelin] Fetching ${key}...`);
     const fileName = `${key}.json`;
     const endpoints = [];
-
+    
     if (window.API_BASE_URL) endpoints.push(`${window.API_BASE_URL}/api/${key}`);
     endpoints.push(`/api/${key}`);
-
+    
     const isRoot = !window.location.pathname.includes('/pages/');
     const dataPath = isRoot ? `./assets/data/${fileName}` : `../assets/data/${fileName}`;
     endpoints.push(dataPath);
@@ -32,7 +32,7 @@ window.fetchMedelinData = async function (key) {
             console.log(`[Medelin] Trying endpoint: ${url}`);
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 6000); 
-
+            
             const finalUrl = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`;
             const response = await fetch(finalUrl, { 
                 signal: controller.signal,
@@ -144,18 +144,21 @@ function escapeHtml(value) {
 
 window.fixImageUrl = function(url) {
     if (!url || url.startsWith('http') || url.startsWith('data:')) return url;
-
+    
+    
+    
     if (url.startsWith('/uploads/')) {
         return url;
     }
-
+    
     const isRoot = !window.location.pathname.includes('/pages/');
     const prefix = isRoot ? '' : '../';
-
+    
+    
     if (url.startsWith('../')) {
         return isRoot ? url.substring(3) : url;
     }
-
+    
     return url;
 };
 
@@ -202,18 +205,19 @@ function getPastOrderSummary(order) {
 window.syncPastOrders = async function(force = false) {
     const userData = window.getUserData();
     if (!userData || !userData.phone) return;
-
+    
+    
     const lastSync = localStorage.getItem('last_sync_time');
     if (!force && lastSync && (Date.now() - parseInt(lastSync) < 300000)) { 
         return window.getPastOrders();
     }
-
+    
     try {
         const resp = await fetch(`${window.API_BASE_URL}/api/past-orders?phone=${encodeURIComponent(userData.phone)}`);
         if (resp.ok) {
             const serverOrders = await resp.json();
             if (Array.isArray(serverOrders)) {
-
+                
                 const localOrders = serverOrders.map(o => ({
                     items: parsePastOrderItems(o.items_text),
                     items_text: o.items_text,
@@ -224,7 +228,8 @@ window.syncPastOrders = async function(force = false) {
                 }));
                 localStorage.setItem('medelin_past_orders', JSON.stringify(localOrders.slice(0, 10)));
                 localStorage.setItem('last_sync_time', Date.now().toString());
-
+                
+                
                 const modal = document.getElementById('cart-modal-container');
                 if (modal && modal.classList.contains('cart-modal--active')) {
                     window.openCartModal();
@@ -278,9 +283,10 @@ window.setCachedData = function (key, data) {
 
 window.loadMedelinData = async function (key, onUpdate = null) {
     const cached = typeof window.getCachedData === 'function' ? window.getCachedData(key) : null;
-
+    
+    
     if (cached && Array.isArray(cached) && cached.length > 0) {
-
+        
         setTimeout(async () => {
             try {
                 const fresh = await window.fetchMedelinData(key);
@@ -293,7 +299,7 @@ window.loadMedelinData = async function (key, onUpdate = null) {
                 }
             } catch (e) {}
         }, 100);
-
+        
         return cached;
     }
 
@@ -320,6 +326,8 @@ function closePopup(id) {
 }
 window.openPopup = openPopup;
 window.closePopup = closePopup;
+
+
 
 (function setupMedelinActionDelegation() {
     if (window.__MEDELIN_ACTIONS_READY) return;
@@ -538,6 +546,7 @@ window.openCartModal = function () {
     const activeCart = isBeans ? cart_beans : cart_menu;
     const typeLabel = isBeans ? 'beans' : 'menu';
 
+    
     const grouped = [];
     activeCart.forEach((item) => {
         const key = item.id + (item.weight || '');
@@ -591,7 +600,7 @@ window.openCartModal = function () {
     if (visiblePastOrders.length > 0 || (userData && userData.phone)) {
         pastOrdersHtml += `<div class="cart-modal__past-orders">
             <div class="cart-modal__past-orders-head">
-                <h4 class="cart-modal__past-orders-title js-dyn-style-15" >Минулі замовлення</h4>
+                <h4 class="cart-modal__past-orders-title" style="margin: 0;">Минулі замовлення</h4>
             </div>
             <div class="cart-modal__past-orders-list">`;
 
@@ -608,7 +617,7 @@ window.openCartModal = function () {
                 </button>`;
             });
         } else {
-            pastOrdersHtml += `<div class="cart-modal__empty js-dyn-style-16" >Попередніх замовлень цього типу ще немає</div>`;
+            pastOrdersHtml += `<div class="cart-modal__empty" style="padding: 10px 0;">Попередніх замовлень цього типу ще немає</div>`;
         }
 
         pastOrdersHtml += `</div></div>`;
@@ -643,13 +652,13 @@ window.openCartModal = function () {
 window.updateCartQty = function(type, id, weight, delta) {
     const cart = type === 'beans' ? cart_beans : cart_menu;
     if (delta > 0) {
-
+        
         const item = cart.find(i => i.id === id && (i.weight || '') === weight);
         if (item) {
             cart.push({ ...item });
         }
     } else {
-
+        
         const idx = cart.findLastIndex(i => i.id === id && (i.weight || '') === weight);
         if (idx !== -1) {
             cart.splice(idx, 1);
@@ -683,13 +692,16 @@ window.repeatOrder = function (idx) {
     }
 
     const isBeans = normalizeOrderKind(order.type, order.items_text) === 'beans';
-
+    
+    
     const groupedPast = {};
     items.forEach(item => {
         const key = item.id + (item.weight || '');
         if (!groupedPast[key]) groupedPast[key] = { ...item, count: 0 };
         groupedPast[key].count++;
     });
+
+
 
     clearPendingPayment();
     if (isBeans) {
@@ -702,6 +714,10 @@ window.repeatOrder = function (idx) {
     window.openCartModal();
     window.showToast('Замовлення додано до кошика', 'success');
 };
+
+
+
+
 
 window.closeCartModal = function () {
     const c = document.getElementById('cart-modal-container');
@@ -789,7 +805,7 @@ window.openCheckoutModal = function () {
                         ${
                             isBeans
                                 ? `
-                            <div id="np_details_wrap" class="np-container js-dyn-style-17" >
+                            <div id="np_details_wrap" class="np-container" style="display:block; margin-top: 1.5rem;">
                                 <p class="form-label">Місто:</p>
                                 <div class="search-wrapper">
                                     <input type="text" id="np_city_search" placeholder="Введіть назву міста...">
@@ -799,22 +815,22 @@ window.openCheckoutModal = function () {
                                 <input type="hidden" name="np_city_name" id="np_city_name">
                                 <input type="hidden" name="delivery_type" value="nova_poshta">
 
-                                <div class="form-group js-dyn-style-18" >
+                                <div class="form-group" style="margin-top: 1rem;">
                                     <label class="form-label">Тип доставки Нової Пошти:</label>
-                                    <div class="choice-grid js-dyn-style-19" >
+                                    <div class="choice-grid" style="grid-template-columns: 1fr 1fr;">
                                         <label class="choice-chip choice-chip--active" id="np_type_branch_label">
-                                            <input type="radio" name="np_delivery_mode" value="branch" checked class="js-dyn-style-20" onchange="window.toggleNpMode('branch')">
+                                            <input type="radio" name="np_delivery_mode" value="branch" checked style="display:none;" onchange="window.toggleNpMode('branch')">
                                             <span class="choice-chip__label">Відділення</span>
                                         </label>
                                         <label class="choice-chip" id="np_type_courier_label">
-                                            <input type="radio" name="np_delivery_mode" value="courier" class="js-dyn-style-21" onchange="window.toggleNpMode('courier')">
+                                            <input type="radio" name="np_delivery_mode" value="courier" style="display:none;" onchange="window.toggleNpMode('courier')">
                                             <span class="choice-chip__label">Кур'єр</span>
                                         </label>
                                     </div>
                                 </div>
 
-                                <div id="np_branch_fields" class="js-dyn-style-22">
-                                    <div id="np_warehouse_search_wrap" class="np-warehouse-search js-dyn-style-23" >
+                                <div id="np_branch_fields" style="display:block; margin-top: 1rem;">
+                                    <div id="np_warehouse_search_wrap" class="np-warehouse-search" style="display:none; padding-top: 1rem; border-top: 1px solid rgba(0,0,0,0.05);">
                                         <p class="form-label">Відділення або поштомат (№ або вул):</p>
                                         <div class="search-wrapper">
                                             <input type="text" id="np_wh_input" placeholder="Наприклад: 1 або Головна">
@@ -825,7 +841,7 @@ window.openCheckoutModal = function () {
                                     </div>
                                 </div>
 
-                                <div id="np_courier_fields" class="js-dyn-style-24">
+                                <div id="np_courier_fields" style="display:none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0,0,0,0.05);">
                                     <div class="form-group">
                                         <label class="form-label">Вулиця:</label>
                                         <div class="search-wrapper">
@@ -834,7 +850,7 @@ window.openCheckoutModal = function () {
                                         </div>
                                         <input type="hidden" name="np_street_name" id="np_street_name">
                                     </div>
-                                    <div class="js-dyn-style-25">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                                         <div class="form-group">
                                             <label class="form-label">Будинок:</label>
                                             <input type="text" name="np_house" placeholder="12А">
@@ -848,22 +864,22 @@ window.openCheckoutModal = function () {
                             </div>
                         `
                                 : `
-                            <div class="delivery-section js-dyn-style-26" ${qrZaklad && hasLocationMatch ? '' : ''}>
+                            <div class="delivery-section" ${qrZaklad && hasLocationMatch ? 'style="display:none;"' : ''}>
                                 <p class="form-label">Оберіть кав'ярню:</p>
                                 <select name="location" required>${locOpts}</select>
                             </div>
-                            <div class="delivery-section js-dyn-style-27" ${qrStolyk && hasLocationMatch ? '' : ''}>
+                            <div class="delivery-section" ${qrStolyk && hasLocationMatch ? 'style="display:none;"' : ''}>
                                 <p class="form-label">Як ви будете забирати?</p>
                                 <select name="type" data-action="toggle-table-input">
                                     <option value="takeaway" ${qrStolyk && hasLocationMatch ? '' : 'selected'}>З собою</option>
                                     <option value="in_house" ${qrStolyk && hasLocationMatch ? 'selected' : ''}>В закладі</option>
                                 </select>
                             </div>
-                            <div id="chk_table_wrap" class="js-dyn-style-28">
+                            <div id="chk_table_wrap" style="${qrStolyk && hasLocationMatch ? 'display:none;' : 'display:none;'} margin-top: 20px;">
                                 <p class="form-label">Номер столика:</p>
                                 <input type="text" name="table_number" id="chk_table" placeholder="Наприклад: 5" value="${qrStolyk || ''}">
                             </div>
-                            <div id="payment-mode-section" class="js-dyn-style-29">
+                            <div id="payment-mode-section" style="${qrStolyk && hasLocationMatch ? 'display:block;' : 'display:none;'} margin-top: 20px;">
                                 <p class="form-label">Оплата:</p>
                                 <select name="payment_mode" id="payment_mode">
                                     <option value="pay_now">Оплатити зараз</option>
@@ -881,7 +897,7 @@ window.openCheckoutModal = function () {
                     </div>
                 </div>
 
-                <div id="checkout-payment-step" class="js-dyn-style-30">
+                <div id="checkout-payment-step" style="display:none;">
                     <p class="payment-title">Оберіть метод оплати:</p>
                     <div class="payment-methods-grid">
                         <button class="payment-btn" type="button" data-action="submit-checkout" data-method="card">
@@ -900,7 +916,7 @@ window.openCheckoutModal = function () {
                             <i class="fas fa-truck-ramp-box"></i> <span>Накладний платіж</span>
                         </button>
                     </div>
-                    <div class="js-dyn-style-31">
+                    <div style="padding: 0 1.5rem 1.5rem;">
                         <button class="btn-back" type="button" data-action="back-to-details"><i class="fas fa-arrow-left btn__icon--left"></i> Назад до деталей</button>
                     </div>
                 </div>
@@ -943,7 +959,7 @@ window.toggleNpMode = function(mode) {
     const courierFields = document.getElementById('np_courier_fields');
     const branchLabel = document.getElementById('np_type_branch_label');
     const courierLabel = document.getElementById('np_type_courier_label');
-
+    
     if (mode === 'courier') {
         if (branchFields) branchFields.style.display = 'none';
         if (courierFields) courierFields.style.display = 'block';
@@ -972,7 +988,7 @@ function initNovaPoshtaSearch() {
             streetRes.style.display = 'none';
             return;
         }
-        streetRes.innerHTML = '<div class="np-result-item js-dyn-style-32" >Шукаємо...</div>';
+        streetRes.innerHTML = '<div class="np-result-item" style="opacity:0.5;">Шукаємо...</div>';
         streetRes.style.display = 'block';
         fetch(`${window.API_BASE_URL}/api/nova-poshta/streets?cityRef=${ref}&search=${encodeURIComponent(val)}`)
             .then((r) => r.json())
@@ -985,12 +1001,12 @@ function initNovaPoshtaSearch() {
                         streets.forEach((s) => {
                             const item = document.createElement('div');
                             item.className = 'np-result-item';
-
+                            
                             const cleanText = (text) => {
                                 if (!text) return '';
-
+                                
                                 let cleaned = text.replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi, '');
-
+                                
                                 cleaned = cleaned.split(/[\s,]+/).filter(word => {
                                     const isId = /[a-f0-9]{8,}/i.test(word) || word.length > 20 || /^[a-f0-9-]{15,}$/i.test(word);
                                     return !isId;
@@ -1000,7 +1016,7 @@ function initNovaPoshtaSearch() {
 
                             let desc = cleanText(s.Description || s.SettlementStreetDescription || '');
                             const type = cleanText(s.StreetsType || s.SettlementStreetDescriptionTyp || '');
-
+                            
                             const full = type ? `${type} ${desc}` : desc;
                             item.textContent = full;
                             item.onclick = () => {
@@ -1018,8 +1034,8 @@ function initNovaPoshtaSearch() {
         const ref = document.getElementById('np_city_ref').value;
         const whRes = document.getElementById('np_wh_results');
         if (!ref || !whRes) return;
-
-        whRes.innerHTML = '<div class="np-result-item js-dyn-style-33" >Шукаємо...</div>';
+        
+        whRes.innerHTML = '<div class="np-result-item" style="opacity:0.5;">Шукаємо...</div>';
         whRes.style.display = 'block';
         fetch(`${window.API_BASE_URL}/api/nova-poshta/warehouses?cityRef=${ref}&search=${encodeURIComponent(val)}`)
             .then((r) => r.json())
@@ -1028,7 +1044,7 @@ function initNovaPoshtaSearch() {
                 const whs = Array.isArray(data) ? data : [];
                 if (whs.length === 0) {
                     if (!val) {
-                        whRes.innerHTML = '<div class="np-result-item js-dyn-style-34" >Введіть номер або назву...</div>';
+                        whRes.innerHTML = '<div class="np-result-item" style="opacity:0.6;">Введіть номер або назву...</div>';
                     } else {
                         whRes.innerHTML = '<div class="np-result-item">Нічого не знайдено</div>';
                     }
@@ -1037,7 +1053,7 @@ function initNovaPoshtaSearch() {
                         const item = document.createElement('div');
                         item.className = 'np-result-item';
                         const icon = w.CategoryOfWarehouse === 'Postomat' ? 'fa-box' : 'fa-house-chimney';
-                        item.innerHTML = `<i class="fas ${icon} js-dyn-style-35" ></i> ${w.Description}`;
+                        item.innerHTML = `<i class="fas ${icon}" style="margin-right:8px; opacity:0.6;"></i> ${w.Description}`;
                         item.onclick = () => {
                             document.getElementById('np_wh_input').value = w.Description;
                             document.getElementById('np_warehouse_final').value = w.Description;
@@ -1055,7 +1071,7 @@ function initNovaPoshtaSearch() {
             res.style.display = 'none';
             return;
         }
-        res.innerHTML = '<div class="np-result-item js-dyn-style-36" >Шукаємо...</div>';
+        res.innerHTML = '<div class="np-result-item" style="opacity:0.5;">Шукаємо...</div>';
         res.style.display = 'block';
         fetch(`${window.API_BASE_URL}/api/nova-poshta/cities?search=${encodeURIComponent(val)}`)
             .then((r) => r.json())
@@ -1068,16 +1084,17 @@ function initNovaPoshtaSearch() {
                     cities.forEach((c) => {
                         const item = document.createElement('div');
                         item.className = 'np-result-item';
-
+                        
                         const cityName = c.Present || c.Description;
                         const area = c.AreaDescription || '';
                         const region = c.RegionsDescription || '';
-
-                        item.innerHTML = `<div class="js-dyn-style-37">${cityName}</div>${area ? `<div class="js-dyn-style-38">${area} обл., ${region}</div>` : ''}`;
-
+                        
+                        item.innerHTML = `<div style="font-weight:700;">${cityName}</div>${area ? `<div style="font-size:0.75rem; opacity:0.7;">${area} обл., ${region}</div>` : ''}`;
+                        
                         item.onclick = () => {
                             inp.value = cityName;
-
+                            
+                            
                             document.getElementById('np_city_ref').value = c.Ref || c.CityRef;
                             document.getElementById('np_city_name').value = cityName;
                             res.style.display = 'none';
@@ -1144,7 +1161,7 @@ window.backToDetails = function () {
 
 window.submitCheckout = function (method) {
     const btn = window.event ? window.event.target.closest('button') : null;
-
+    
     if (window.CURRENT_ORDER_ID) {
         if (btn) {
             btn.disabled = true;
@@ -1278,7 +1295,7 @@ document.addEventListener('DOMContentLoaded', () => {
         url.searchParams.delete('order_id');
         window.history.replaceState({}, document.title, url.pathname + url.search);
     }
-
+    
     const initRevealAnimations = () => {
         const revealObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -1316,13 +1333,13 @@ document.addEventListener('DOMContentLoaded', () => {
             container.innerHTML = `
                 <div class="cart-modal__overlay"></div>
                 <div class="cart-modal__content checkout-modal">
-                    <div class="checkout-modal__loading js-dyn-style-39" >
-                        <i class="fas fa-spinner fa-spin fa-3x js-dyn-style-40" ></i>
+                    <div class="checkout-modal__loading" style="padding: 3rem; text-align: center;">
+                        <i class="fas fa-spinner fa-spin fa-3x" style="color: var(--color-coffee); margin-bottom: 1rem;"></i>
                         <p>Завантажуємо деталі замовлення...</p>
                     </div>
                 </div>`;
             container.classList.add('cart-modal--active');
-
+            
             fetch(`${window.API_BASE_URL}/api/orders/${orderId}`)
                 .then(r => r.ok ? r.json() : { detail: 'Помилка' })
                 .then(order => {
@@ -1333,9 +1350,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button class="cart-modal__close" type="button" data-action="close-checkout-modal"><i class="fas fa-times"></i></button>
                             <h3 class="checkout-modal__title">Оплата замовлення</h3>
                             <div id="checkout-payment-step">
-                                <div class="js-dyn-style-41">
-                                    <p class="js-dyn-style-42">Сума до оплати:</p>
-                                    <p class="js-dyn-style-43">${order.total} ₴</p>
+                                <div style="padding: 0 1.5rem 1rem; text-align: center;">
+                                    <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">Сума до оплати:</p>
+                                    <p style="font-size: 2.2rem; font-weight: 900; color: var(--color-coffee);">${order.total} ₴</p>
                                 </div>
                                 <p class="payment-title">Оберіть метод оплати:</p>
                                 <div class="payment-methods-grid">
@@ -1387,18 +1404,20 @@ window.toggleTableInput = function (v) {
     if (paymentModeSection) paymentModeSection.style.display = v === 'in_house' ? 'block' : 'none';
 };
 
+
 (function initOrderStatusPolling() {
     const pollStatuses = async () => {
         const pastOrders = window.getPastOrders();
         if (!pastOrders || pastOrders.length === 0) return;
-
+        
+        
         const latest = pastOrders.slice(0, 3);
         const knownStatuses = JSON.parse(localStorage.getItem('medelin_order_statuses') || '{}');
         let changed = false;
 
         for (const order of latest) {
             if (!order.id) continue;
-
+            
             if (knownStatuses[order.id] === 'confirmed' || knownStatuses[order.id] === 'rejected') continue;
 
             try {
@@ -1427,6 +1446,7 @@ window.toggleTableInput = function (v) {
     setInterval(pollStatuses, 15000); 
     setTimeout(pollStatuses, 2000); 
 })();
+
 
 const SOCIAL_ICONS = {
     instagram: 'fab fa-instagram',
@@ -1479,7 +1499,7 @@ function renderSocials(socials) {
         if (!url) return '';
         const u = url.trim();
         if (u.startsWith('http') || u.startsWith('tel:') || u.startsWith('mailto:')) return u;
-
+        
         if (u.includes('@') && !u.includes('/')) return 'mailto:' + u;
         const clean = u.replace(/[\s\-()]/g, '');
         if (u.startsWith('+') || (clean.length >= 9 && /^\d+$/.test(clean))) return 'tel:' + u;
@@ -1503,7 +1523,7 @@ function renderSocials(socials) {
             a.target = '_blank';
             a.rel = 'noopener noreferrer';
             a.title = soc.name;
-            a.innerHTML = `<i class="${iconClass}"></i><span class="js-dyn-style-44">${soc.name}</span>`;
+            a.innerHTML = `<i class="${iconClass}"></i><span style="font-size:0.7rem; font-weight:700; text-transform:uppercase;">${soc.name}</span>`;
             container.appendChild(a);
         });
     }
@@ -1519,7 +1539,7 @@ function renderSocials(socials) {
             const nameKey = soc.name.toLowerCase().trim();
             const byUrl = guessSocialKeyFromUrl(soc.url);
             const iconClass = SOCIAL_ICONS[nameKey] || (byUrl ? SOCIAL_ICONS[byUrl] : null) || 'fas fa-link';
-            a.innerHTML = `<i class="${iconClass} js-dyn-style-45" ></i>${soc.name}`;
+            a.innerHTML = `<i class="${iconClass}" style="margin-right:5px;"></i>${soc.name}`;
             footerSocials.appendChild(a);
         });
     }
